@@ -1,0 +1,26 @@
+[project]
+name = "cartaos"
+version = "0.1.0"
+description = "CartaOS - [ C ]uradoria, [ A ]nálise e [ R ]efinamento de [ T ]extos [ A ]cadêmicos ( O pen S ource)"
+authors = [
+    {name = "Scotch Luis",email = "lfgranjaead@gmail.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "typer (>=0.16.0,<0.17.0)",
+    "pdfplumber (>=0.11.7,<0.12.0)",
+    "pymupdf (>=1.26.3,<2.0.0)",
+    "pytesseract (>=0.3.13,<0.4.0)",
+    "babel (>=2.17.0,<3.0.0)"
+]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.1"
+black = "^25.1.0"
+isort = "^6.0.1"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
