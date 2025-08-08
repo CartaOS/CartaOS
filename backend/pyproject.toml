@@ -1,26 +1,47 @@
+# pyproject.toml
+
+# Secção [project] - Padrão PEP 621 (Tool-Agnostic)
+# Define os metadados principais do projeto.
 [project]
 name = "cartaos"
 version = "0.1.0"
-description = "CartaOS - [ C ]uradoria, [ A ]nálise e [ R ]efinamento de [ T ]extos [ A ]cadêmicos ( O pen S ource)"
+description = "CartaOS - Core processing engine for academic documents."
 authors = [
-    {name = "Scotch Luis",email = "lfgranjaead@gmail.com"}
+    {name = "Luis", email = "lfgranjaead+cartaOS@gmail.com"}
 ]
 license = {text = "MIT"}
-readme = "README.md"
+readme = "../README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "typer (>=0.16.0,<0.17.0)",
-    "pdfplumber (>=0.11.7,<0.12.0)",
-    "pymupdf (>=1.26.3,<2.0.0)",
-    "pytesseract (>=0.3.13,<0.4.0)",
-    "babel (>=2.17.0,<3.0.0)"
+    "typer[rich]>=0.12.3",
+    "pdfplumber>=0.11.1",
+    "PyMuPDF>=1.24.9",
+    "pdf2image>=1.17.0",
+    "Pillow>=10.4.0",
+    "pytesseract>=0.3.13",
+    "google-generativeai>=0.8.4",
+    "python-dotenv>=1.0.1",
+    "PyYAML>=6.0.1",
+    "python-slugify>=8.0.4",
+    "loguru>=0.7.2",
+    # Nota: babel e google-cloud-aiplatform não são usados nos nossos scripts atuais.
+    # Removi-os para manter a lista de dependências limpa.
+    # Se precisar deles no futuro, pode adicioná-los com 'poetry add'.
 ]
+
+# Secção [tool.poetry] - Específica do Poetry
+# Usada para configurações que não fazem parte do padrão PEP 621.
+[tool.poetry]
+# Diz ao Poetry que o nosso código fonte está na pasta 'cartaos'.
+packages = [{include = "cartaos"}]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
-black = "^25.1.0"
-isort = "^6.0.1"
+black = "^24.4.2"
+isort = "^5.13.2"
 
+# Secção [build-system] - Padrão PEP 517
+# Define como o projeto deve ser construído.
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
