@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 processor.py
-
 Handles the processing of PDF files to generate summaries using AI.
 """
 
@@ -13,7 +12,7 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import Optional
-
+from typing import List
 import google.generativeai as genai
 import pdfplumber
 import fitz  # PyMuPDF
@@ -26,6 +25,7 @@ from rich.progress import (
     TimeRemainingColumn,
     SpinnerColumn,
 )
+from .utils import WarningCaptureHandler
 
 class CartaOSProcessor:
     """Encapsulates the entire process of generating a summary for a PDF file."""
@@ -44,9 +44,30 @@ class CartaOSProcessor:
         self.dry_run = dry_run
         self.debug = debug
         self.force_ocr = force_ocr
+
+        self.captured_warnings: List[str] = []
+        self._setup_warning_capture()
+
         
         self.load_config()
         self.configure_api()
+    
+    def _setup_warning_capture(self):
+        """Configures a handler to capture pdfminer warnings in memory."""
+        # Get the specific logger for the pdfminer library
+        pdfminer_logger = logging.getLogger("pdfminer")
+        
+        # Set the level to WARNING to only capture warnings and errors
+        pdfminer_logger.setLevel(logging.WARNING)
+        
+        # Create an instance of our custom handler
+        handler = WarningCaptureHandler(self.captured_warnings)
+        pdfminer_logger.addHandler(handler)
+        
+        # Setting propagate to False prevents the captured warnings
+        # from also being printed to the console by the root logger.
+        pdfminer_logger.propagate = False
+
 
     def load_config(self):
         """Loads environment configurations from the .env file."""
@@ -56,7 +77,7 @@ class CartaOSProcessor:
         self.api_key = os.getenv("GOOGLE_API_KEY")
         self.obsidian_vault_path = os.getenv("OBSIDIAN_VAULT_PATH")
 
-        self.processed_pdf_dir = Path(__file__).parent.parent / "07_Processed"
+        self.processed_pdf_dir = Path(__file__).parent.parent.parent / "07_Processed"
         
         if self.obsidian_vault_path and Path(self.obsidian_vault_path).is_dir():
             self.summary_dir = Path(self.obsidian_vault_path) / "Summaries"

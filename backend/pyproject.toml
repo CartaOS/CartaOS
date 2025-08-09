@@ -24,15 +24,13 @@ dependencies = [
     "PyYAML>=6.0.1",
     "python-slugify>=8.0.4",
     "loguru>=0.7.2",
-    # Nota: babel e google-cloud-aiplatform não são usados nos nossos scripts atuais.
-    # Removi-os para manter a lista de dependências limpa.
-    # Se precisar deles no futuro, pode adicioná-los com 'poetry add'.
+    "rich (>=14.1.0,<15.0.0)",
+    "typing-extensions (>=4.14.1,<5.0.0)",
+    "img2pdf (>=0.6.1,<0.7.0)"
 ]
 
-# Secção [tool.poetry] - Específica do Poetry
-# Usada para configurações que não fazem parte do padrão PEP 621.
 [tool.poetry]
-# Diz ao Poetry que o nosso código fonte está na pasta 'cartaos'.
+
 packages = [{include = "cartaos"}]
 
 [tool.poetry.group.dev.dependencies]
@@ -40,8 +38,6 @@ pytest = "^8.4.1"
 black = "^24.4.2"
 isort = "^5.13.2"
 
-# Secção [build-system] - Padrão PEP 517
-# Define como o projeto deve ser construído.
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
