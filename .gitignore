@@ -1,0 +1,74 @@
+# Ignore generated workspace files
+00_Inbox/*
+01_Library/*
+02_Triage/*
+03_Lab/*
+04_ReadyForOCR/*
+05_ReadyForSummary/*
+06_TooLarge/*
+07_Processed/*
+
+#But also keeps directory structure
+!00_Inbox/.gitkeep
+!01_Library/.gitkeep
+!02_Triage/.gitkeep
+!03_Lab/.gitkeep
+!04_ReadyForOCR/.gitkeep
+!05_ReadyForSummary/.gitkeep
+!06_TooLarge/.gitkeep
+!07_Processed/.gitkeep
+
+# Byte‑compiled / optimized / DLL files (Python)
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+.venv/
+venv/
+.env/  # If using .env directory
+
+# Python packaging/build
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Poetry lock file (optional if not committed)
+poetry.lock
+
+# PyTest cache
+.pytest_cache/
+
+# Logs
+*.log
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Rust build artifacts
+target/
+
+# Node / frontend artifacts
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# SvelteKit/Vite build outputs and caches
+.build/
+build/
+.svelte-kit/
+.vite/
+.vitepress/
+.cache/
+
+# VSCode, IDE, and OS files
+.vscode/
+.idea/
+.DS_Store
+
+# Other OS junk
+Thumbs.db

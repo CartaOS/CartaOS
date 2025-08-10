@@ -1,0 +1,43 @@
+# pyproject.toml
+
+# Secção [project] - Padrão PEP 621 (Tool-Agnostic)
+# Define os metadados principais do projeto.
+[project]
+name = "cartaos"
+version = "0.1.0"
+description = "CartaOS - Core processing engine for academic documents."
+authors = [
+    {name = "Luis", email = "lfgranjaead+cartaOS@gmail.com"}
+]
+license = {text = "MIT"}
+readme = "../README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "typer[rich]>=0.12.3",
+    "pdfplumber>=0.11.1",
+    "PyMuPDF>=1.24.9",
+    "pdf2image>=1.17.0",
+    "Pillow>=10.4.0",
+    "pytesseract>=0.3.13",
+    "google-generativeai>=0.8.4",
+    "python-dotenv>=1.0.1",
+    "PyYAML>=6.0.1",
+    "python-slugify>=8.0.4",
+    "loguru>=0.7.2",
+    "rich (>=14.1.0,<15.0.0)",
+    "typing-extensions (>=4.14.1,<5.0.0)",
+    "img2pdf (>=0.6.1,<0.7.0)"
+]
+
+[tool.poetry]
+
+packages = [{include = "cartaos"}]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.1"
+black = "^24.4.2"
+isort = "^5.13.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
