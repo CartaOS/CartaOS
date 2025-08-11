@@ -135,7 +135,6 @@ class CartaOSProcessor:
         
         logging.info(f"Text extracted successfully: {text[:100]}...")
         return text.strip() if text else None
-
     def generate_summary(self, text: str) -> Optional[str]:
         """
         Generates the analytical summary using the Gemini API.
@@ -247,5 +246,6 @@ class CartaOSProcessor:
             self._move_pdf()
             logging.info("File processed successfully.")
             return True
+
 
 

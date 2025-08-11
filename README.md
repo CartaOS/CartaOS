@@ -1,128 +1,127 @@
 # 📚 CartaOS — [C]uration, [A]nalysis, and [R]efinement of [T]exts for [A]cademia ([O]pen [S]ource)
 
-**Open-source modular document processing and knowledge structuring system — ingestion, triage, OCR, pre-processing, analysis, AI, automation, and advanced text refinement.**
-
-CartaOS is a **fully open-source** platform for transforming raw digital documents into structured, searchable, and enriched knowledge. It is designed for researchers, educators, activists, and knowledge workers who need **full transparency, control, and extensibility** over their workflows.
-
-> “Free your documents. Free your mind.”
+> *Free your documents. Free your mind.*
 
 ---
 
-## ✨ Key Features (Roadmap)
+![CartaOS Banner](docs/assets/banner.png) <!-- Optional header image -->
 
-| Feature                       | Status        | Description                                                                                                                |
-| ----------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 📥 Document Ingestion         | ✅ Planned     | Drop any PDF, EPUB, or image-based document into the inbox for automated processing.                                       |
-| 🧠 AI-Powered Analysis        | ✅ Planned     | Modular integration with LLMs (Google Gemini, OpenAI, Claude, etc.) for summaries, tagging, and semantic insights.         |
-| 🖼️ OCR & Image Processing    | ✅ In Progress | High-quality text extraction with Tesseract, PyMuPDF, pdfplumber, and optional manual correction with ScanTailor Advanced. |
-| 🧪 Preprocessing & Refinement | ✅ In Progress | Cleaning, deskewing, splitting, dewarping, and quality triage for optimal processing.                                      |
-| 🧩 Plugin System              | ✅ Planned     | Extensible architecture to allow community-built modules for new OCR engines, AI models, or export formats.                |
-| ⚡ CLI + GUI                   | ✅ Planned     | Typer-based CLI and a modern GUI using Tauri + Svelte + Tailwind.                                                          |
-| 🌍 i18n & l10n                | ✅ Planned     | Internationalization and localization from the ground up.                                                                  |
-| 🔍 Knowledge Integration      | ✅ Planned     | Integration with Zotero, Obsidian, markdown vaults, and other research tools.                                              |
-
----
-
-## 🧱 Tech Stack
-
-| Purpose                 | Tech Stack                              |
-| ----------------------- | --------------------------------------- |
-| Core logic & automation | **Python** (Typer, Rich, logging)       |
-| Performance modules     | **Rust**                                |
-| GUI                     | **Tauri** + Svelte + Tailwind           |
-| OCR                     | Tesseract, pdfplumber, PyMuPDF          |
-| AI Integration          | Google Gemini, OpenAI, etc.             |
-| CLI                     | Typer (Python)                          |
-| PDF/Image tools         | Unpaper, ScanTailor (optional), img2pdf |
-| Logging & testing       | Python logging, pytest                  |
+<p align="center">
+  <a href="https://github.com/CartaOS/CartaOS/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/CartaOS/CartaOS/ci.yml?branch=main&logo=github&style=for-the-badge" alt="Build Status">
+  </a>
+  <a href="https://github.com/CartaOS/CartaOS/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/CartaOS/CartaOS?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="License">
+  </a>
+  <img src="https://img.shields.io/github/languages/top/CartaOS/CartaOS?style=for-the-badge&color=blue&logo=python" alt="Top Language">
+  <img src="https://img.shields.io/github/v/release/CartaOS/CartaOS?style=for-the-badge&color=brightgreen&logo=semver" alt="Version">
+  <img src="https://img.shields.io/github/contributors/CartaOS/CartaOS?style=for-the-badge&color=orange&logo=github" alt="Contributors">
+</p>
 
 ---
 
-## 📁 Current Project Structure
+## 🌍 Overview
 
-```bash
-CartaOS/
-├── backend/               # Python automation, OCR, AI integration
-├── frontend/              # Tauri + Svelte + Tailwind GUI
-├── rust-core/             # Rust performance modules
-├── tests/                 # Unit and integration tests
-├── docs/                  # Documentation
-├── i18n/                  # Internationalization files
-├── 00_Inbox/              # Raw incoming documents
-├── 01_Library/            # Organized, processed documents
-├── 02_Triage/             # Files pending classification
-├── 03_Lab/                # Image/PDF correction lab
-├── 04_ReadyForOCR/        # Files prepared for OCR
-├── 05_ReadyForSummary/    # Text-ready files for AI processing
-├── 06_TooLarge/           # Oversized files requiring special handling
-├── 07_Processed/          # Final outputs (summaries, processed docs)
-├── README.md
-├── pyproject.toml
-└── .env                   # API keys and environment variables (not committed)
+**CartaOS** is an open-source system for **C**uration, **A**nalysis, and **R**efinement of **T**exts for **A**cademia (**O**pen **S**ource).  
+It helps researchers, educators, activists, and other knowledge workers transform raw collections of digital documents (PDFs, e-books, images) into an **organized, searchable knowledge base** enriched with AI-powered insights.
+
+---
+
+## 🛠 How It Works — Workflow
+
+The system follows a **multi-stage pipeline**, where documents move through structured directories as they are processed:
+
+1. 📥 **Inbox (`00_Inbox`) / Triage (`02_Triage`)** — Drop files here. The `triage.py` module classifies them into ready-to-analyze or needing correction.  
+2. 🧪 **Correction Lab (`03_Lab`)** — Manual corrections for poor scans using tools like ScanTailor Advanced.  
+3. 🖹 **Ready for OCR (`04_ReadyForOCR`)** — Cleaned files awaiting OCR.  
+4. 📝 **Ready for Summary (`05_ReadyForSummary`)** — High-quality text files awaiting AI analysis.  
+5. 📦 **Processed (`07_Processed`)** — Final PDFs and `.md` summaries stored here.
+
+---
+
+## ✨ Features
+
+- 📂 **Document Ingestion** — Automatically process PDFs, EPUBs, and image-based docs.  
+- 🤖 **AI Analysis** — Summaries, key concepts, and tags via LLMs (Google Gemini, OpenAI, etc.).  
+- 🖹 **OCR & Image Processing** — High-quality text extraction with Tesseract, PyMuPDF, pdfplumber.  
+- 🧼 **Pre-processing & Refinement** — Deskewing, cleaning, and splitting for optimal results.  
+- 🖥 **Dual Interface** — Python/Typer CLI + Tauri/Svelte/Tailwind GUI.  
+- 🔌 **Knowledge Tools Integration** — Planned Zotero & Obsidian support.  
+- 🧩 **Plugin Architecture** — Extend with custom modules.
+
+---
+
+## ⚙ Tech Stack
+
+- 🐍 **Python** — Core logic, automation, Typer CLI.  
+- 🖥 **Tauri + Svelte + Tailwind** — Modern, lightweight desktop GUI.  
+- 🦀 **Rust** — High-performance modules.  
+- 📜 **AGPLv3** — Free software, open for everyone.
+
+---
+
+## 📂 Directory Structure
+
+```yaml
+📦 CartaOS
+ ┣ 📂 backend                               # 🖥 Backend core logic
+ ┃ ┗ 📂 cartaos
+ ┃    ┣ 📜 __init__.py                      # 📄 Package init
+ ┃    ┣ 📜 triage.py                        # 📄 File triage module
+ ┃    ┣ 📜 lab.py                           # 📄 Correction lab helper
+ ┃    ┣ 📜 processor.py                     # 📄 AI summary processor
+ ┃    ┗ 📜 install_dev_env.py               # ⚙ Cross-platform installer
+ ┣ 📂 frontend                              # 🎨 GUI frontend
+ ┃ ┗ 📂 src
+ ┃    ┗ 📂 components                       # 🧩 UI Components
+ ┣ 📂 data                                  # 📁 Main document storage
+ ┃ ┣ 📂 00_Inbox                            # 📥 Incoming files
+ ┃ ┣ 📂 02_Triage                           # 🗂 Pre-analysis sorting
+ ┃ ┣ 📂 03_Lab                              # 🧪 Manual corrections
+ ┃ ┣ 📂 04_ReadyForOCR                      # 🖹 OCR queue
+ ┃ ┣ 📂 05_ReadyForSummary                  # 📝 Summary queue
+ ┃ ┗ 📂 07_Processed                        # 📦 Completed docs
+ ┣ 📂 docs                                  # 📚 Documentation
+ ┃ ┗ 📂 assets                              # 🖼 Images, banners
+ ┣ 📜 README.md
+ ┗ 📜 LICENSE
 ````
 
 ---
 
-## 🚀 Getting Started
-
-> ⚠️ Work-in-progress. Alpha stage.
-
-### Requirements
-
-* Python 3.11+
-* Rust toolchain
-* Node.js + pnpm
-* Tesseract OCR
-* Flatpak (optional, for ScanTailor Advanced)
-* Poetry (Python dependency management)
-* img2pdf, unpaper
-
-### Setup
+## 🚀 Installation
 
 ```bash
 git clone https://github.com/CartaOS/CartaOS.git
 cd CartaOS
-poetry install
-poetry shell
+python3 backend/cartaos/install_dev_env.py
 ```
+
+This installer:
+
+* Detects your OS and package manager.
+* Installs dependencies (Tesseract, unpaper, poppler-utils, etc.).
+* Sets up Rust, Node.js, Poetry, and Tauri CLI.
 
 ---
 
-## 🧪 Example CLI Usage
+## 📸 Screenshots *(coming soon)*
 
-```bash
-# Triage raw files
-cartaos triage ./00_Inbox/
-
-# Run OCR
-cartaos ocr ./04_ReadyForOCR/file.pdf
-
-# Summarize with AI
-cartaos summarize ./05_ReadyForSummary/file.pdf
-```
-
----
-
-## 🌍 Internationalization (i18n)
-
-All code and docs use **English** as the default language.
-Future releases will support multiple languages via i18n-friendly CLI/GUI.
+| Pipeline Stage | Screenshot                   |
+| -------------- | ---------------------------- |
+| Triage         | ![](docs/assets/triage.png)  |
+| OCR            | ![](docs/assets/ocr.png)     |
+| Summary        | ![](docs/assets/summary.png) |
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions!
-Please fork the repo, work on feature branches, and submit pull requests.
+We welcome pull requests and discussions in the [GitHub Issues](https://github.com/CartaOS/CartaOS/issues).
+Follow our [Contributing Guide](CONTRIBUTING.md) for setup, coding standards, and testing.
 
 ---
 
-## 🛡️ License
+## 📜 License
 
-**Copyright © 2025 CartaOS contributors.**
-
-This program is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License v3.0 (AGPLv3)** as published by the Free Software Foundation.
-
-See the [LICENSE](LICENSE) file for details.
-
-> *"The revolution will be processed."* ✊
+Licensed under **AGPLv3** — see the [LICENSE](LICENSE) file.
