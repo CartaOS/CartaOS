@@ -37,7 +37,8 @@ from cartaos.triage import TriageProcessor
 
 # --- Configuration ---
 app = typer.Typer(
-    help="📚 CartaOS - A command-line tool for academic document processing.",
+    help="📚 CartaOS - [C]uration, [A]nalysis, and [R]efinement of [T]exts for [A]cademia ([O]pen [S]ource)."
+    "A command-line tool for academic document processing.",
     add_completion=False,
     rich_markup_mode="markdown"
 )
@@ -58,7 +59,6 @@ def setup():
     
     backend_root = Path(__file__).parent.parent
     env_path = backend_root / '.env'
-
     if env_path.exists():
         typer.secho(f"✔️ .env file already exists at: {env_path.as_posix()}", fg=typer.colors.GREEN)
     else:
@@ -69,15 +69,12 @@ def setup():
             "(Optional) Enter the absolute path to your Obsidian vault. Leave blank to skip", 
             default=""
         )
-
         with open(env_path, "w") as f:
             f.write(f'GOOGLE_API_KEY="{api_key}"\n')
             if obsidian_path:
                 f.write(f'OBSIDIAN_VAULT_PATH="{obsidian_path}"\n')
         
         typer.secho(f"🎉 Success! Configuration saved to {env_path.as_posix()}", fg=typer.colors.GREEN)
-
-
 @app.command()
 def triage():
     """
@@ -192,8 +189,7 @@ def summarize(
                     "   Internal issues were detected in the original PDF file.\n"
                     "   This may have affected the quality of the text extraction and,\n"
                     "   consequently, the final summary.",
-                    fg=typer.colors.YELLOW
-                )
+                    fg=typer.colors.YELLOW)
                 typer.secho(
                     "="*50 + "\n", fg=typer.colors.YELLOW)
 
@@ -207,3 +203,4 @@ def summarize(
 
 if __name__ == "__main__":
     app()
+
