@@ -1,30 +1,25 @@
+# backend/cartaos/cli.py
+
 """
 CartaOS - A command-line tool for academic document processing.
 
 This tool provides a command-line interface for processing academic documents
 using the CartaOS library. It allows users to generate analytical summaries for
 PDF files and save them to a designated directory.
-
 The tool is designed to be extensible and can be customized to integrate with
 other tools and services.
-
 This script uses Typer to create a professional CLI that serves as the
 entry point for all backend operations, including triage, lab processing,
 OCR, and summarization.
-
 The main entry point for the tool is the `cartaos` command, which provides a
 helpful interface for generating summaries and configuring the tool.
-
 The `setup` command guides the user through the initial configuration of
 CartaOS, including setting up the API key for Google Gemini and the path to
 the Obsidian vault.
-
 The `summarize` command generates an analytical summary for a given PDF file
 and saves it to a designated directory.
-
 The tool uses the `typer` library to define its command-line interface and
 provides helpful documentation and error messages.
-
 The code is organized into a single module, with the main entry point at the
 bottom of the file.
 """
@@ -86,17 +81,38 @@ def setup():
 @app.command()
 def triage():
     """
-    Scans the Triage (02) directory and classifies files.
+    Scans the Triage (02) directory, classifies files, and reports the actions.
     """
-    typer.secho("--- Starting Triage Process ---", fg=typer.colors.BLUE)
+    typer.secho("--- 🔍 Starting Triage Process ---", fg=typer.colors.BLUE)
     try:
         processor = TriageProcessor(
             input_dir=DIR_TRIAGE,
             summary_dir=DIR_READY_FOR_SUMMARY,
             lab_dir=DIR_LAB
         )
-        processor.process()
-        typer.secho("✅ Triage process completed successfully.", fg=typer.colors.GREEN)
+        # 1. Capture the report returned by the processor
+        report = processor.process()
+
+        # 2. Display the detailed report to the user
+        typer.secho("\n--- Triage Report ---", fg=typer.colors.CYAN, bold=True)
+
+        if report["moved_to_summary"]:
+            typer.secho("✅ Moved to 'Ready for Summary':", fg=typer.colors.GREEN)
+            for file in report["moved_to_summary"]:
+                typer.echo(f"   - {file}")
+        
+        if report["moved_to_lab"]:
+            typer.secho("🔬 Moved to 'Lab' for correction/OCR:", fg=typer.colors.MAGENTA)
+            for file in report["moved_to_lab"]:
+                typer.echo(f"   - {file}")
+
+        if report["ignored"]:
+            typer.secho("⚠️ Ignored (unsupported file type):", fg=typer.colors.YELLOW)
+            for file in report["ignored"]:
+                typer.echo(f"   - {file}")
+
+        typer.secho("\n✅ Triage process completed successfully.", fg=typer.colors.GREEN)
+
     except Exception as e:
         typer.secho(f"❌ An error occurred during triage: {str(e)}", fg=typer.colors.RED)
         raise typer.Exit(code=1)
@@ -160,7 +176,7 @@ def summarize(
             pdf_path=str(expanded_pdf_path),
             dry_run=dry_run,
             debug=debug,
-            force_ocr=force_ocr # <-- Passa a nova opção
+            force_ocr=force_ocr
         )
         
         if processor.process():
@@ -188,9 +204,6 @@ def summarize(
     except Exception as e:
         typer.secho(f"❌ Fatal error during processing: {e}", fg=typer.colors.RED)
         raise typer.Exit(code=1)
+
 if __name__ == "__main__":
     app()
-
-
-
-

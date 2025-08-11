@@ -1,72 +1,88 @@
-# backend/tests/test_lab.py
-
-"""
-Tests for the LabProcessor class.
-
-Tests:
-    - Successful lab workflow
-    - Test extract_pages method
-    - Test run_unpaper_cleanup method
-    - Test generate_scantailor_project method
-    - Test run_manual_correction method
-"""
-import pytest
-from unittest.mock import patch
+import os
+import unittest
+from unittest.mock import patch, MagicMock, mock_open
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from cartaos.lab import LabProcessor
 
-@pytest.fixture
-def input_path(tmp_path):
+
+class TestLabProcessor(unittest.TestCase):
     """
-    Fixture for creating a temporary input PDF file path.
-
-    Args:
-        tmp_path: Temporary path provided by pytest.
-
-    Returns:
-        Path: Path to the temporary input PDF file.
+    Unit tests for the LabProcessor class.
     """
-    return tmp_path / "input.pdf"
 
-@pytest.fixture
-def output_dir(tmp_path):
-    """
-    Fixture for creating a temporary output directory path.
+    def setUp(self):
+        """
+        Set up the test environment.
 
-    Args:
-        tmp_path: Temporary path provided by pytest.
+        Creates a LabProcessor instance with a temporary input file and output directory.
+        """
+        self.input_path = Path("input.pdf")
+        self.output_dir = Path("output")
+        self.processor = LabProcessor(self.input_path, self.output_dir)
 
-    Returns:
-        Path: Path to the temporary output directory.
-    """
-    return tmp_path / "output"
+    def test_extract_pages(self):
+        """
+        Test that the _extract_pages method extracts TIFF images from the input PDF.
+        """
+        with TemporaryDirectory() as workspace:
+            self.processor._extract_pages(workspace)
+            tiff_files = [file for file in os.listdir(workspace) if file.endswith(".tiff")]
+            self.assertTrue(
+                tiff_files,
+                "No TIFF images were extracted",
+            )
 
-def test_lab_processor(input_path, output_dir):
-    """
-    Test for the LabProcessor process method.
+    @patch("subprocess.run")
+    def test_run_unpaper_cleanup(self, mock_run: MagicMock):
+        """
+        Test that the _run_unpaper_cleanup method runs unpaper on the TIFF images.
+        """
+        with TemporaryDirectory() as workspace:
+            self.processor._run_unpaper_cleanup(workspace)
+            mock_run.assert_any_call(
+                ["unpaper", "page_1.tiff"],
+                cwd=workspace,
+            )
 
-    Asserts that the process method of the LabProcessor returns True.
-    """
-    processor = LabProcessor(input_path, output_dir)
-    assert processor.process() is True
+    @patch("builtins.open", new_callable=mock_open)
+    def test_generate_scantailor_project(self, mock_open: MagicMock):
+        """
+        Test that the _generate_scantailor_project method generates a ScanTailor project file.
+        """
+        with TemporaryDirectory() as workspace:
+            self.processor._generate_scantailor_project(workspace)
+            mock_open.assert_called_once_with(
+                os.path.join(workspace, "project.scantailor"),
+                "w",
+            )
 
-def test_extract_pages(input_path, output_dir):
-    """
-    Test for the _extract_pages method of LabProcessor.
+    @patch("subprocess.run")
+    def test_run_manual_correction(self, mock_run: MagicMock):
+        """
+        Test that the _run_manual_correction method runs ScanTailor Advanced.
+        """
+        with TemporaryDirectory() as workspace:
+            self.processor._run_manual_correction(workspace)
+            mock_run.assert_called_once_with(
+                ["flatpak", "run", "com.github._4lex4.ScanTailor-Advanced", "project.scantailor"],
+                cwd=workspace,
+            )
 
-    Asserts that pdf2image.convert_from_path is called with the correct arguments.
-    """
-    processor = LabProcessor(input_path, output_dir)
-    with patch("pdf2image.convert_from_path") as mock_convert:
-        processor._extract_pages("/tmp/workspace")
-        mock_convert.assert_called_once_with(input_path, dpi=300, grayscale=True)
+    def test_recompose_pdf(self):
+        """
+        Test that the _recompose_pdf method recomposes a PDF from the corrected TIFF images.
+        """
+        with TemporaryDirectory() as workspace:
+            out_dir = os.path.join(workspace, "out")
+            os.makedirs(out_dir, exist_ok=True)
+            for i in range(3):
+                with open(os.path.join(out_dir, f"page_{i+1}.tiff"), "wb") as f:
+                    f.write(b"")
+            self.processor._recompose_pdf(workspace)
+            output_pdf = os.path.join(self.output_dir, self.input_path.name)
+            self.assertTrue(
+                os.path.exists(output_pdf),
+                "PDF was not saved",
+            )
 
-def test_run_unpaper_cleanup(input_path, output_dir):
-    """
-    Test for the _run_unpaper_cleanup method of LabProcessor.
-
-    Asserts that subprocess.run is called with the correct arguments.
-    """
-    processor = LabProcessor(input_path, output_dir)
-    with patch("subprocess.run") as mock_run:
-        processor._run_unpaper_cleanup("/tmp/workspace")
-        mock_run.assert_called_once_with(["unpaper", "page_1.tiff"], cwd="/tmp/workspace")

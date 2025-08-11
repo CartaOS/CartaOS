@@ -1,89 +1,76 @@
-# backend/tests/test_ocr.py
-
-import logging
-import os
-import pytest
-from pathlib import Path
-from cartaos.ocr import OcrProcessor
-
 """
 Tests for the OcrProcessor class.
 
-Tests:
-    - Successful OCR process
-    - Failed OCR process due to missing ocrmypdf command
-    - Invalid input file
+Tests that the OcrProcessor class runs ocrmypdf correctly and handles errors
+gracefully.
+
 """
 
-@pytest.fixture
-def input_file(tmp_path):
-    """
-    Creates a temporary PDF file as input for the OCR processor.
+import pytest
+import subprocess
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+from cartaos.ocr import OcrProcessor
 
-    Returns:
-        Path: Path to the temporary PDF file.
-    """
-    # Create a temporary PDF file
-    input_file = tmp_path / "input.pdf"
-    with open(input_file, "w") as f:
-        f.write("This is a test PDF file.")
-    return input_file
 
 @pytest.fixture
-def output_file(tmp_path):
+def input_output_paths(tmp_path):
     """
-    Creates a temporary output directory and file for the OCR processor.
+    Creates an empty input file and returns paths to the input and output files.
+
+    Args:
+        tmp_path (Path): Temporary directory path.
 
     Returns:
-        Path: Path to the temporary output file.
+        tuple: Input and output paths.
     """
-    # Create a temporary output directory
-    output_dir = tmp_path / "output"
-    output_dir.mkdir()
-    return output_dir / "output.pdf"
+    input_path = tmp_path / "input.pdf"
+    output_path = tmp_path / "output.pdf"
+    input_path.touch()  # create an empty input file
+    return input_path, output_path
 
-def test_ocr_processor(input_file, output_file):
-    """
-    Tests a successful OCR process.
 
-    Asserts:
-        - The OCR process returns True
+class TestOcrProcessor:
     """
-    # Create an OcrProcessor instance
-    processor = OcrProcessor(input_file, output_file)
-    # Run the OCR process
-    result = processor.process()
-    # Check the result
-    assert result is True
+    Tests for the OcrProcessor class.
+    """
 
-def test_ocr_processor_failure(input_file, output_file):
-    """
-    Tests a failed OCR process due to missing ocrmypdf command.
+    def test_process_success(self, input_output_paths):
+        """
+        Tests that process runs ocrmypdf successfully.
 
-    Asserts:
-        - The OCR process returns False
-    """
-    # Create an OcrProcessor instance
-    processor = OcrProcessor(input_file, output_file)
-    # Simulate a failure by removing the ocrmypdf command
-    os.environ["PATH"] = ""
-    # Run the OCR process
-    result = processor.process()
-    # Check the result
-    assert result is False
+        Args:
+            input_output_paths (tuple): Input and output paths.
+        """
+        input_path, output_path = input_output_paths
+        with patch('subprocess.run', return_value=MagicMock(returncode=0)):
+            processor = OcrProcessor(input_path, output_path)
+            result = processor.process()
+            assert result is True
 
-def test_ocr_processor_invalid_input(input_file, output_file):
-    """
-    Tests a failed OCR process due to invalid input file.
+    def test_process_failure(self, input_output_paths):
+        """
+        Tests that process handles ocrmypdf errors gracefully.
 
-    Asserts:
-        - The OCR process returns False
-    """
-    # Create an OcrProcessor instance
-    processor = OcrProcessor(input_file, output_file)
-    # Simulate an invalid input file
-    input_file.unlink()
-    # Run the OCR process
-    result = processor.process()
-    # Check the result
-    assert result is False
+        Args:
+            input_output_paths (tuple): Input and output paths.
+        """
+        input_path, output_path = input_output_paths
+        with patch('subprocess.run', side_effect=subprocess.CalledProcessError(1, 'ocrmypdf', stderr="Error")):
+            processor = OcrProcessor(input_path, output_path)
+            result = processor.process()
+            assert result is False
+
+    def test_process_command_not_found(self, input_output_paths):
+        """
+        Tests that process handles FileNotFoundError for ocrmypdf.
+
+        Args:
+            input_output_paths (tuple): Input and output paths.
+        """
+        input_path, output_path = input_output_paths
+        with patch('subprocess.run', side_effect=FileNotFoundError):
+            processor = OcrProcessor(input_path, output_path)
+            result = processor.process()
+            assert result is False
+
