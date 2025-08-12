@@ -1,6 +1,6 @@
 import logging
 import unittest
-from cartaos.utils import WarningCaptureHandler
+from cartaos.utils.utils import WarningCaptureHandler
 
 class TestWarningCaptureHandler(unittest.TestCase):
     """Unit tests for the WarningCaptureHandler class."""

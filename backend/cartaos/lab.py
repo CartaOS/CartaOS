@@ -1,9 +1,12 @@
+# -*- coding: utf-8 -*-
+# backend/cartaos/lab.py
+
 import logging
 import os
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import List
 
 import pdf2image
 from img2pdf import convert
@@ -11,20 +14,20 @@ from img2pdf import convert
 logger = logging.getLogger(__name__)
 
 class LabProcessor:
-    def __init__(self, input_path: Path, output_dir: Path):
+    def __init__(self, input_path: Path, output_dir: Path) -> None:
         """
-        Initialize the LabProcessor.
+        Initialize the LabProcessor with the input PDF and output directory.
 
         Args:
             input_path (Path): The path to the source PDF file.
             output_dir (Path): The destination directory for the corrected PDF.
         """
-        self.input_path = input_path
-        self.output_dir = output_dir
+        self.input_path: Path = input_path
+        self.output_dir: Path = output_dir
 
     def process(self) -> bool:
         """
-        Orchestrate the entire workflow.
+        Send the PDF to the manual correction lab with ScanTailor.
 
         Returns:
             bool: True on success, False on failure.
@@ -38,22 +41,24 @@ class LabProcessor:
                 self._recompose_pdf(workspace)
             return True
         except Exception as e:
-            logger.error(f"Error during processing: {e}")
+            logger.error(f"Error during lab processing: {e}")
             return False
 
-    def _extract_pages(self, workspace: str):
+    def _extract_pages(self, workspace: str) -> None:
         """
-        Extract pages from the input PDF.
+        Extract the pages from the input PDF.
 
         Args:
             workspace (str): The temporary workspace directory.
         """
         logger.info("Extracting pages from input PDF")
-        images = pdf2image.convert_from_path(self.input_path, dpi=300, grayscale=True)
-        for i, image in enumerate(images):
-            image.save(os.path.join(workspace, f"page_{i+1}.tiff"))
+        images: List[Path] = []
+        for i, image in enumerate(pdf2image.convert_from_path(self.input_path, dpi=300, grayscale=True)):
+            image_path: Path = Path(os.path.join(workspace, f"page_{i+1}.tiff"))
+            image.save(image_path)
+            images.append(image_path)
 
-    def _run_unpaper_cleanup(self, workspace: str):
+    def _run_unpaper_cleanup(self, workspace: str) -> None:
         """
         Run unpaper cleanup on the extracted TIFF images.
 
@@ -65,7 +70,7 @@ class LabProcessor:
             if file.endswith(".tiff"):
                 subprocess.run(["unpaper", file], cwd=workspace)
 
-    def _generate_scantailor_project(self, workspace: str):
+    def _generate_scantailor_project(self, workspace: str) -> None:
         """
         Generate a ScanTailor project file.
 
@@ -80,7 +85,7 @@ class LabProcessor:
                     f.write(f"<image>{file}</image>\n")
             f.write("</project>\n")
 
-    def _run_manual_correction(self, workspace: str):
+    def _run_manual_correction(self, workspace: str) -> None:
         """
         Run manual correction using ScanTailor Advanced.
 
@@ -92,7 +97,7 @@ class LabProcessor:
         input("Press [Enter] to continue...")
         subprocess.run(["flatpak", "run", "com.github._4lex4.ScanTailor-Advanced", "project.scantailor"], cwd=workspace)
 
-    def _recompose_pdf(self, workspace: str):
+    def _recompose_pdf(self, workspace: str) -> None:
         """
         Recompose the PDF from the corrected images.
 
@@ -100,10 +105,10 @@ class LabProcessor:
             workspace (str): The temporary workspace directory.
         """
         logger.info("Recomposing PDF from corrected images")
-        out_dir = os.path.join(workspace, "out")
-        if os.path.exists(out_dir) and os.listdir(out_dir):
-            images = [os.path.join(out_dir, file) for file in os.listdir(out_dir) if file.endswith(".tiff")]
-            pdf_path = os.path.join(self.output_dir, self.input_path.name)
+        out_dir: Path = Path(os.path.join(workspace, "out"))
+        if out_dir.exists() and out_dir.is_dir() and any(out_dir.iterdir()):
+            images: List[Path] = [out_dir / file for file in os.listdir(out_dir) if file.endswith(".tiff")]
+            pdf_path: Path = self.output_dir / self.input_path.name
             convert(images, pdf_path)
             logger.info(f"PDF saved to {pdf_path}")
         else:
