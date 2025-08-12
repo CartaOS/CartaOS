@@ -1,0 +1,144 @@
+*** Para nossa versão 0.1.0:
+
+*** Implementação para o Release 0.1.0:
+Identificação: O sistema automaticamente move os arquivos que precisam de correção para a pasta 03_Lab.
+Visualização na GUI: Em vez de apenas rodar um script, sua GUI deve ter uma área (uma aba ou seção "Laboratório") que lista os arquivos presentes no diretório 03_Lab.
+Ação do Usuário: Para cada arquivo na lista, a GUI poderia oferecer um botão "Corrigir no ScanTailor". Clicar nesse botão abriria a ferramenta externa com o projeto do arquivo selecionado.
+Finalização: Após você salvar seu trabalho no ScanTailor, a GUI precisaria de uma ação para finalizar a etapa, como um botão "Concluído, Mover para OCR". Esse comando então moveria o resultado do ScanTailor para a pasta 04_ReadyForOCR.
+Isso transforma a etapa manual em uma tarefa gerenciada pelo CartaOS, o que é um objetivo muito mais realista e valioso para a primeira versão.
+
+*** Vamos ficar com a GUI proposta pelo Gemini:
+
+Gerenciamento Visual das Filas
+O poder do seu pipeline está nos diretórios que funcionam como "filas" de processamento. Sua GUI pode tornar isso visível.
+Abas por Etapa: Imagine a GUI com abas correspondentes às pastas principais: "Caixa de Entrada", "Triagem", "Laboratório", "Pronto para OCR", "Processados".
+Lista de Arquivos: Dentro de cada aba, a GUI listaria os arquivos que estão atualmente naquele diretório. Isso dá ao usuário uma visão clara e controle sobre todo o fluxo de trabalho.
+
+Tela única com 4 blocos:
+📂 Triage
+🔧 Lab
+📄 OCR
+📝 Processor
+
+Botões: “Run Step”, “Run Full Pipeline”, “Open Log”.
+Barra de progresso e status básico.
+Lista de arquivos por etapa (opcional, mas recomendada).
+
+Aba de “Configurações” com:
+Chave de API (salva no .env).
+Caminho do diretório base.
+
+Tela de Configurações: Crie uma área simples na GUI onde o usuário possa inserir e salvar sua chave de API do Google e, opcionalmente, o caminho para o seu cofre do Obsidian. Isso substitui a necessidade de rodar o comando setup via terminal.
+Painel de Logs/Status: Uma pequena área na GUI que mostre o que o sistema está fazendo em tempo real (Processando triage..., Iniciando OCR de 'documento.pdf'...). Isso é crucial para que o usuário não pense que o programa travou durante tarefas longas.
+
+Tela única com 4 blocos (Triage, Lab, OCR, Summary).
+Seletor de diretório base e detecção automática das subpastas 00–07.
+Botões: “Run Triage”, “Run OCR batch”, “Run Full Pipeline”, “Open Log”.
+Barra de progresso por etapa e lista de eventos/erros recentes.
+
+
+Backend:
+[✓] Refatorar para módulos utilitários (pdf_utils, ai_utils, etc.).
+[✓] Documentar tudo com Docstrings.
+[✓] Implementar testes unitários para os módulos.
+GUI (Simples e Funcional):
+[✓] Uma tela principal com abas para visualizar os arquivos em cada etapa do pipeline.
+[✓] Uma interface para gerenciar a etapa manual do Lab (listar arquivos, botão para abrir ferramenta externa, botão para finalizar).
+[✓] Uma tela de configurações para a chave de API e outras opções.
+[✓] Um painel de status/log.
+Release:
+[✓] Gerar um instalador usando o tauri build.
+
+3. Empacotamento e Distribuição
+Um "release" implica em ter um instalador ou um executável que outras pessoas (ou você mesmo, em outra máquina) possam usar facilmente.
+Aproveite o Tauri: Você já está usando Tauri, que é perfeito para isso. Planeje usar o comando tauri build para gerar os pacotes de instalação para Windows, macOS e Linux. O seu arquivo tauri.conf.json já tem as configurações de ícone e de bundle preparadas para isso.
+
+*** A documentação proposta pelo ChatGPT
+README.md bem completo, com:
+💡 Quick start (1–2 comandos para instalar e rodar)
+📸 Capturas de tela ou GIF do instalador em execução
+🛠 Lista de features atuais + roadmap breve
+🤝 Seção de contribuição (link para CONTRIBUTING.md)
+🏷 Badges de build, cobertura de testes e licença
+CHANGELOG.md já no padrão Keep a Changelog para começar o versionamento.
+ROADMAP.md atualizado com milestones claros.
+Exemplo de uso mostrando a pipeline completa (Triage → Lab → OCR → Processor).
+Mensagens mais humanas e emojis na CLI (mantendo Rich).
+
+
+O processo de release proposto pelo Microsoft Copilot
+
+Testes unitários cobrindo todas as funções do pipeline
+Testes de integração simulando execução completa em dry-run.
+CI/CD no GitHub Actions:
+- Rodar testes automaticamente.
+- Validar instalação em containers Linux e, se possível, runners para Windows e MacOS.
+Pre-commit hooks para lint, formatação e verificação de imports.
+
+Empacotamento pelo Tauri
+
+
+Polimento técnico antes do release
+Padronização de nomes de arquivos e pastas (kebab_case ou CamelCase, mas consistente).
+Mensagens de erro que digam “o que deu errado + como corrigir”.
+Timeouts e mensagens claras em chamadas externas (ocrmypdf, tesseract).
+Tratamento seguro de secrets (não logar API key; .env no .gitignore).
+Conferir os paths da documentação: SETUP/README estão atualizados com o novo installer sob backend/cartaos/install_dev_env.
+Versão centralizada do projeto (por exemplo, via Poetry, e exibida no CLI — cartaos --version).
+Changelog inicial (CHANGELOG.md) com breaking changes e adições.
+
+
+Estratégia de testes
+Unit:
+triage: classificação por extensão e heurística de texto.
+processor: sanitização, fallback de extração, controle de dry-run.
+ocr: invocação de ocrmypdf (mock), tratamento de erros.
+utils: WarningCaptureHandler.
+Integração:
+pipeline “happy path” com arquivos fake e mocks de ocrmypdf/IA.
+Smoke tests (manuais):
+Dois PDFs de exemplo: um com texto, um imagem.
+Execução do pipeline CLI e pela GUI.
+Verificar outputs em 05_ReadyForSummary e 07_Processed e resumo .md.
+
+
+Documentação a incluir/ajustar
+README: visão geral, demo GIF (se der), badges, Quickstart.
+SETUP: comando único com installer modular, variáveis .env, permissões e dependências.
+ARCHITECTURE: fluxo dos módulos, pontos de extensão (plugins futuros).
+CONTRIBUTING: fluxo de branches (feat/fix/chore), PRs, testes.
+TROUBLESHOOTING (novo): erros comuns do ocrmypdf/tesseract e correções.
+ROADMAP: marcar v0.1.0 e o que vai no 0.2.0 (GUI + manifest + dedupe).
+
+CI e qualidade
+Lint/format (black, isort) e pytest no backend.
+Build do frontend (lint, build).
+cargo check no Tauri.
+Branch protection: PR obrigatório e checks passando.
+Template de PR com “Como testar” e checklist.
+
+
+Processo de release (v0.1.0)
+Abrir PR “release: v0.1.0” com:
+CHANGELOG.md (Added/Fixed/Docs).
+Versão atualizada (Poetry e app GUI se necessário).
+README/SETUP atualizados.
+Merge na main (checks verdes).
+Criar Tag: v0.1.0.
+GitHub Release com notas, itens processados, limitações conhecidas, e link para SETUP.
+Abrir milestone 0.2.0.
+
+Riscos e mitigação rápidos
+Dependências externas quebrando (ocr/tesseract): dry-run abrangente, mensagens de correção e checks no installer.
+PDFs “sujos”: warnings capturados e bloco de “document quality warning” (você já fez isso — ótimo).
+Falhas de API: retry simples com backoff e mensagem clara, fallback para debug.
+
+Nice-to-have (0.2+)
+Manifest de documentos com status/timestamps e deduplicação por hash (SHA-256).
+Retentativa com backoff para OCR/IA.
+Métricas simples e relatório final do batch.
+CLI dry-run do pipeline completo.
+Configuração externa (config.yaml) para linguagens OCR e paths.
+Arquivo de configuração externo (config.yaml) para que usuários possam personalizar pacotes, linguagens OCR, etc.
+Modo interativo com menus (mesmo no terminal), usando algo como questionary ou InquirerPy.
+Fallback inteligente para quando algum pacote não estiver no package manager detectado (ex.: baixar binário oficial).

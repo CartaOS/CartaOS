@@ -1,0 +1,71 @@
+11/08/2025 (Segunda-feira) - 21:21
+
+Com base nesse plano detalhado, vamos elaborar o que fazer **amanhã**. O objetivo de amanhã não é implementar tudo, mas sim construir as fundações corretas para que o resto do desenvolvimento flua de maneira lógica e eficiente.
+
+A estratégia para amanhã será: **"Estrutura Primeiro, Interface Depois"**. Precisamos refatorar o backend para a nova arquitetura modular *antes* de construir a GUI que dependerá dela.
+
+---
+
+### **Plano de Ação para Amanhã**
+
+#### **Manhã: A Fundação do Backend (Refatoração e Modularização)**
+
+**Objetivo:** Refatorar o código do backend existente para a nova estrutura modular. Isso tornará o código mais limpo, testável e fácil de ser "consumido" pela GUI.
+
+1.  **Criar a Estrutura de Módulos (5 min):**
+    * No diretório `backend/cartaos/`, crie uma nova pasta chamada `utils/`.
+    * Dentro de `utils/`, crie os arquivos vazios: `__init__.py`, `pdf_utils.py`, `text_utils.py`, e `ai_utils.py`.
+
+2.  **Mover a Lógica de PDF para `pdf_utils.py` (45 min):**
+    * [cite_start]Identifique a função `robust_extract_text` que discutimos (que tenta `pdfplumber` e depois `fitz` [cite: 293, 294]).
+    * Mova essa lógica para uma função dentro de `pdf_utils.py`.
+    * [cite_start]Atualize os arquivos `triage.py` e `processor.py` para importar e usar `from .utils.pdf_utils import robust_extract_text` em vez de terem a lógica duplicada. [cite: 313, 277]
+
+3.  **Mover a Lógica de Texto para `text_utils.py` (20 min):**
+    * [cite_start]Encontre o método `_sanitize_text` dentro da classe `CartaOSProcessor` em `processor.py`. [cite: 288]
+    * Mova-o para uma função `sanitize(text)` em `text_utils.py`.
+    * Atualize `processor.py` para importar e usar essa nova função utilitária.
+
+4.  **Mover a Lógica de IA para `ai_utils.py` (45 min):**
+    * [cite_start]Encontre o método `generate_summary` em `processor.py`. [cite: 295]
+    * Mova toda a lógica de interação com a API do Gemini (leitura do prompt, configuração de segurança, chamada `genai.generate_content`) para uma função `generate_summary(text)` em `ai_utils.py`.
+    * `processor.py` agora apenas importará e chamará essa função, passando o texto sanitizado.
+
+5.  **Revisão e Limpeza dos "Orquestradores" (15 min):**
+    * Com a lógica de baixo nível movida, seu arquivo `processor.py` se tornará muito mais enxuto. [cite_start]Ele agora atuará como um "orquestrador", chamando funções dos módulos `utils` na sequência correta. [cite: 277]
+    * Revise `processor.py` e `triage.py` para garantir que estejam legíveis e que todas as importações estejam corretas.
+
+**Meta ao Final da Manhã:** Seu backend estará modular e desacoplado. Você terá uma "caixa de ferramentas" (`utils`) e os "orquestradores" que a utilizam. Esta fundação é essencial para os próximos passos.
+
+---
+
+#### **Tarde: Preparação da GUI e Garantia de Qualidade**
+
+**Objetivo:** Preparar a comunicação entre o frontend e o novo backend modular, e garantir que a refatoração da manhã está coberta por testes.
+
+1.  **Definir a Ponte de Comunicação (Tauri Commands) (60 min):**
+    * Antes de escrever qualquer código Svelte, precisamos definir como a GUI (JavaScript) chamará as funções do backend (Python). A forma mais pragmática de iniciar é através de comandos que invocam seu CLI.
+    * Em `src-tauri/src/main.rs`, defina alguns [Tauri Commands](https://tauri.app/v1/guides/features/command) iniciais que o frontend poderá chamar.
+    * Exemplos de comandos para criar:
+        * `#[tauri::command] fn run_triage() -> Result<String, String>`
+        * `#[tauri::command] fn get_files_in_stage(stage: String) -> Result<Vec<String>, String>`
+    * A implementação inicial desses comandos em Rust pode simplesmente usar `std::process::Command` para chamar o CLI Python (`python3 backend/cartaos/cli.py triage`, por exemplo) e retornar a saída.
+
+2.  **Esboçar os Componentes da GUI (Svelte) (30 min):**
+    * Com a ponte de comunicação planejada, crie os arquivos de componente Svelte vazios que formarão a estrutura da sua GUI.
+    * Em `frontend/src/lib/`, talvez crie uma pasta `components/`.
+    * Crie os arquivos: `PipelineView.svelte`, `SettingsView.svelte`, `StatusBar.svelte`.
+    * Você ainda não vai implementar a lógica, apenas criar o esqueleto visual e as áreas que correspondem ao plano.
+
+3.  **Implementar Testes Unitários para os Módulos `utils` (90 min):**
+    * Agora que suas funções utilitárias estão isoladas, este é o momento perfeito para testá-las, conforme seu plano.
+    * Em `backend/tests/`, crie uma nova pasta `utils/`.
+    * Crie `test_text_utils.py` e escreva um teste simples para a função `sanitize`.
+    * Crie `test_pdf_utils.py` e escreva um teste para `robust_extract_text`, usando um arquivo PDF de mock.
+    * Isso cumpre um requisito chave do seu plano e dá confiança de que a refatoração foi bem-sucedida.
+
+**Meta ao Final da Tarde:** Você terá uma fundação de backend testada, uma ponte de comunicação via Tauri definida e o esqueleto dos componentes da GUI pronto para ser desenvolvido.
+
+---
+
+Com este plano, você terá um dia extremamente produtivo, avançando significativamente na qualidade do backend e deixando tudo preparado para, nos dias seguintes, focar em conectar a interface Svelte aos comandos Tauri e dar vida à experiência do usuário que você desenhou.
