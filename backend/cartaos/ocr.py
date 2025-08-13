@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# backend/cartaos/ocr.py
+
 """
 OCR processor module for CartaOS.
 
@@ -16,13 +18,13 @@ import logging
 import os
 from pathlib import Path
 from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
-
+from typing import Union
 
 class OcrProcessor:
     """
     Runs ocrmypdf on the input file and saves it to the output path.
 
-    Args:
+    Attributes:
         input_path (Path): Path to the input PDF file.
         output_path (Path): Path to the output PDF file.
     """
@@ -30,9 +32,13 @@ class OcrProcessor:
     def __init__(self, input_path: Path, output_path: Path) -> None:
         """
         Initializes OcrProcessor with input and output paths.
+
+        Args:
+            input_path (Path): Path to the input PDF file.
+            output_path (Path): Path to the output PDF file.
         """
-        self.input_path = input_path
-        self.output_path = output_path
+        self.input_path: Path = input_path
+        self.output_path: Path = output_path
 
     def process(self) -> bool:
         """
@@ -46,18 +52,19 @@ class OcrProcessor:
         # Ensure the output directory exists
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Build the command line arguments
-        command = [
+        # Construct command line for ocrmypdf
+        command: list[Union[str, Path]] = [
             "ocrmypdf",
-            "--language", "por+eng",  # Languages for OCR
-            "--force-ocr",           # Forces OCR even if text is present
-            "--deskew",              # Straightens skewed pages
-            "--clean",               # Cleans pages before OCR
-            "--jobs", str(os.cpu_count()), # Use all available CPU cores
+            "--language", "por+eng",
+            "--force-ocr",
+            "--deskew",
+            "--clean",
+            "--jobs", str(os.cpu_count()),
             str(self.input_path),
             str(self.output_path)
         ]
 
+        # Initialize progress bar for OCR processing
         with Progress(
             TextColumn("[bold blue]{task.description}", justify="right"),
             BarColumn(bar_width=None),
@@ -65,37 +72,24 @@ class OcrProcessor:
             TextColumn("[progress.percentage]{task.percentage:>3.1f}%", justify="right"),
             refresh_per_second=1
         ) as progress:
-            # Create a task for the current file
             task_id = progress.add_task(f"[red]{self.input_path.name}[/red]", total=100)
             try:
-                # Run the ocrmypdf command
+                # Execute the ocrmypdf command
                 result = subprocess.run(command, check=True, capture_output=True, text=True)
-                # Advance the task to completion
+                # Mark task as completed on success
                 progress.update(task_id, completed=100)
-                # Log the successful completion
                 logging.info(f"OCR completed successfully for '{self.input_path.name}'.")
-                # Log the command output
                 logging.debug(result.stdout)
-                # Return True on success
                 return True
             except subprocess.CalledProcessError as e:
-                # Log the failure
-                logging.error(f"ocrmypdf failed for '{self.input_path.name}'.")
-                # Log the return code
-                logging.error(f"Return Code: {e.returncode}")
-                # Log the stderr output
+                # Handle errors from ocrmypdf execution
+                logging.error(f"ocrmypdf failed for '{self.input_path.name}'. Return Code: {e.returncode}")
                 logging.error(f"Stderr: {e.stderr}")
-                # Update the task to failure
                 progress.update(task_id, completed=100)
-                # Return False on failure
                 return False
             except FileNotFoundError:
-                # Log the error
+                # Handle command not found error
                 logging.error("`ocrmypdf` command not found. Is it installed and in your PATH?")
-                # Update the task to failure
                 progress.update(task_id, completed=100)
-                # Return False on failure
                 return False
-
-
 
