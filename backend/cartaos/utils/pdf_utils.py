@@ -2,11 +2,13 @@
 # backend/cartaos/utils/pdf_utils.py
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 import pdfplumber
 import fitz
 import logging
+import pdf2image
+from img2pdf import convert
 
 def extract_text(pdf_path: Path) -> Optional[str]:
     """
@@ -45,6 +47,38 @@ def extract_text(pdf_path: Path) -> Optional[str]:
                 return text.strip()
     except Exception as e:
         logging.error(f"PyMuPDF extraction failed: {e}")
+    return text
 
-    return None
+def extract_pages(input_path: Path) -> List[Path]:
+    """
+    Extract the pages from the input PDF.
 
+    Args:
+        input_path (Path): The path to the source PDF file.
+
+    Returns:
+        List[Path]: A list of paths to the extracted TIFF images.
+    """
+    images: List[Path] = []
+    for i, image in enumerate(pdf2image.convert_from_path(input_path, dpi=300, grayscale=True)):
+        image_path: Path = input_path.parent / f"page_{i+1}.tiff"
+        image.save(image_path)
+        images.append(image_path)
+    return images
+
+
+def recompose_pdf(images: List[Path], output_dir: Path, input_path: Path) -> Path:
+    """
+    Recompose the PDF from the corrected images.
+
+    Args:
+        images (List[Path]): The list of paths to the corrected TIFF images.
+        output_dir (Path): The destination directory for the corrected PDF.
+        input_path (Path): The path to the source PDF file.
+
+    Returns:
+        Path: The path to the saved PDF file.
+    """
+    pdf_path: Path = output_dir / input_path.name
+    convert(images, pdf_path)
+    return pdf_path

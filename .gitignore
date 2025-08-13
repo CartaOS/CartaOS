@@ -7,6 +7,7 @@
 05_ReadyForSummary/*
 06_TooLarge/*
 07_Processed/*
+gitignore/*
 
 #But also keeps directory structure
 !00_Inbox/.gitkeep

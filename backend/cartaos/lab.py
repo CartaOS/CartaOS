@@ -7,11 +7,10 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import List
-
-import pdf2image
-from img2pdf import convert
+from .utils.pdf_utils import extract_pages, recompose_pdf
 
 logger = logging.getLogger(__name__)
+
 
 class LabProcessor:
     def __init__(self, input_path: Path, output_dir: Path) -> None:
@@ -34,83 +33,62 @@ class LabProcessor:
         """
         try:
             with tempfile.TemporaryDirectory() as workspace:
-                self._extract_pages(workspace)
-                self._run_unpaper_cleanup(workspace)
-                self._generate_scantailor_project(workspace)
-                self._run_manual_correction(workspace)
-                self._recompose_pdf(workspace)
+                logger.info("Extracting pages from input PDF")
+                images: List[Path] = extract_pages(self.input_path)
+                
+                logger.info("Running unpaper cleanup")
+                self._run_unpaper_cleanup(workspace, images)
+
+                logger.info("Generating ScanTailor project file")
+                self._generate_scantailor_project(workspace, images)
+
+                logger.info("Running manual correction using ScanTailor Advanced")
+                print("Please correct the images using ScanTailor Advanced.")
+                input("Press [Enter] to continue...")
+                self._run_manual_correction(workspace, images)
+
+                logger.info("Recomposing PDF from corrected images")
+                pdf_path = recompose_pdf(images, self.output_dir, self.input_path)
+
+                logger.info(f"PDF saved to {pdf_path}")
             return True
         except Exception as e:
             logger.error(f"Error during lab processing: {e}")
             return False
 
-    def _extract_pages(self, workspace: str) -> None:
-        """
-        Extract the pages from the input PDF.
-
-        Args:
-            workspace (str): The temporary workspace directory.
-        """
-        logger.info("Extracting pages from input PDF")
-        images: List[Path] = []
-        for i, image in enumerate(pdf2image.convert_from_path(self.input_path, dpi=300, grayscale=True)):
-            image_path: Path = Path(os.path.join(workspace, f"page_{i+1}.tiff"))
-            image.save(image_path)
-            images.append(image_path)
-
-    def _run_unpaper_cleanup(self, workspace: str) -> None:
+    def _run_unpaper_cleanup(self, workspace: str, images: List[Path]) -> None:
         """
         Run unpaper cleanup on the extracted TIFF images.
 
         Args:
             workspace (str): The temporary workspace directory.
+            images (List[Path]): The list of paths to the extracted TIFF images.
         """
-        logger.info("Running unpaper cleanup")
-        for file in os.listdir(workspace):
-            if file.endswith(".tiff"):
-                subprocess.run(["unpaper", file], cwd=workspace)
+        for image in images:
+            subprocess.run(["unpaper", image], cwd=workspace)
 
-    def _generate_scantailor_project(self, workspace: str) -> None:
+    def _generate_scantailor_project(self, workspace: str, images: List[Path]) -> None:
         """
         Generate a ScanTailor project file.
 
         Args:
             workspace (str): The temporary workspace directory.
+            images (List[Path]): The list of paths to the extracted TIFF images.
         """
-        logger.info("Generating ScanTailor project file")
         with open(os.path.join(workspace, "project.scantailor"), "w") as f:
             f.write("<project>\n")
-            for file in os.listdir(workspace):
-                if file.endswith(".tiff"):
-                    f.write(f"<image>{file}</image>\n")
+            for image in images:
+                f.write(f"<image>{image.name}</image>\n")
             f.write("</project>\n")
 
-    def _run_manual_correction(self, workspace: str) -> None:
+    def _run_manual_correction(self, workspace: str, images: List[Path]) -> None:
         """
         Run manual correction using ScanTailor Advanced.
 
         Args:
             workspace (str): The temporary workspace directory.
+            images (List[Path]): The list of paths to the extracted TIFF images.
         """
-        logger.info("Running manual correction using ScanTailor Advanced")
-        print("Please correct the images using ScanTailor Advanced.")
-        input("Press [Enter] to continue...")
+        
         subprocess.run(["flatpak", "run", "com.github._4lex4.ScanTailor-Advanced", "project.scantailor"], cwd=workspace)
-
-    def _recompose_pdf(self, workspace: str) -> None:
-        """
-        Recompose the PDF from the corrected images.
-
-        Args:
-            workspace (str): The temporary workspace directory.
-        """
-        logger.info("Recomposing PDF from corrected images")
-        out_dir: Path = Path(os.path.join(workspace, "out"))
-        if out_dir.exists() and out_dir.is_dir() and any(out_dir.iterdir()):
-            images: List[Path] = [out_dir / file for file in os.listdir(out_dir) if file.endswith(".tiff")]
-            pdf_path: Path = self.output_dir / self.input_path.name
-            convert(images, pdf_path)
-            logger.info(f"PDF saved to {pdf_path}")
-        else:
-            logger.error("No output images found")
 
