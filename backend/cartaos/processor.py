@@ -11,7 +11,6 @@ import logging
 import shutil
 from pathlib import Path
 from typing import Optional, List
-from google import genai
 from dotenv import load_dotenv
 from slugify import slugify
 from rich.progress import (
