@@ -34,6 +34,7 @@ img2pdf = ">=0.6.1,<0.7.0"
 pytest = "^8.4.1"
 black = "^24.4.2"
 isort = "^5.13.2"
+pytest-cov = "^5.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -41,3 +42,10 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 cartaos = "cartaos.cli:app"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+  # silencia todos os DeprecationWarning que mencionem SwigPy.* sem __module__
+  "ignore:.*builtin type SwigPy.* has no __module__ attribute:DeprecationWarning",
+  "ignore:.*builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
+]

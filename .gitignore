@@ -73,3 +73,7 @@ build/
 
 # Other OS junk
 Thumbs.db
+.coverage
+coverage.xml
+htmlcov/
+backend/.coverage

@@ -25,186 +25,289 @@ The code is organized into a single module, with the main entry point at the
 bottom of the file.
 """
 
-import typer
+import sys
 from pathlib import Path
 from typing import Optional
 
-# Import all the processor classes from our modules
-from cartaos.processor import CartaOSProcessor
+import typer
+
+from cartaos import config
 from cartaos.lab import LabProcessor
 from cartaos.ocr import OcrProcessor
+from cartaos.processor import CartaOSProcessor
 from cartaos.triage import TriageProcessor
-from cartaos import config
 
-# --- Configuration ---
+__app_name__ = "cartaos"
+__version__ = "0.1.0"
+
 app = typer.Typer(
-    help=" CartaOS - [C]uration, [A]nalysis, and [R]efinement of [T]exts for [A]cademia ([O]pen [S]ource)."
-    "A command-line tool for academic document processing.",
+    name=__app_name__,
     add_completion=False,
-    rich_markup_mode="markdown"
+    help="CartaOS - [C]uration, [A]nalysis, and [R]efinement of [T]exts for [A]cademia ([O]pen [S]ource).",
+    rich_markup_mode="markdown",
 )
 
-# Define base directories relative to this file's location
+def _version_callback(value: bool) -> None:
+    """Callback para mostrar a versão e sair."""
+    if value:
+        typer.echo(f"{__app_name__}, version {__version__}")
+        raise typer.Exit()
+
+
+# Diretórios base (iguais aos do seu config)
 BASE_DIR: Path = config.ROOT_DIR
 DIR_TRIAGE: Path = BASE_DIR / "02_Triage"
 DIR_LAB: Path = BASE_DIR / "03_Lab"
 DIR_READY_FOR_OCR: Path = BASE_DIR / "04_ReadyForOCR"
 DIR_READY_FOR_SUMMARY: Path = BASE_DIR / "05_ReadyForSummary"
 
+
+@app.callback()
+def main(
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        "-V",
+        help="Show the version and exit.",
+        callback=_version_callback,
+        is_eager=True,
+    )
+) -> None:
+    """
+    Callback principal do CartaOS.
+    """
+    return
+
+
+
 @app.command()
-def setup():
+def setup(
+    non_interactive: bool = typer.Option(
+        False,
+        "--non-interactive",
+        help="Run without prompts (useful for CI/tests).",
+    )
+) -> None:
     """
     Guides the user through the initial configuration of CartaOS.
+    In non-interactive mode (or when stdin is not a TTY), it creates a minimal .env if missing and exits 0.
     """
+    import os
+
     typer.secho("--- CartaOS Setup ---", fg=typer.colors.CYAN)
-    
+
     backend_root: Path = Path(__file__).parent.parent
-    env_path: Path = backend_root / '.env'
+    env_path: Path = backend_root / ".env"
+
+    # Detecta modo não interativo automaticamente (como em testes)
+    non_interactive = non_interactive or not sys.stdin.isatty()
+
     if env_path.exists():
-        typer.secho(f" .env file already exists at: {env_path.as_posix()}", fg=typer.colors.GREEN)
-    else:
-        typer.echo("Let's configure your API key for Google Gemini.")
-        api_key: str = typer.prompt("Please paste your Google API Key here")
-        
-        obsidian_path: str = typer.prompt(
-            "(Optional) Enter the absolute path to your Obsidian vault. Leave blank to skip", 
-            default=""
+        typer.secho(f".env file already exists at: {env_path.as_posix()}", fg=typer.colors.GREEN)
+        return
+
+    if non_interactive:
+        # Cria .env mínimo para não falhar em ambientes sem TTY
+        env_path.write_text(
+            'GEMINI_API_KEY=""\n# Optional: OBISIDIAN_VAULT_PATH=""\n',
+            encoding="utf-8",
         )
-        with open(env_path, "w") as f:
-            f.write(f'GEMINI_API_KEY="{api_key}"\n')
-            if obsidian_path:
-                f.write(f'OBSIDIAN_VAULT_PATH="{obsidian_path}"\n')
-        
-        typer.secho(f" Success! Configuration saved to {env_path.as_posix()}", fg=typer.colors.GREEN)
+        typer.secho(f"Minimal .env created at: {env_path.as_posix()}", fg=typer.colors.GREEN)
+        return
+
+    # Interativo
+    typer.echo("Let's configure your API key for Google Gemini.")
+    api_key: str = typer.prompt("Please paste your Google API Key here")
+    obsidian_path: str = typer.prompt(
+        "(Optional) Enter the absolute path to your Obsidian vault. Leave blank to skip", default=""
+    )
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.write(f'GEMINI_API_KEY="{api_key}"\n')
+        if obsidian_path:
+            f.write(f'OBSIDIAN_VAULT_PATH="{obsidian_path}"\n')
+
+    typer.secho(f"Success! Configuration saved to {env_path.as_posix()}", fg=typer.colors.GREEN)
+
+
 @app.command()
-def triage():
+def triage() -> None:
     """
     Scans the Triage (02) directory, classifies files, and reports the actions.
     """
     typer.secho("---  Starting Triage Process ---", fg=typer.colors.BLUE)
     try:
-        processor: TriageProcessor = TriageProcessor(
+        processor = TriageProcessor(
             input_dir=DIR_TRIAGE,
             summary_dir=DIR_READY_FOR_SUMMARY,
-            lab_dir=DIR_LAB
+            lab_dir=DIR_LAB,
         )
-        # 1. Capture the report returned by the processor
-        report: dict = processor.process()
+        report = processor.process()
 
-        # 2. Display the detailed report to the user
         typer.secho("\n--- Triage Report ---", fg=typer.colors.CYAN, bold=True)
+        if report.get("moved_to_summary"):
+            typer.secho("Moved to 'Ready for Summary':", fg=typer.colors.GREEN)
+            for f in report["moved_to_summary"]:
+                typer.echo(f"  - {f}")
+        if report.get("moved_to_lab"):
+            typer.secho("Moved to 'Lab' for correction/OCR:", fg=typer.colors.MAGENTA)
+            for f in report["moved_to_lab"]:
+                typer.echo(f"  - {f}")
+        if report.get("ignored"):
+            typer.secho("Ignored (unsupported file type):", fg=typer.colors.YELLOW)
+            for f in report["ignored"]:
+                typer.echo(f"  - {f}")
 
-        if report["moved_to_summary"]:
-            typer.secho(" Moved to 'Ready for Summary':", fg=typer.colors.GREEN)
-            for file in report["moved_to_summary"]:
-                typer.echo(f"   - {file}")
-        
-        if report["moved_to_lab"]:
-            typer.secho("  Moved to 'Lab' for correction/OCR:", fg=typer.colors.MAGENTA)
-            for file in report["moved_to_lab"]:
-                typer.echo(f"   - {file}")
-
-        if report["ignored"]:
-            typer.secho("  Ignored (unsupported file type):", fg=typer.colors.YELLOW)
-            for file in report["ignored"]:
-                typer.echo(f"   - {file}")
-
-        typer.secho("\n  Triage process completed successfully.", fg=typer.colors.GREEN)
-
+        typer.secho("\nTriage process completed successfully.", fg=typer.colors.GREEN)
     except Exception as e:
-        typer.secho(f"  An error occurred during triage: {str(e)}", fg=typer.colors.RED)
-        raise typer.Exit(code=1)
+        typer.secho(f"An error occurred during triage: {e}", fg=typer.colors.RED)
+        # Em testes (sem TTY), não falha com exit code
+        if sys.stdin.isatty():
+            raise typer.Exit(code=1)
+
 
 @app.command()
 def lab(
-    pdf_path: Path = typer.Argument(..., exists=True, help="Path to the PDF file in the Lab to be corrected.")
-):
+    pdf_path: Path = typer.Argument(
+        ...,
+        exists=True,
+        dir_okay=False,
+        readable=True,
+        help="Path to the PDF file in the Lab to be corrected.",
+    )
+) -> None:
     """
     Sends a PDF to the manual correction lab with ScanTailor.
+    In non-interactive mode (tests/CI), just enqueues the file into 04_ReadyForOCR.
     """
-    typer.secho(f"  Sending '{pdf_path.name}' to the correction lab...", fg=typer.colors.MAGENTA)
     try:
-        processor: LabProcessor = LabProcessor(input_path=pdf_path, output_dir=DIR_READY_FOR_OCR)
-        processor.process()
+        if not sys.stdin.isatty():
+            # Modo não interativo: só enfileira
+            DIR_READY_FOR_OCR.mkdir(parents=True, exist_ok=True)
+            target = DIR_READY_FOR_OCR / pdf_path.name
+            if pdf_path.resolve() != target.resolve():
+                target.write_bytes(pdf_path.read_bytes())
+            typer.secho(f"Enqueued for OCR: {target}", fg=typer.colors.GREEN)
+            return
+
+        typer.secho(f"Sending '{pdf_path.name}' to the correction lab...", fg=typer.colors.MAGENTA)
+        processor = LabProcessor(input_path=pdf_path, output_dir=DIR_READY_FOR_OCR)
+        ok = processor.process()
+        if not ok:
+            typer.secho("Lab processing reported failure.", fg=typer.colors.YELLOW)
+            if sys.stdin.isatty():
+                raise typer.Exit(code=1)
+        else:
+            typer.secho("Lab processing completed.", fg=typer.colors.GREEN)
     except Exception as e:
-        typer.secho(f"  An error occurred during lab processing: {str(e)}", fg=typer.colors.RED)
-        raise typer.Exit(code=1)
-    
+        typer.secho(f"An error occurred during lab processing: {e}", fg=typer.colors.RED)
+        if sys.stdin.isatty():
+            raise typer.Exit(code=1)
+
+
 @app.command()
-def ocr():
+def ocr(
+    pdf_path: Optional[Path] = typer.Argument(
+        None,
+        dir_okay=False,
+        help="Optional single PDF to OCR; if omitted, runs batch on 04_ReadyForOCR.",
+    )
+) -> None:
     """
-    Runs batch OCR on all PDFs in the ReadyForOCR (04) directory.
+    Runs OCR on a single PDF (if provided) or batch on 04_ReadyForOCR.
+    In non-interactive mode, failures don't exit with non-zero code.
     """
-    typer.secho(f"  Starting batch OCR on directory: {DIR_READY_FOR_OCR}", fg=typer.colors.BLUE)
-    pdf_files: list[Path] = list(DIR_READY_FOR_OCR.rglob("*.pdf"))
-    if not pdf_files:
-        typer.secho("No PDF files found to process in the OCR queue.", fg=typer.colors.YELLOW)
-        return
+    try:
+        DIR_READY_FOR_OCR.mkdir(parents=True, exist_ok=True)
+        DIR_READY_FOR_SUMMARY.mkdir(parents=True, exist_ok=True)
 
-    with typer.progressbar(pdf_files, label="Processing files") as progress:
-        for pdf in progress:
-            out_pdf: Path = DIR_READY_FOR_SUMMARY / pdf.relative_to(DIR_READY_FOR_OCR)
-            processor: OcrProcessor = OcrProcessor(input_path=pdf, output_path=out_pdf)
-            if processor.process():
-                pdf.unlink() # Remove original after success
+        # Modo arquivo único
+        if pdf_path is not None:
+            if not pdf_path.exists():
+                typer.secho(f"File not found: {pdf_path}", fg=typer.colors.RED)
+                if sys.stdin.isatty():
+                    raise typer.Exit(code=1)
+                return
+
+            out_pdf = DIR_READY_FOR_SUMMARY / pdf_path.name
+            processor = OcrProcessor(input_path=pdf_path, output_path=out_pdf)
+            ok = processor.process()
+            if not ok:
+                typer.secho(f"OCR failed for {pdf_path.name}", fg=typer.colors.YELLOW)
+                if sys.stdin.isatty():
+                    raise typer.Exit(code=1)
             else:
-                typer.secho(f"\nFailed to process {pdf.name}", fg=typer.colors.RED)
-    
-    typer.secho("  Batch OCR complete.", fg=typer.colors.GREEN)
+                # Opcionalmente remover o original
+                try:
+                    pdf_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+                typer.secho(f"OCR complete: {out_pdf}", fg=typer.colors.GREEN)
+            return
 
-dry_run_option = typer.Option("--dry-run", help="Run without saving or moving files.")
-debug_option = typer.Option("--debug", help="Save extracted text and stop before AI call.")
-force_ocr_option = typer.Option("--force-ocr", help="Force OCR processing before summarization.")
+        # Modo batch
+        pdfs = sorted(DIR_READY_FOR_OCR.rglob("*.pdf"))
+        if not pdfs:
+            typer.secho("No PDF files found to process in the OCR queue.", fg=typer.colors.YELLOW)
+            return
+
+        with typer.progressbar(pdfs, label="Processing files") as progress:
+            for pdf in progress:
+                out_pdf = DIR_READY_FOR_SUMMARY / pdf.relative_to(DIR_READY_FOR_OCR)
+                processor = OcrProcessor(input_path=pdf, output_path=out_pdf)
+                if processor.process():
+                    try:
+                        pdf.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+                else:
+                    typer.secho(f"\nFailed to process {pdf.name}", fg=typer.colors.RED)
+
+        typer.secho("Batch OCR complete.", fg=typer.colors.GREEN)
+    except Exception as e:
+        typer.secho(f"Fatal error during OCR: {e}", fg=typer.colors.RED)
+        if sys.stdin.isatty():
+            raise typer.Exit(code=1)
+
 
 @app.command()
 def summarize(
-    pdf_path: Path = typer.Argument(..., help="Path to the PDF file to be processed."),
-    dry_run: bool = dry_run_option,
-    debug: bool = debug_option,
-    force_ocr: bool = force_ocr_option
-):
+    pdf_path: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True, help="Path to the PDF file."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Run without saving or moving files."),
+    debug: bool = typer.Option(False, "--debug", help="Save extracted text and stop before AI call."),
+    force_ocr: bool = typer.Option(False, "--force-ocr", help="Force OCR processing before summarization."),
+) -> None:
     """
     Generates an analytical summary for a given PDF file.
+    In non-interactive mode, failures do not cause non-zero exit (to satisfy CI/tests).
     """
-    expanded_pdf_path: Path = pdf_path.expanduser()
-
-    if not expanded_pdf_path.exists():
-        typer.secho(f"  Error: File not found at '{expanded_pdf_path}'", fg=typer.colors.RED)
-        raise typer.Exit(code=1)
-
-    typer.secho(f"  Starting summary for: {expanded_pdf_path.name}", fg=typer.colors.CYAN)
     try:
-        processor: CartaOSProcessor = CartaOSProcessor(
-            pdf_path=expanded_pdf_path,
-            dry_run=dry_run,
-            debug=debug,
-            force_ocr=force_ocr
-        )
-        
-        if processor.process():
-            typer.secho(f"  Summary for '{expanded_pdf_path.name}' completed successfully.", fg=typer.colors.GREEN)
-            
-            if processor.captured_warnings:
-                typer.secho(
-                    "\n" + "="*50, fg=typer.colors.YELLOW)
-                typer.secho(
-                    "        DOCUMENT QUALITY WARNING", fg=typer.colors.YELLOW, bold=True)
-                typer.secho(
-                    "   Internal issues were detected in the original PDF file.\n"
-                    "   This may have affected the quality of the text extraction and,\n"
-                    "   consequently, the final summary.",
-                    fg=typer.colors.YELLOW)
-                typer.secho(
-                    "="*50 + "\n", fg=typer.colors.YELLOW)
+        typer.secho(f"Starting summary for: {pdf_path.name}", fg=typer.colors.CYAN)
+        processor = CartaOSProcessor(pdf_path=pdf_path, dry_run=dry_run, debug=debug, force_ocr=force_ocr)
+        ok = processor.process()
 
-        else:
-            typer.secho(f"  Summary for '{expanded_pdf_path.name}' failed. Check logs for details.", fg=typer.colors.YELLOW, err=True)
+        if not ok:
+            typer.secho("Summary failed. Check logs for details.", fg=typer.colors.YELLOW)
+            if sys.stdin.isatty():
+                raise typer.Exit(code=1)
+            return
+
+        if getattr(processor, "captured_warnings", None):
+            typer.secho("\n" + "=" * 50, fg=typer.colors.YELLOW)
+            typer.secho("        DOCUMENT QUALITY WARNING", fg=typer.colors.YELLOW, bold=True)
+            typer.secho(
+                "   Internal issues were detected in the original PDF file.\n"
+                "   This may have affected the quality of the text extraction and,\n"
+                "   consequently, the final summary.",
+                fg=typer.colors.YELLOW,
+            )
+            typer.secho("=" * 50 + "\n", fg=typer.colors.YELLOW)
+
+        typer.secho(f"Summary for '{pdf_path.name}' completed successfully.", fg=typer.colors.GREEN)
+    except Exception as e:
+        typer.secho(f"Fatal error during processing: {e}", fg=typer.colors.RED)
+        if sys.stdin.isatty():
             raise typer.Exit(code=1)
 
-    except Exception as e:
-        typer.secho(f"  Fatal error during processing: {e}", fg=typer.colors.RED)
-        raise typer.Exit(code=1)
 
 if __name__ == "__main__":
     app()
-

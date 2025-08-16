@@ -4,15 +4,21 @@
   "version": "0.1.0",
   "identifier": "com.cartaos.app",
   "build": {
-    "frontendDist": "frontend/build",
+    "frontendDist": "../frontend/dist",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeDevCommand": {
+      "script": "npm run dev",
+      "cwd": "../frontend"
+    },
+    "beforeBuildCommand": {
+      "script": "npm run build",
+      "cwd": "../frontend"
+    }
   },
   "app": {
     "windows": [
       {
-        "title": "CartaOS - [C]uradoria, [A]nálise e [R]efinamento de [T]extos [A]cadêmicos ([O]pen [S]ource)",
+        "title": "CartaOS — [C]uration, [A]nalysis, and [R]efinement of [T]exts for [A]cademia ([O]pen [S]ource",
         "width": 800,
         "height": 600,
         "resizable": true,

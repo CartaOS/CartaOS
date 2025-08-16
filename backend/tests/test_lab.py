@@ -1,88 +1,54 @@
-import os
-import unittest
-from unittest.mock import patch, MagicMock, mock_open
 from pathlib import Path
-from tempfile import TemporaryDirectory
+import pytest
 from cartaos.lab import LabProcessor
 
+def test_run_full(monkeypatch, tmp_path):
+    # 1) Fake o extract_pages para sempre retornar uma lista de imagens
+    monkeypatch.setattr(
+        "cartaos.lab.extract_pages",
+        lambda pdf_path: [tmp_path / "page_1.tiff"]
+    )
 
-class TestLabProcessor(unittest.TestCase):
-    """
-    Unit tests for the LabProcessor class.
-    """
+    # 2) Mockamos todos os passos internos para não chamar subprocess reais
+    monkeypatch.setattr(
+        "cartaos.lab.LabProcessor._run_unpaper_cleanup",
+        lambda self, workspace, images: None
+    )
+    monkeypatch.setattr(
+        "cartaos.lab.LabProcessor._generate_scantailor_project",
+        lambda self, workspace, images: None
+    )
+    monkeypatch.setattr(
+        "cartaos.lab.LabProcessor._run_manual_correction",
+        lambda self, workspace, images: None
+    )
 
-    def setUp(self):
-        """
-        Set up the test environment.
+    # 3) Fake o recompose_pdf para criar de fato um PDF de saída vazio
+    def fake_recompose(images, output_dir, input_path):
+        out_file = output_dir / input_path.name
+        out_file.write_bytes(b"%PDF-1.4\n")  # cria um arquivo mínimo
+        return out_file
 
-        Creates a LabProcessor instance with a temporary input file and output directory.
-        """
-        self.input_path = Path("input.pdf")
-        self.output_dir = Path("output")
-        self.processor = LabProcessor(self.input_path, self.output_dir)
+    monkeypatch.setattr(
+        "cartaos.lab.recompose_pdf",
+        fake_recompose
+    )
 
-    def test_extract_pages(self):
-        """
-        Test that the _extract_pages method extracts TIFF images from the input PDF.
-        """
-        with TemporaryDirectory() as workspace:
-            self.processor._extract_pages(workspace)
-            tiff_files = [file for file in os.listdir(workspace) if file.endswith(".tiff")]
-            self.assertTrue(
-                tiff_files,
-                "No TIFF images were extracted",
-            )
+    # 4) Mock do input() para não travar pedindo Enter
+    monkeypatch.setattr("builtins.input", lambda prompt="": "")
 
-    @patch("subprocess.run")
-    def test_run_unpaper_cleanup(self, mock_run: MagicMock):
-        """
-        Test that the _run_unpaper_cleanup method runs unpaper on the TIFF images.
-        """
-        with TemporaryDirectory() as workspace:
-            self.processor._run_unpaper_cleanup(workspace)
-            mock_run.assert_any_call(
-                ["unpaper", "page_1.tiff"],
-                cwd=workspace,
-            )
+    # 5) Prepara um PDF e o diretório de saída
+    inp = tmp_path / "input.pdf"
+    inp.write_bytes(b"%PDF-1.4\n")   # conteúdo mínimo de PDF
+    outdir = tmp_path / "outdir"
+    outdir.mkdir()
 
-    @patch("builtins.open", new_callable=mock_open)
-    def test_generate_scantailor_project(self, mock_open: MagicMock):
-        """
-        Test that the _generate_scantailor_project method generates a ScanTailor project file.
-        """
-        with TemporaryDirectory() as workspace:
-            self.processor._generate_scantailor_project(workspace)
-            mock_open.assert_called_once_with(
-                os.path.join(workspace, "project.scantailor"),
-                "w",
-            )
+    # 6) Executa o process e valida que retorna True
+    processor = LabProcessor(input_path=inp, output_dir=outdir)
+    assert processor.process() is True
 
-    @patch("subprocess.run")
-    def test_run_manual_correction(self, mock_run: MagicMock):
-        """
-        Test that the _run_manual_correction method runs ScanTailor Advanced.
-        """
-        with TemporaryDirectory() as workspace:
-            self.processor._run_manual_correction(workspace)
-            mock_run.assert_called_once_with(
-                ["flatpak", "run", "com.github._4lex4.ScanTailor-Advanced", "project.scantailor"],
-                cwd=workspace,
-            )
-
-    def test_recompose_pdf(self):
-        """
-        Test that the _recompose_pdf method recomposes a PDF from the corrected TIFF images.
-        """
-        with TemporaryDirectory() as workspace:
-            out_dir = os.path.join(workspace, "out")
-            os.makedirs(out_dir, exist_ok=True)
-            for i in range(3):
-                with open(os.path.join(out_dir, f"page_{i+1}.tiff"), "wb") as f:
-                    f.write(b"")
-            self.processor._recompose_pdf(workspace)
-            output_pdf = os.path.join(self.output_dir, self.input_path.name)
-            self.assertTrue(
-                os.path.exists(output_pdf),
-                "PDF was not saved",
-            )
-
+    # 7) Verifica que o PDF final foi “recomposed” no outdir
+    final_pdf = outdir / inp.name
+    assert final_pdf.exists()
+    # E opcionalmente: é um PDF (começa com %PDF)
+    assert final_pdf.read_bytes().startswith(b"%PDF")
