@@ -10,7 +10,6 @@ use std::path::Path;
 /// This function runs the `triage` command in the `backend/cartaos/cli.py` script.
 ///
 /// # Returns
-///
 /// Returns a `Result` with `Ok(String)` if the command was executed successfully,
 /// or `Err(String)` if there was an error.
 #[tauri::command]
