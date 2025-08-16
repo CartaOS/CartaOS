@@ -1,35 +1,50 @@
 // src-tauri/src/lib.rs
 
-// Adicionamos os imports necessários para executar comandos e ler arquivos
+// We add the necessary imports to run commands and read files
 use std::process::Command;
 use std::fs;
 use std::path::Path;
 
-// Este é o "decorator" que transforma uma função Rust em um comando que o frontend pode chamar.
+/// Executes the triage command and returns the output (success or error).
+///
+/// This function runs the `triage` command in the `backend/cartaos/cli.py` script.
+///
+/// # Returns
+///
+/// Returns a `Result` with `Ok(String)` if the command was executed successfully,
+/// or `Err(String)` if there was an error.
 #[tauri::command]
 async fn run_triage() -> Result<String, String> {
-    // Usamos std::process::Command para executar o seu script Python exatamente como no terminal.
+    // We use std::process::Command to execute your Python script exactly as in the terminal.
     let output = Command::new("python3")
-        .arg("backend/cartaos/cli.py") // Argumento 1: o script
-        .arg("triage")                // Argumento 2: o comando do CLI
-        .output()                     // Executa e captura a saída
-        .map_err(|e| e.to_string())?; // Mapeia erros de execução (ex: python3 não encontrado)
+        .arg("backend/cartaos/cli.py") // Argument 1: the script
+        .arg("triage")                // Argument 2: the CLI command
+        .output()                     // Executes and captures the output
+        .map_err(|e| e.to_string())?; // Maps errors in execution (ex: python3 not found)
 
-    // Verificamos se o comando foi executado com sucesso.
+    // We check if the command was executed successfully.
     if output.status.success() {
-        // Se sim, retornamos a saída padrão (stdout) como uma string de sucesso.
+        // If yes, we return the standard output (stdout) as a success string.
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        // Se não, retornamos a saída de erro (stderr) como uma string de erro.
+        // If not, we return the error output (stderr) as an error string.
         Err(String::from_utf8_lossy(&output.stderr).to_string())
     }
 }
 
+/// Executes the OCR batch command and returns the output (success or error).
+///
+/// This function runs the `ocr` command in the `backend/cartaos/cli.py` script.
+///
+/// # Returns
+///
+/// Returns a `Result` with `Ok(String)` if the command was executed successfully,
+/// or `Err(String)` if there was an error.
 #[tauri::command]
 async fn run_ocr_batch() -> Result<String, String> {
     let output = Command::new("python3")
         .arg("backend/cartaos/cli.py")
-        .arg("ocr") // A única mudança é o comando que passamos para o CLI
+        .arg("ocr") // The only change is the command we pass to the CLI
         .output()
         .map_err(|e| e.to_string())?;
 
@@ -40,11 +55,20 @@ async fn run_ocr_batch() -> Result<String, String> {
     }
 }
 
-// Este comando recebe um argumento do frontend (o nome da pasta/etapa)
+/// Retrieves the list of files in a specific stage directory.
+///
+/// # Arguments
+///
+/// * `stage` - The name of the stage directory (ex: "03_Lab").
+///
+/// # Returns
+///
+/// Returns a `Result` with `Ok(Vec<String>)` containing the list of file names,
+/// or `Err(String)` if there was an error reading the directory.
 #[tauri::command]
 async fn get_files_in_stage(stage: String) -> Result<Vec<String>, String> {
-    // Construímos o caminho para o diretório da etapa (ex: ./03_Lab)
-    // Nota: O executável do Tauri roda a partir da pasta `src-tauri`, por isso usamos `../` para voltar à raiz.
+    // We construct the path to the stage directory (ex: ./03_Lab)
+    // Note: The Tauri executable runs from the `src-tauri` folder, so we use `../` to go back to the root.
     let dir_path = Path::new("..").join(stage);
     let mut files = Vec::new();
 
@@ -52,12 +76,12 @@ async fn get_files_in_stage(stage: String) -> Result<Vec<String>, String> {
 
     for entry in entries {
         let entry = entry.map_err(|e| e.to_string())?;
-        // Pegamos apenas o nome do arquivo e o adicionamos ao nosso vetor
+        // We only get the file name and add it to our vector
         if let Some(file_name) = entry.path().file_name() {
              files.push(file_name.to_string_lossy().to_string());
         }
     }
-    // Retornamos a lista de nomes de arquivos.
+    // We return the list of file names.
     Ok(files)
 }
 
@@ -65,8 +89,8 @@ async fn get_files_in_stage(stage: String) -> Result<Vec<String>, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
-    // A linha abaixo é a mais importante: ela "registra" nossas funções
-    // e as torna disponíveis para serem chamadas pelo `invoke` no Svelte.
+    // The line below is the most important: it "registers" our functions
+    // and makes them available to be called by `invoke` in Svelte.
     .invoke_handler(tauri::generate_handler![
         run_triage,
         run_ocr_batch,
@@ -85,3 +109,4 @@ pub fn run() {
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
+
