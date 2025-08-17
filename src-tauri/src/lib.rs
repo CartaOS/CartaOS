@@ -3,7 +3,7 @@
 use serde::Serialize;
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 use thiserror::Error;
 use log::info;
@@ -185,15 +185,13 @@ pub fn run() -> Result<(), tauri::Error> {
             finalize_lab_file
         ])
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle()
-                    .plugin(
-                        tauri_plugin_log::Builder::default()
-                            .level(log::LevelFilter::Info)
-                            .build(),
-                    )
-                    .expect("failed to initialize log plugin");
-            }
+            app.handle()
+                .plugin(
+                    tauri_plugin_log::Builder::default()
+                        .level(log::LevelFilter::Info)
+                        .build(),
+                )
+                .expect("failed to initialize log plugin");
             Ok(())
         })
         .run(tauri::generate_context!())
