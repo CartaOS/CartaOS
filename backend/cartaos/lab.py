@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 # backend/cartaos/lab.py
 
 
@@ -9,11 +9,19 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import List
-from .utils.pdf_utils import extract_pages, recompose_pdf
+from xml.etree.ElementTree import Element, SubElement, tostring, Comment
+from xml.dom import minidom
 
-# Configure logging to output to console
-#logging.basicConfig(level=logging.INFO, format='[%(asctime)s][%(levelname)s][%(name)s] %(message)s')
-#logger = logging.getLogger(__name__)
+# É altamente recomendável usar a biblioteca Pillow para ler os metadados da imagem.
+# Se ela não estiver no seu ambiente, instale com: pip install Pillow
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    logger.warning("A biblioteca Pillow (PIL) não foi encontrada. Usando valores padrão para DPI e tamanho da imagem.")
+
+from .utils.pdf_utils import extract_pages, recompose_pdf
 
 
 class LabProcessor:
@@ -35,7 +43,9 @@ class LabProcessor:
         Returns:
             bool: True on success, False on failure.
         """
-        workspace = tempfile.mkdtemp()
+        tmp_dir = Path.home() / ".cache" / "cartaos" / "tmp"
+        os.makedirs(tmp_dir, exist_ok=True)
+        workspace = tempfile.mkdtemp(dir=str(tmp_dir))
         try:
             logger.info("Extracting pages from input PDF")
             images: List[Path] = extract_pages(self.input_path, Path(workspace))
@@ -44,14 +54,25 @@ class LabProcessor:
             self._run_unpaper_cleanup(workspace, images)
 
             logger.info("Generating ScanTailor project file")
-            self._generate_scantailor_project(workspace, images)
+            project_file_path = self._create_scantailor_project(Path(workspace))
+            if not project_file_path:
+                return False
 
             logger.info("Running manual correction using ScanTailor Advanced")
-            self._run_manual_correction(workspace, images)
+            self._run_manual_correction(workspace, project_file_path)
 
             logger.info("Recomposing PDF from corrected images")
             output_pdf_path = self.output_dir / f"corrected_{self.input_path.name}"
-            recomposed_pdf = recompose_pdf(images, output_pdf_path)
+            
+            # As imagens processadas pelo ScanTailor estarão no subdiretório 'out'
+            corrected_images_dir = Path(workspace) / "out"
+            corrected_images = sorted(corrected_images_dir.glob('*.tif'))
+
+            if not corrected_images:
+                logger.warning("Nenhuma imagem corrigida encontrada no diretório de saída do ScanTailor. O PDF não será recriado.")
+                return False
+
+            recomposed_pdf = recompose_pdf(corrected_images, output_pdf_path)
 
             if recomposed_pdf:
                 logger.info(f"Corrected PDF saved to {recomposed_pdf}")
@@ -78,38 +99,146 @@ class LabProcessor:
         processed_images = []
         for image in images:
             output_image = Path(workspace) / f"unpaper_{image.name}"
-            subprocess.run(["unpaper", str(image), str(output_image)], cwd=workspace, check=True)
+            # Usa capture_output=True para suprimir a saída do unpaper no console
+            subprocess.run(["unpaper", str(image), str(output_image)], cwd=workspace, check=True, capture_output=True)
             processed_images.append(output_image)
-        images[:] = processed_images # Update the original list with processed images
+        # Atualiza a lista original com as imagens processadas
+        images[:] = processed_images
 
-    def _generate_scantailor_project(self, workspace: str, images: List[Path]) -> None:
+    def _create_scantailor_project(self, project_dir: Path):
         """
-        Generate a ScanTailor project file.
-
-        Args:
-            workspace (str): The temporary workspace directory.
-            images (List[Path]): The list of paths to the extracted TIFF images.
+        Cria um arquivo de projeto .scantailor compatível, replicando a estrutura
+        exata da versão 3, conforme o arquivo de exemplo fornecido.
         """
-        with open(os.path.join(workspace, "project.scantailor"), "w") as f:
-            f.write("<project>\n")
-            for image in images:
-                f.write(f"<image>{image.name}</image>\n")
-            f.write("</project>\n")
+        project_dir = Path(project_dir).resolve()
+        project_name = project_dir.name
+        project_file_path = project_dir / f"{project_name}.scantailor"
+        output_dir = project_dir / "out"
+        output_dir.mkdir(exist_ok=True)
 
-    def _run_manual_correction(self, workspace: str, images: List[Path]) -> None:
+        logger.info(f"Gerando projeto Scantailor (versão 3) em: {project_file_path}")
+
+        image_extensions = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.bmp']
+        all_image_paths = sorted([p for p in project_dir.iterdir() if p.is_file() and p.suffix.lower() in image_extensions])
+
+        if not all_image_paths:
+            logger.warning(f"Nenhum arquivo de imagem encontrado em {project_dir}.")
+            return None
+
+        dir_map, file_map, image_map, page_map = {}, {}, {}, {}
+        next_id = 1
+
+        root = Element('project', version="3", outputDirectory=str(output_dir), layoutDirection="LTR")
+        root.append(Comment(" Gerado por CartaOS "))
+
+        directories_el = SubElement(root, 'directories')
+        files_el = SubElement(root, 'files')
+        images_el = SubElement(root, 'images')
+        pages_el = SubElement(root, 'pages')
+        
+        for img_path in all_image_paths:
+            dir_path_str = str(img_path.parent)
+            
+            if dir_path_str not in dir_map:
+                dir_map[dir_path_str] = next_id
+                SubElement(directories_el, 'directory', id=str(next_id), path=dir_path_str)
+                next_id += 1
+            dir_id = dir_map[dir_path_str]
+
+            file_id = next_id
+            file_map[str(img_path)] = file_id
+            SubElement(files_el, 'file', dirId=str(dir_id), name=img_path.name, id=str(file_id))
+            next_id += 1
+
+            image_id = next_id
+            image_map[str(img_path)] = image_id
+            image_el = SubElement(images_el, 'image', fileImage="0", fileId=str(file_id), id=str(image_id), subPages="1")
+            next_id += 1
+
+            width, height, dpi_h, dpi_v = "2480", "3508", "300", "300"
+            if PIL_AVAILABLE:
+                try:
+                    with Image.open(img_path) as im:
+                        width, height = str(im.width), str(im.height)
+                        if im.info.get('dpi'):
+                            dpi_h, dpi_v = str(int(im.info['dpi'][0])), str(int(im.info['dpi'][1]))
+                except Exception as e:
+                    logger.warning(f"Não foi possível ler metadados de {img_path.name}: {e}")
+
+            SubElement(image_el, 'size', width=width, height=height)
+            SubElement(image_el, 'dpi', horizontal=dpi_h, vertical=dpi_v)
+
+            page_id = next_id
+            page_map[str(img_path)] = page_id
+            page_attrs = {'imageId': str(image_id), 'subPage': 'single', 'id': str(page_id)}
+            if len(page_map) == 1:
+                 page_attrs['selected'] = 'selected'
+            SubElement(pages_el, 'page', page_attrs)
+            next_id += 1
+
+        disambiguation_el = SubElement(root, 'file-name-disambiguation')
+        for img_path, file_id in file_map.items():
+            SubElement(disambiguation_el, 'mapping', file=str(file_id), label="0")
+
+        filters_el = SubElement(root, 'filters')
+        
+        fix_orientation_el = SubElement(filters_el, 'fix-orientation')
+        SubElement(fix_orientation_el, 'image-settings')
+
+        SubElement(filters_el, 'page-split', defaultLayoutType="auto-detect")
+        
+        deskew_el = SubElement(filters_el, 'deskew')
+        SubElement(deskew_el, 'image-settings')
+
+        SubElement(filters_el, 'select-content', pageDetectionTolerance="0.1")
+        SubElement(filters_el, 'page-layout', showMiddleRect="1")
+        output_el = SubElement(filters_el, 'output')
+
+        for page_id in page_map.values():
+            page_id_str = str(page_id)
+            page_out_el = SubElement(output_el, 'page', id=page_id_str)
+            SubElement(page_out_el, 'zones')
+            SubElement(page_out_el, 'fill-zones')
+            params_out_el = SubElement(page_out_el, 'params', despeckleLevel="1", blackOnWhite="1", depthPerception="2")
+            SubElement(params_out_el, 'dpi', horizontal="600", vertical="600")
+            color_params_el = SubElement(params_out_el, 'color-params', colorMode="bw")
+            SubElement(color_params_el, 'bw', binarizationMethod="otsu")
+
+        logger.info(f"Estrutura XML da versão 3 criada para {len(all_image_paths)} imagens.")
+
+        xml_string = tostring(root, 'utf-8')
+        pretty_xml = minidom.parseString(xml_string).toprettyxml(indent="  ", encoding="UTF-8").decode('utf-8')
+
+        try:
+            with open(project_file_path, 'w', encoding='utf-8') as f:
+                f.write(pretty_xml)
+            logger.info(f"Projeto Scantailor salvo com sucesso em {project_file_path}")
+            return project_file_path
+        except IOError as e:
+            logger.error(f"Falha ao salvar o arquivo de projeto: {e}")
+            return None
+
+    def _run_manual_correction(self, workspace: str, project_file_path: Path) -> None:
         """
         Run manual correction using ScanTailor Advanced.
 
         Args:
             workspace (str): The temporary workspace directory.
-            images (List[Path]): The list of paths to the extracted TIFF images.
+            project_file_path (Path): The path to the ScanTailor project file.
         """
         logger.info("Please correct the images using ScanTailor Advanced.")
-        input("Press [Enter] to continue...")
-        command = ["flatpak", "run", "com.github._4lex4.ScanTailor-Advanced", "project.scantailor"]
+        # O input() foi removido para um fluxo mais direto, mas pode ser re-adicionado se necessário
+        # input("Press [Enter] to continue...")
+        command = ["flatpak", "run", "com.github._4lex4.ScanTailor-Advanced", str(project_file_path)]
         
-        with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as stdout_file, \
-             tempfile.TemporaryFile(mode='w+', encoding='utf-8') as stderr_file:
-            process = subprocess.Popen(command, cwd=workspace, start_new_session=True, stdout=stdout_file, stderr=stderr_file)
-            process.wait() # Wait for the process to finish
-
+        try:
+            # Redireciona a saída para DEVNULL para manter a consola limpa
+            process = subprocess.Popen(command, cwd=workspace, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            process.wait() # Espera que o processo do ScanTailor termine (utilizador fecha o programa)
+            logger.info("ScanTailor Advanced fechado. A continuar o processo.")
+        except FileNotFoundError:
+             logger.error("Comando 'flatpak' não encontrado. Verifique se o Flatpak está instalado.")
+             raise
+        except Exception as e:
+            logger.error(f"Ocorreu um erro ao executar o ScanTailor via Flatpak: {e}")
+            raise
