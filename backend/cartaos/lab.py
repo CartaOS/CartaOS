@@ -1,7 +1,9 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*- 
 # backend/cartaos/lab.py
 
-import logging
+
+from loguru import logger
+
 import os
 import subprocess
 import tempfile
@@ -9,7 +11,9 @@ from pathlib import Path
 from typing import List
 from .utils.pdf_utils import extract_pages, recompose_pdf
 
-logger = logging.getLogger(__name__)
+# Configure logging to output to console
+#logging.basicConfig(level=logging.INFO, format='[%(asctime)s][%(levelname)s][%(name)s] %(message)s')
+#logger = logging.getLogger(__name__)
 
 
 class LabProcessor:
@@ -31,30 +35,37 @@ class LabProcessor:
         Returns:
             bool: True on success, False on failure.
         """
+        workspace = tempfile.mkdtemp()
         try:
-            with tempfile.TemporaryDirectory() as workspace:
-                logger.info("Extracting pages from input PDF")
-                images: List[Path] = extract_pages(self.input_path)
-                
-                logger.info("Running unpaper cleanup")
-                self._run_unpaper_cleanup(workspace, images)
+            logger.info("Extracting pages from input PDF")
+            images: List[Path] = extract_pages(self.input_path, Path(workspace))
+            
+            logger.info("Running unpaper cleanup")
+            self._run_unpaper_cleanup(workspace, images)
 
-                logger.info("Generating ScanTailor project file")
-                self._generate_scantailor_project(workspace, images)
+            logger.info("Generating ScanTailor project file")
+            self._generate_scantailor_project(workspace, images)
 
-                logger.info("Running manual correction using ScanTailor Advanced")
-                print("Please correct the images using ScanTailor Advanced.")
-                input("Press [Enter] to continue...")
-                self._run_manual_correction(workspace, images)
+            logger.info("Running manual correction using ScanTailor Advanced")
+            self._run_manual_correction(workspace, images)
 
-                logger.info("Recomposing PDF from corrected images")
-                pdf_path = recompose_pdf(images, self.output_dir, self.input_path)
+            logger.info("Recomposing PDF from corrected images")
+            output_pdf_path = self.output_dir / f"corrected_{self.input_path.name}"
+            recomposed_pdf = recompose_pdf(images, output_pdf_path)
 
-                logger.info(f"PDF saved to {pdf_path}")
-            return True
+            if recomposed_pdf:
+                logger.info(f"Corrected PDF saved to {recomposed_pdf}")
+                return True
+            else:
+                logger.error("Failed to create the corrected PDF.")
+                return False
         except Exception as e:
-            logger.error(f"Error during lab processing: {e}")
+            logger.error(f"An error occurred during lab processing: {e}")
             return False
+        finally:
+            # Cleanup the temporary directory
+            import shutil
+            shutil.rmtree(workspace)
 
     def _run_unpaper_cleanup(self, workspace: str, images: List[Path]) -> None:
         """
@@ -64,8 +75,12 @@ class LabProcessor:
             workspace (str): The temporary workspace directory.
             images (List[Path]): The list of paths to the extracted TIFF images.
         """
+        processed_images = []
         for image in images:
-            subprocess.run(["unpaper", image], cwd=workspace)
+            output_image = Path(workspace) / f"unpaper_{image.name}"
+            subprocess.run(["unpaper", str(image), str(output_image)], cwd=workspace, check=True)
+            processed_images.append(output_image)
+        images[:] = processed_images # Update the original list with processed images
 
     def _generate_scantailor_project(self, workspace: str, images: List[Path]) -> None:
         """
@@ -89,6 +104,12 @@ class LabProcessor:
             workspace (str): The temporary workspace directory.
             images (List[Path]): The list of paths to the extracted TIFF images.
         """
+        logger.info("Please correct the images using ScanTailor Advanced.")
+        input("Press [Enter] to continue...")
+        command = ["flatpak", "run", "com.github._4lex4.ScanTailor-Advanced", "project.scantailor"]
         
-        subprocess.run(["flatpak", "run", "com.github._4lex4.ScanTailor-Advanced", "project.scantailor"], cwd=workspace)
+        with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as stdout_file, \
+             tempfile.TemporaryFile(mode='w+', encoding='utf-8') as stderr_file:
+            process = subprocess.Popen(command, cwd=workspace, start_new_session=True, stdout=stdout_file, stderr=stderr_file)
+            process.wait() # Wait for the process to finish
 

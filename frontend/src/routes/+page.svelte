@@ -1,146 +1,123 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/core';
 	import { onMount } from 'svelte';
+	import ActionButton from '$lib/components/ActionButton.svelte';
+	import QueueColumn from '$lib/components/QueueColumn.svelte';
 
 	// --- State ---
-	let statusMessage: string = 'Waiting for action...';
-	let triageFiles: string[] = [];
-	let labFiles: string[] = [];
-	let ocrFiles: string[] = [];
-	let summaryFiles: string[] = [];
+	let statusMessage = $state('Waiting for action...');
+	let isLoading = $state(false);
+	let triageFiles = $state<string[]>([]);
+	let labFiles = $state<string[]>([]);
+	let ocrFiles = $state<string[]>([]);
+	let summaryFiles = $state<string[]>([]);
 
-	// --- Funções ---
-
-	// Função unificada para atualizar todas as filas
-	async function refreshAllQueues(): Promise<void> {
-		statusMessage = 'Refreshing file queues...';
+	// --- Lógica de Ações ---
+	async function withLoading<T>(action: () => Promise<T>, baseMessage: string): Promise<void> {
+		statusMessage = `Running ${baseMessage}...`;
+		isLoading = true;
 		try {
-			// Usamos Promise.all para buscar tudo em paralelo
+			const result = await action();
+			if (typeof result === 'string' && result.trim()) {
+				statusMessage = result.trim();
+			} else {
+				statusMessage = `${baseMessage} completed successfully.`;
+			}
+			await refreshAllQueues();
+		} catch (error) {
+			console.error("Caught error in withLoading:", error);
+			const errorMessage = typeof error === 'string' ? error : (error instanceof Error ? error.message : `An unknown error occurred during ${baseMessage}.`);
+			statusMessage = `ERROR in ${baseMessage}: ${errorMessage}`;
+			console.error(statusMessage, error);
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	const handleTriage = () => withLoading(() => invoke('run_triage'), 'Triage');
+	const handleOcr = () => withLoading(() => invoke('run_ocr_batch'), 'OCR Batch');
+	const handleCorrect = (fileName: string) =>
+		withLoading(
+			() => invoke('open_scantailor', { fileName }),
+			`Opening ScanTailor for ${fileName}`
+		);
+	const handleFinalize = (fileName: string) =>
+		withLoading(() => invoke('finalize_lab_file', { fileName }), `Finalizing ${fileName}`);
+
+	// Função de refresh (deve estar aqui, omitida por brevidade)
+	async function refreshAllQueues(): Promise<void> {
+		statusMessage = 'Refreshing all file queues...';
+		isLoading = true;
+		try {
 			const [triage, lab, ocr, summary] = await Promise.all([
 				invoke<string[]>('get_files_in_stage', { stage: '02_Triage' }),
 				invoke<string[]>('get_files_in_stage', { stage: '03_Lab' }),
 				invoke<string[]>('get_files_in_stage', { stage: '04_ReadyForOCR' }),
 				invoke<string[]>('get_files_in_stage', { stage: '05_ReadyForSummary' })
 			]);
-
 			triageFiles = triage;
 			labFiles = lab;
 			ocrFiles = ocr;
 			summaryFiles = summary;
-
-			statusMessage = 'File queues updated successfully.';
+			statusMessage = 'File queues refreshed successfully.';
 		} catch (error) {
-			const errorMessage = 'ERROR refreshing queues: ' + (error as Error).message;
-			statusMessage = errorMessage;
-			console.error(errorMessage);
+			console.error("Caught error in refreshAllQueues:", error);
+			const errorMessage = typeof error === 'string' ? error : (error instanceof Error ? error.message : 'An unknown error occurred while refreshing queues.');
+			statusMessage = `ERROR refreshing queues: ${errorMessage}`;
+			console.error(statusMessage, error);
+		} finally {
+			isLoading = false;
 		}
 	}
 
-	async function handleTriage(): Promise<void> {
-		statusMessage = 'Running Triage...';
-		try {
-			const result: string | null = await invoke<string>('run_triage');
-			statusMessage = result ?? 'Triage completed successfully.';
-			await refreshAllQueues(); // Atualiza as filas após a ação
-		} catch (error) {
-			statusMessage = 'ERROR in Triage: ' + (error as Error).message;
-			console.error('Triage Error:', error);
-		}
-	}
-
-	async function handleOcr(): Promise<void> {
-		statusMessage = 'Running OCR in batch...';
-		try {
-			const result: string | null = await invoke<string>('run_ocr_batch');
-			statusMessage = result ?? 'OCR completed successfully.';
-			await refreshAllQueues(); // Atualiza as filas após a ação
-		} catch (error) {
-			statusMessage = 'ERROR in OCR: ' + (error as Error).message;
-			console.error('OCR Error:', error);
-		}
-	}
-
-	// Carrega os arquivos assim que a página é montada
 	onMount(refreshAllQueues);
 </script>
 
 <main class="p-8 max-w-7xl mx-auto space-y-6 bg-gray-100 min-h-screen">
 	<div class="text-center">
 		<h1 class="text-4xl font-bold text-gray-800">CartaOS</h1>
-		<p class="text-gray-600 mt-1">Pipeline Control Panel</p>
+		<p class="text-lg text-gray-600">Your Document Processing Pipeline</p>
 	</div>
 
 	<div class="bg-white p-4 rounded-lg shadow-md space-x-4 text-center">
-		<button
-			on:click={handleTriage}
-			class="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition-colors"
-		>
+		<ActionButton onclick={handleTriage} {isLoading} color="blue">
 			Run Triage
-		</button>
-		<button
-			on:click={handleOcr}
-			class="bg-green-500 text-white font-bold py-2 px-4 rounded hover:bg-green-700 transition-colors"
-		>
+		</ActionButton>
+		<ActionButton onclick={handleOcr} {isLoading} color="teal">
 			Run OCR Batch
-		</button>
-		<button
-			on:click={refreshAllQueues}
-			class="bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-700 transition-colors"
-		>
-			Refresh Queues
-		</button>
+		</ActionButton>
 	</div>
 
 	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-		<div class="bg-white p-4 rounded-lg shadow-md">
-			<h2 class="text-lg font-semibold text-gray-700 border-b pb-2">📂 02_Triage</h2>
-			<ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-				{#each triageFiles as file (file)}
-					<li class="text-gray-800">{file}</li>
-				{:else}
-					<li class="text-gray-400 italic">Empty</li>
-				{/each}
-			</ul>
-		</div>
+		<QueueColumn title="📂 02_Triage" files={triageFiles} />
 
-		<div class="bg-white p-4 rounded-lg shadow-md">
-			<h2 class="text-lg font-semibold text-gray-700 border-b pb-2">🔧 03_Lab</h2>
-			<ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-				{#each labFiles as file (file)}
-					<li class="text-gray-800">{file}</li>
-				{:else}
-					<li class="text-gray-400 italic">Empty</li>
-				{/each}
-			</ul>
-		</div>
+		<QueueColumn title="🔧 03_Lab" files={labFiles}>
+			{#snippet children({ file })}
+				<span class="text-gray-800 break-all pr-2">{file}</span>
+				<div class="flex-shrink-0 space-x-1">
+					<button
+						onclick={() => handleCorrect(file)}
+						class="px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded hover:bg-blue-600"
+						title="Correct in ScanTailor"
+					>
+						Correct
+					</button>
+					<button
+						onclick={() => handleFinalize(file)}
+						class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded hover:bg-green-600"
+						title="Mark as done and move to OCR"
+					>
+						Finalized
+					</button>
+				</div>
+			{/snippet}
+		</QueueColumn>
 
-		<div class="bg-white p-4 rounded-lg shadow-md">
-			<h2 class="text-lg font-semibold text-gray-700 border-b pb-2">📄 04_ReadyForOCR</h2>
-			<ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-				{#each ocrFiles as file (file)}
-					<li class="text-gray-800">{file}</li>
-				{:else}
-					<li class="text-gray-400 italic">Empty</li>
-				{/each}
-			</ul>
-		</div>
-
-		<div class="bg-white p-4 rounded-lg shadow-md">
-			<h2 class="text-lg font-semibold text-gray-700 border-b pb-2">📝 05_ReadyForSummary</h2>
-			<ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-				{#each summaryFiles as file (file)}
-					<li class="text-gray-800">{file}</li>
-				{:else}
-					<li class="text-gray-400 italic">Empty</li>
-				{/each}
-			</ul>
-		</div>
+		<QueueColumn title="📄 04_ReadyForOCR" files={ocrFiles} />
+		<QueueColumn title="📝 05_ReadyForSummary" files={summaryFiles} />
 	</div>
 
 	<div class="bg-white p-4 rounded-lg shadow-md">
-		<h2 class="text-lg font-semibold text-gray-700 border-b pb-2">Status / Log</h2>
-		<pre
-			class="bg-gray-800 text-white p-4 rounded mt-2 whitespace-pre-wrap text-sm min-h-[50px]"
-		>{statusMessage}</pre>
+		<p class="text-sm text-gray-700 font-mono">{statusMessage}</p>
 	</div>
 </main>
