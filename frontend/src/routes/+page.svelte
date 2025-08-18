@@ -85,9 +85,9 @@
 	</div>
 
 	<div class="flex justify-center space-x-4 mb-6 border-b pb-2">
-        <button on:click={() => currentView = 'pipeline'} class:font-bold={currentView === 'pipeline'}>Pipeline</button>
-        <button on:click={() => currentView = 'lab'} class:font-bold={currentView === 'lab'}>Lab</button>
-        <button on:click={() => currentView = 'settings'} class:font-bold={currentView === 'settings'}>Settings</button>
+        <button onclick={() => currentView = 'pipeline'} class:font-bold={currentView === 'pipeline'}>Pipeline</button>
+        <button onclick={() => currentView = 'lab'} class:font-bold={currentView === 'lab'}>Lab</button>
+        <button onclick={() => currentView = 'settings'} class:font-bold={currentView === 'settings'}>Settings</button>
     </div>
 
 	{#if currentView === 'pipeline'}
