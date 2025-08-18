@@ -4,6 +4,42 @@
 use std::process::Command;
 use std::fs;
 use std::path::Path;
+use dotenv::dotenv; // Import dotenv
+use std::env; // Import std::env for environment variables
+use serde::{Deserialize, Serialize}; // Import for serialization/deserialization
+
+/// Struct to hold application settings.
+#[derive(Debug, Serialize, Deserialize)]
+struct AppSettings {
+    api_key: String,
+    base_dir: String,
+}
+
+/// Loads settings from the .env file.
+#[tauri::command]
+async fn load_settings() -> Result<AppSettings, String> {
+    dotenv().ok(); // Load .env file, ignoring if it doesn't exist
+
+    let api_key = env::var("API_KEY").unwrap_or_else(|_| "".to_string());
+    let base_dir = env::var("OBSIDIAN_VAULT_PATH").unwrap_or_else(|_| "".to_string());
+
+    Ok(AppSettings { api_key, base_dir })
+}
+
+/// Saves settings to the .env file.
+#[tauri::command]
+async fn save_settings(api_key: String, base_dir: String) -> Result<(), String> {
+    let env_path = Path::new("../.env"); // Path to the .env file relative to src-tauri
+
+    let content = format!(
+        "API_KEY={}\nOBSIDIAN_VAULT_PATH={}\n",
+        api_key,
+        base_dir
+    );
+
+    fs::write(env_path, content).map_err(|e| e.to_string())?;
+    Ok(())
+}
 
 /// Executes the triage command and returns the output (success or error).
 ///
@@ -69,7 +105,7 @@ async fn run_ocr_batch() -> Result<String, String> {
 async fn get_files_in_stage(stage: String) -> Result<Vec<String>, String> {
     // We construct the path to the stage directory (ex: ./03_Lab)
     // Note: The Tauri executable runs from the `src-tauri` folder, so we use `../` to go back to the root.
-    let dir_path = Path::new("..").join(stage);
+    let dir_path = Path::new(".." ).join(stage);
     let mut files = Vec::new();
 
     let entries = fs::read_dir(dir_path).map_err(|e| e.to_string())?;
@@ -94,7 +130,9 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
         run_triage,
         run_ocr_batch,
-        get_files_in_stage
+        get_files_in_stage,
+        load_settings,
+        save_settings
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
@@ -109,4 +147,3 @@ pub fn run() {
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
-
