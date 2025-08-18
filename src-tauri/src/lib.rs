@@ -1,10 +1,12 @@
 // src-tauri/src/lib.rs
 
-use serde::Serialize;
+// We add the necessary imports to run commands and read files
 use std::env;
-use std::fs;
-use std::path::PathBuf;
 use std::process::Command;
+use std::fs;
+use std::path::{Path, PathBuf};
+use dotenv::dotenv;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use log::info;
 
@@ -20,6 +22,8 @@ pub enum Error {
     FileRename(String),
     #[error("Could not determine project root")]
     ProjectRoot,
+    #[error("File write failed: {0}")]
+    FileWrite(String),
 }
 
 // Helper function to get the project root
@@ -59,6 +63,40 @@ fn get_poetry_python_path() -> Result<PathBuf, Error> {
     }
 }
 
+/// Struct to hold application settings.
+#[derive(Debug, Serialize, Deserialize)]
+struct AppSettings {
+    api_key: String,
+    base_dir: String,
+}
+
+/// Loads settings from the .env file.
+#[tauri::command]
+async fn load_settings() -> Result<AppSettings, String> {
+    dotenv().ok(); // Load .env file, ignoring if it doesn't exist
+
+    let api_key = env::var("API_KEY").unwrap_or_else(|_| "".to_string());
+    let base_dir = env::var("OBSIDIAN_VAULT_PATH").unwrap_or_else(|_| "".to_string());
+
+    Ok(AppSettings { api_key, base_dir })
+}
+
+/// Saves settings to the .env file.
+#[tauri::command]
+async fn save_settings(api_key: String, base_dir: String) -> Result<(), Error> {
+    let project_root = get_project_root()?;
+    let env_path = project_root.join(".env");
+
+    let content = format!(
+        "API_KEY={}\nOBSIDIAN_VAULT_PATH={}\n",
+        api_key,
+        base_dir
+    );
+
+    fs::write(env_path, content).map_err(|e| Error::FileWrite(e.to_string()))?;
+    Ok(())
+}
+
 /// Run the triage command.
 ///
 /// This function calls the `triage` command of the backend Python script.
@@ -73,7 +111,7 @@ async fn run_triage() -> Result<String, Error> {
     let output = Command::new(&poetry_python_path)
         .arg(script_path)
         .arg("triage")
-        .current_dir(&project_root) // Ensure CWD is project root
+        .current_dir(&project_root)
         .output()
         .map_err(|e| Error::CommandExecution(e.to_string()))?;
 
@@ -176,24 +214,27 @@ async fn finalize_lab_file(file_name: String) -> Result<(), Error> {
 /// This function sets up the Tauri application and runs it.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> Result<(), tauri::Error> {
-    tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![
-            run_triage,
-            run_ocr_batch,
-            get_files_in_stage,
-            open_scantailor,
-            finalize_lab_file
-        ])
-        .setup(|app| {
-            app.handle()
-                .plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )
-                .expect("failed to initialize log plugin");
-            Ok(())
-        })
-        .run(tauri::generate_context!())
+  tauri::Builder::default()
+    // The line below is the most important: it "registers" our functions
+    // and makes them available to be called by `invoke` in Svelte.
+    .invoke_handler(tauri::generate_handler![
+        run_triage,
+        run_ocr_batch,
+        get_files_in_stage,
+        load_settings,
+        save_settings,
+        open_scantailor,
+        finalize_lab_file
+    ])
+    .setup(|app: &mut tauri::App| {
+      if cfg!(debug_assertions) {
+        app.handle().plugin(
+          tauri_plugin_log::Builder::default()
+            .level(log::LevelFilter::Info)
+            .build(),
+        ).expect("failed to initialize log plugin");
+      }
+      Ok(())
+    })
+    .run(tauri::generate_context!())
 }
-
