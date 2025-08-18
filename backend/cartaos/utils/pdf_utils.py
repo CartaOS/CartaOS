@@ -49,36 +49,36 @@ def extract_text(pdf_path: Path) -> Optional[str]:
         logging.error(f"PyMuPDF extraction failed: {e}")
     return text
 
-def extract_pages(input_path: Path) -> List[Path]:
+def extract_pages(input_path: Path, output_dir: Path) -> List[Path]:
     """
     Extract the pages from the input PDF.
 
     Args:
         input_path (Path): The path to the source PDF file.
+        output_dir (Path): The destination directory for the extracted images.
 
     Returns:
         List[Path]: A list of paths to the extracted TIFF images.
     """
     images: List[Path] = []
     for i, image in enumerate(pdf2image.convert_from_path(input_path, dpi=300, grayscale=True)):
-        image_path: Path = input_path.parent / f"page_{i+1}.tiff"
+        image_path: Path = output_dir / f"page_{i+1}.tiff"
         image.save(image_path)
         images.append(image_path)
     return images
 
 
-def recompose_pdf(images: List[Path], output_dir: Path, input_path: Path) -> Path:
+def recompose_pdf(images: List[Path], output_path: Path) -> Path:
     """
     Recompose the PDF from the corrected images.
 
     Args:
         images (List[Path]): The list of paths to the corrected TIFF images.
-        output_dir (Path): The destination directory for the corrected PDF.
-        input_path (Path): The path to the source PDF file.
+        output_path (Path): The path to the saved PDF file.
 
     Returns:
         Path: The path to the saved PDF file.
     """
-    pdf_path: Path = output_dir / input_path.name
-    convert(images, pdf_path)
-    return pdf_path
+    with open(output_path, "wb") as f:
+        f.write(convert(images))
+    return output_path

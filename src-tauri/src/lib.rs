@@ -1,11 +1,11 @@
 // src-tauri/src/lib.rs
 
 // We add the necessary imports to run commands and read files
+use std::env;
 use std::process::Command;
 use std::fs;
 use std::path::{Path, PathBuf};
 use dotenv::dotenv;
-use std::env;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use log::info;
