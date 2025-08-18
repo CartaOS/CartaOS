@@ -53,7 +53,7 @@ async fn save_settings(api_key: String, base_dir: String) -> Result<(), String> 
 async fn run_triage() -> Result<String, String> {
     // We use std::process::Command to execute your Python script exactly as in the terminal.
     let output = Command::new("python3")
-        .arg("backend/cartaos/cli.py") // Argument 1: the script
+        .arg("../backend/cartaos/cli.py") // Argument 1: the script
         .arg("triage")                // Argument 2: the CLI command
         .output()                     // Executes and captures the output
         .map_err(|e| e.to_string())?; // Maps errors in execution (ex: python3 not found)
@@ -78,11 +78,11 @@ async fn run_triage() -> Result<String, String> {
 /// or `Err(String)` if there was an error.
 #[tauri::command]
 async fn run_ocr_batch() -> Result<String, String> {
-    let output = Command::new("python3")
-        .arg("backend/cartaos/cli.py")
+    let output: std::process::Output = Command::new("python3")
+        .arg("../backend/cartaos/cli.py")
         .arg("ocr") // The only change is the command we pass to the CLI
         .output()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: std::io::Error| e.to_string())?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
@@ -105,13 +105,13 @@ async fn run_ocr_batch() -> Result<String, String> {
 async fn get_files_in_stage(stage: String) -> Result<Vec<String>, String> {
     // We construct the path to the stage directory (ex: ./03_Lab)
     // Note: The Tauri executable runs from the `src-tauri` folder, so we use `../` to go back to the root.
-    let dir_path = Path::new(".." ).join(stage);
-    let mut files = Vec::new();
+    let dir_path: std::path::PathBuf = Path::new(".." ).join(stage);
+    let mut files: Vec<String> = Vec::new();
 
-    let entries = fs::read_dir(dir_path).map_err(|e| e.to_string())?;
+    let entries: fs::ReadDir = fs::read_dir(dir_path).map_err(|e| e.to_string())?;
 
     for entry in entries {
-        let entry = entry.map_err(|e| e.to_string())?;
+        let entry: fs::DirEntry = entry.map_err(|e: std::io::Error| e.to_string())?;
         // We only get the file name and add it to our vector
         if let Some(file_name) = entry.path().file_name() {
              files.push(file_name.to_string_lossy().to_string());
@@ -134,7 +134,7 @@ pub fn run() {
         load_settings,
         save_settings
     ])
-    .setup(|app| {
+    .setup(|app: &mut tauri::App| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()

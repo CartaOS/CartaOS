@@ -7,7 +7,7 @@
 	import QueueColumn from '$lib/components/QueueColumn.svelte';
 
 	// --- State ---
-	let currentView: 'pipeline' | 'lab' | 'settings' = 'pipeline';
+	let currentView: 'pipeline' | 'lab' | 'settings' = $state('pipeline');
 	let statusMessage = $state('Waiting for action...');
 	let isLoading = $state(false);
 	let triageFiles = $state<string[]>([]);
@@ -61,7 +61,7 @@
 
 			triageFiles = triage;
 			labFiles = lab;
-			ocFiles = ocr;
+			ocrFiles = ocr;
 			summaryFiles = summary;
 
 			statusMessage = 'File queues refreshed successfully.';
@@ -99,7 +99,7 @@
 				Run OCR Batch
 			</ActionButton>
 			<button
-				on:click={refreshAllQueues}
+				          onclick={refreshAllQueues}
 				class="bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-700 transition-colors"
 			>
 				Refresh Queues
