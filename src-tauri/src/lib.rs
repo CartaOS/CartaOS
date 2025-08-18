@@ -3,10 +3,65 @@
 // We add the necessary imports to run commands and read files
 use std::process::Command;
 use std::fs;
-use std::path::Path;
-use dotenv::dotenv; // Import dotenv
-use std::env; // Import std::env for environment variables
-use serde::{Deserialize, Serialize}; // Import for serialization/deserialization
+use std::path::{Path, PathBuf};
+use dotenv::dotenv;
+use std::env;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use log::info;
+
+#[derive(Debug, Error, Serialize)]
+pub enum Error {
+    #[error("Command execution failed: {0}")]
+    CommandExecution(String),
+    #[error("Command returned non-zero exit code: {0}")]
+    CommandFailed(String),
+    #[error("Directory read failed: {0}")]
+    DirectoryRead(String),
+    #[error("File rename failed: {0}")]
+    FileRename(String),
+    #[error("Could not determine project root")]
+    ProjectRoot,
+    #[error("File write failed: {0}")]
+    FileWrite(String),
+}
+
+// Helper function to get the project root
+fn get_project_root() -> Result<PathBuf, Error> {
+    let current_exe = env::current_exe().map_err(|e| Error::CommandExecution(e.to_string()))?;
+    info!("Current exe path: {:?}", current_exe);
+    // We assume the executable is in `src-tauri/target/{debug|release}`
+    if let Some(path) = current_exe.ancestors().nth(4) {
+        info!("Project root path: {:?}", path);
+        Ok(path.to_path_buf())
+    } else {
+        Err(Error::ProjectRoot)
+    }
+}
+
+// Helper function to get the path to the Poetry virtual environment's Python executable
+fn get_poetry_python_path() -> Result<PathBuf, Error> {
+    let project_root = get_project_root()?;
+    let backend_dir = project_root.join("backend");
+
+    let output = Command::new("poetry")
+        .arg("env")
+        .arg("info")
+        .arg("--path")
+        .current_dir(&backend_dir)
+        .output()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+
+    if output.status.success() {
+        let venv_path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let python_path = PathBuf::from(venv_path_str).join("bin").join("python");
+        Ok(python_path)
+    } else {
+        Err(Error::CommandFailed(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ))
+    }
+}
 
 /// Struct to hold application settings.
 #[derive(Debug, Serialize, Deserialize)]
@@ -28,8 +83,9 @@ async fn load_settings() -> Result<AppSettings, String> {
 
 /// Saves settings to the .env file.
 #[tauri::command]
-async fn save_settings(api_key: String, base_dir: String) -> Result<(), String> {
-    let env_path = Path::new("../.env"); // Path to the .env file relative to src-tauri
+async fn save_settings(api_key: String, base_dir: String) -> Result<(), Error> {
+    let project_root = get_project_root()?;
+    let env_path = project_root.join(".env");
 
     let content = format!(
         "API_KEY={}\nOBSIDIAN_VAULT_PATH={}\n",
@@ -37,93 +93,127 @@ async fn save_settings(api_key: String, base_dir: String) -> Result<(), String> 
         base_dir
     );
 
-    fs::write(env_path, content).map_err(|e| e.to_string())?;
+    fs::write(env_path, content).map_err(|e| Error::FileWrite(e.to_string()))?;
     Ok(())
 }
 
-/// Executes the triage command and returns the output (success or error).
+/// Run the triage command.
 ///
-/// This function runs the `triage` command in the `backend/cartaos/cli.py` script.
-///
-/// # Returns
-///
-/// Returns a `Result` with `Ok(String)` if the command was executed successfully,
-/// or `Err(String)` if there was an error.
+/// This function calls the `triage` command of the backend Python script.
+/// It returns the stdout of the command as a string.
+/// In case of an error, it returns the stderr of the command as a string.
 #[tauri::command]
-async fn run_triage() -> Result<String, String> {
-    // We use std::process::Command to execute your Python script exactly as in the terminal.
-    let output = Command::new("python3")
-        .arg("../backend/cartaos/cli.py") // Argument 1: the script
-        .arg("triage")                // Argument 2: the CLI command
-        .output()                     // Executes and captures the output
-        .map_err(|e| e.to_string())?; // Maps errors in execution (ex: python3 not found)
+async fn run_triage() -> Result<String, Error> {
+    let project_root = get_project_root()?;
+    let script_path = project_root.join("backend/cartaos/cli.py");
+    let poetry_python_path = get_poetry_python_path()?;
 
-    // We check if the command was executed successfully.
-    if output.status.success() {
-        // If yes, we return the standard output (stdout) as a success string.
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
-    } else {
-        // If not, we return the error output (stderr) as an error string.
-        Err(String::from_utf8_lossy(&output.stderr).to_string())
-    }
-}
-
-/// Executes the OCR batch command and returns the output (success or error).
-///
-/// This function runs the `ocr` command in the `backend/cartaos/cli.py` script.
-///
-/// # Returns
-///
-/// Returns a `Result` with `Ok(String)` if the command was executed successfully,
-/// or `Err(String)` if there was an error.
-#[tauri::command]
-async fn run_ocr_batch() -> Result<String, String> {
-    let output: std::process::Output = Command::new("python3")
-        .arg("../backend/cartaos/cli.py")
-        .arg("ocr") // The only change is the command we pass to the CLI
+    let output = Command::new(&poetry_python_path)
+        .arg(script_path)
+        .arg("triage")
+        .current_dir(&project_root)
         .output()
-        .map_err(|e: std::io::Error| e.to_string())?;
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).to_string())
+        Err(Error::CommandFailed(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ))
     }
 }
 
-/// Retrieves the list of files in a specific stage directory.
+/// Run the OCR batch command.
 ///
-/// # Arguments
-///
-/// * `stage` - The name of the stage directory (ex: "03_Lab").
-///
-/// # Returns
-///
-/// Returns a `Result` with `Ok(Vec<String>)` containing the list of file names,
-/// or `Err(String)` if there was an error reading the directory.
+/// This function calls the `ocr` command of the backend Python script.
+/// It returns the stdout of the command as a string.
+/// In case of an error, it returns the stderr of the command as a string.
 #[tauri::command]
-async fn get_files_in_stage(stage: String) -> Result<Vec<String>, String> {
-    // We construct the path to the stage directory (ex: ./03_Lab)
-    // Note: The Tauri executable runs from the `src-tauri` folder, so we use `../` to go back to the root.
-    let dir_path: std::path::PathBuf = Path::new(".." ).join(stage);
-    let mut files: Vec<String> = Vec::new();
+async fn run_ocr_batch() -> Result<String, Error> {
+    let project_root = get_project_root()?;
+    let script_path = project_root.join("backend/cartaos/cli.py");
+    let poetry_python_path = get_poetry_python_path()?;
 
-    let entries: fs::ReadDir = fs::read_dir(dir_path).map_err(|e| e.to_string())?;
+    let output = Command::new(&poetry_python_path)
+        .arg(script_path)
+        .arg("ocr")
+        .current_dir(&project_root)
+        .output()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(Error::CommandFailed(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ))
+    }
+}
+
+/// Get the list of files in a specific stage.
+///
+/// This function returns the list of file names in the specified stage directory.
+/// The stage directory is located in the parent directory of the current directory.
+#[tauri::command]
+async fn get_files_in_stage(stage: String) -> Result<Vec<String>, Error> {
+    let project_root = get_project_root()?;
+    let dir_path = project_root.join(stage);
+    let mut files = Vec::new();
+
+    let entries = fs::read_dir(dir_path).map_err(|e| Error::DirectoryRead(e.to_string()))?;
 
     for entry in entries {
-        let entry: fs::DirEntry = entry.map_err(|e: std::io::Error| e.to_string())?;
-        // We only get the file name and add it to our vector
-        if let Some(file_name) = entry.path().file_name() {
-             files.push(file_name.to_string_lossy().to_string());
+        let entry = entry.map_err(|e| Error::DirectoryRead(e.to_string()))?;
+        if let Some(file_name) = entry.file_name().to_str() {
+            files.push(file_name.to_string());
         }
     }
-    // We return the list of file names.
+
     Ok(files)
 }
 
+/// Open the Scantailor application for a file.
+///
+/// This function calls the `lab` command of the backend Python script to open the Scantailor application for the specified file.
+#[tauri::command]
+async fn open_scantailor(file_name: String) -> Result<(), Error> {
+    let project_root = get_project_root()?;
+    let script_path = project_root.join("backend/cartaos/cli.py");
+    let project_path_arg = project_root.join("03_Lab").join(&file_name);
+    let poetry_python_path = get_poetry_python_path()?;
 
+    Command::new(&poetry_python_path)
+        .arg(script_path)
+        .arg("lab")
+        .arg(project_path_arg)
+        .current_dir(&project_root)
+        .spawn()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Finalize a Lab file.
+///
+/// This function moves a file from the 03_Lab stage to the 04_ReadyForOCR stage.
+#[tauri::command]
+async fn finalize_lab_file(file_name: String) -> Result<(), Error> {
+    let project_root = get_project_root()?;
+    let source_path = project_root.join("03_Lab").join(&file_name);
+    let destination_path = project_root.join("04_ReadyForOCR").join(&file_name);
+
+    fs::rename(&source_path, &destination_path)
+        .map_err(|e| Error::FileRename(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Run the Tauri application.
+///
+/// This function sets up the Tauri application and runs it.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+pub fn run() -> Result<(), tauri::Error> {
   tauri::Builder::default()
     // The line below is the most important: it "registers" our functions
     // and makes them available to be called by `invoke` in Svelte.
@@ -132,7 +222,9 @@ pub fn run() {
         run_ocr_batch,
         get_files_in_stage,
         load_settings,
-        save_settings
+        save_settings,
+        open_scantailor,
+        finalize_lab_file
     ])
     .setup(|app: &mut tauri::App| {
       if cfg!(debug_assertions) {
@@ -140,10 +232,9 @@ pub fn run() {
           tauri_plugin_log::Builder::default()
             .level(log::LevelFilter::Info)
             .build(),
-        )?;
+        ).expect("failed to initialize log plugin");
       }
       Ok(())
     })
     .run(tauri::generate_context!())
-    .expect("error while running tauri application");
 }
