@@ -113,3 +113,31 @@ def test_process_returns_false_when_recompose_fails(monkeypatch, tmp_path):
 
     proc = LabProcessor(inp, outdir)
     assert proc.process() is False
+
+
+def test_process_handles_exception_in_manual_correction(monkeypatch, tmp_path):
+    _setup_basic_mocks(monkeypatch, tmp_path)
+
+    # create corrected image so we would get past earlier checks
+    workspace = tmp_path / "workspace"
+    out_dir = workspace / "out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "p1.tif").write_bytes(b"TIFF")
+
+    # make manual correction raise
+    def raise_manual(self, workspace, project_file_path):
+        raise RuntimeError("scantailor crashed")
+    monkeypatch.setattr("cartaos.lab.LabProcessor._run_manual_correction", raise_manual)
+
+    # capture cleanup
+    cleaned = {"done": False}
+    def fake_rmtree(p):
+        cleaned["done"] = True
+    monkeypatch.setattr("shutil.rmtree", fake_rmtree)
+
+    inp = tmp_path / "input.pdf"; inp.write_bytes(b"%PDF-1.4\n")
+    outdir = tmp_path / "outdir"; outdir.mkdir()
+
+    proc = LabProcessor(inp, outdir)
+    assert proc.process() is False
+    assert cleaned["done"] is True

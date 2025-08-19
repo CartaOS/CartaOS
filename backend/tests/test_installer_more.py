@@ -1,0 +1,162 @@
+# -*- coding: utf-8 -*-
+# backend/tests/test_installer_more.py
+
+from pathlib import Path
+import platform
+import pytest
+
+from cartaos.install_dev_env.installer import Installer
+from cartaos.install_dev_env import shell_utils as su
+
+
+class DummyConsole:
+    def __init__(self, *args, **kwargs):
+        pass
+    def print(self, *args, **kwargs):
+        pass
+    def log(self, *args, **kwargs):
+        pass
+
+
+@pytest.fixture(autouse=True)
+def patch_console(monkeypatch):
+    monkeypatch.setattr("cartaos.install_dev_env.installer.Console", DummyConsole)
+
+
+def make_inst(tmp_path, minimal=False, dry_run=False):
+    inst = Installer(no_confirm=True, minimal=minimal, dry_run=dry_run, ci_mode=True)
+    # Force a fake project root to avoid touching the repo
+    inst.project_root = tmp_path
+    return inst
+
+
+def test_ensure_frontend_deps_skips_when_no_package_json(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    monkeypatch.setattr(su, "is_installed", lambda c: True)
+
+    inst.ensure_frontend_deps()
+    r = next(x for x in inst.results if x.name == "Frontend Dependencies")
+    assert r.success is True
+    assert "No package.json" in r.details
+
+
+def test_ensure_frontend_deps_runs_npm_ci(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    frontend = tmp_path / "frontend"
+    frontend.mkdir()
+    (frontend / "package.json").write_text("{}")
+
+    called = {"cmd": None}
+    def fake_run(cmd, env=None, cwd=None, read_only=False, login_shell=False):
+        called["cmd"] = cmd
+        return True, "ok"
+    monkeypatch.setattr(su, "is_installed", lambda c: c == "npm")
+    monkeypatch.setattr(inst, "_run_cmd", fake_run)
+
+    inst.ensure_frontend_deps()
+    r = next(x for x in inst.results if x.name == "Frontend Dependencies")
+    assert r.success is True
+    assert called["cmd"] == ["npm", "ci"]
+
+
+def test_ensure_backend_deps_missing_poetry(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    backend = tmp_path / "backend"
+    backend.mkdir()
+    (backend / "pyproject.toml").write_text("[tool.poetry]\nname='x'\n")
+
+    monkeypatch.setattr(su, "is_installed", lambda c: False)
+
+    inst.ensure_backend_deps()
+    r = next(x for x in inst.results if x.name == "Project Dependencies")
+    assert r.success is False
+    assert "Poetry is not available" in r.details
+
+
+def test_ensure_backend_deps_runs_poetry_install(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    backend = tmp_path / "backend"
+    backend.mkdir()
+    (backend / "pyproject.toml").write_text("[tool.poetry]\nname='x'\n")
+
+    monkeypatch.setattr(su, "is_installed", lambda c: c == "poetry")
+    called = {"cmd": None, "cwd": None}
+    def fake_run(cmd, env=None, cwd=None, read_only=False, login_shell=False):
+        called["cmd"], called["cwd"] = cmd, cwd
+        return True, "installed"
+    monkeypatch.setattr(inst, "_run_cmd", fake_run)
+
+    inst.ensure_backend_deps()
+    r = next(x for x in inst.results if x.name == "Project Dependencies")
+    assert r.success is True
+    assert called["cmd"] == ["poetry", "install"]
+    assert called["cwd"] == backend
+
+
+def test_ensure_tesseract_langs_skip_minimal(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path, minimal=True)
+    inst.ensure_tesseract_langs()
+    r = next(x for x in inst.results if x.name == "Tesseract languages")
+    assert r.success is True
+    assert "Skipped" in r.details
+
+
+def test_ensure_tesseract_langs_missing_binary(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    monkeypatch.setattr(su, "is_installed", lambda c: False)
+    inst.ensure_tesseract_langs()
+    # Should not add a result if tesseract missing? The code returns early; assert no entry added.
+    assert not any(x.name == "Tesseract languages" and x.details == "tesseract command failed." for x in inst.results)
+
+
+def test_ensure_tesseract_langs_ok_when_all_present(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    monkeypatch.setattr(su, "is_installed", lambda c: c == "tesseract")
+    langs_output = """
+List of available languages (4):
+eng
+por
+spa
+ita
+"""
+    monkeypatch.setattr(inst, "_run_cmd", lambda *a, **k: (True, langs_output))
+
+    inst.ensure_tesseract_langs()
+    r = next(x for x in inst.results if x.name == "Tesseract languages")
+    assert r.success is True
+    assert "All present" in r.details
+
+
+def test_ensure_node_already_ok(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    monkeypatch.setattr(inst, "system", "linux")
+    # node -v returns v20
+    monkeypatch.setattr(inst, "_run_cmd", lambda *a, **k: (True, "v20.10.0"))
+
+    inst.ensure_node()
+    r = next(x for x in inst.results if x.name == "Node.js LTS")
+    assert r.success is True
+    assert "Already installed" in r.details
+
+
+def test_ensure_node_installs_via_nvm(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    monkeypatch.setattr(inst, "system", "linux")
+
+    calls = {"shell": 0}
+    def fake_run_cmd(cmd, env=None, cwd=None, read_only=False, login_shell=False):
+        # First call is node -v read_only
+        if read_only:
+            return False, ""
+        return True, "installed"
+    def fake_run_shell(command, read_only=False):
+        calls["shell"] += 1
+        return True, "nvm ok"
+
+    monkeypatch.setattr(inst, "_run_cmd", fake_run_cmd)
+    monkeypatch.setattr(inst, "_run_shell", fake_run_shell)
+
+    inst.ensure_node()
+    r = next(x for x in inst.results if x.name == "Node.js LTS")
+    assert r.success is False  # ensure_node records info about attempting install via NVM
+    assert calls["shell"] == 1
