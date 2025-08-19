@@ -141,3 +141,54 @@ def test_process_handles_exception_in_manual_correction(monkeypatch, tmp_path):
     proc = LabProcessor(inp, outdir)
     assert proc.process() is False
     assert cleaned["done"] is True
+
+
+def test_process_success_calls_cleanup(monkeypatch, tmp_path):
+    _setup_basic_mocks(monkeypatch, tmp_path)
+
+    # ensure a corrected image exists so success path is taken
+    workspace = tmp_path / "workspace"
+    out_dir = workspace / "out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "p1.tif").write_bytes(b"TIFF")
+
+    # recompose returns output path
+    def fake_recompose(images, output):
+        output.write_bytes(b"%PDF-1.4\n")
+        return output
+    monkeypatch.setattr("cartaos.lab.recompose_pdf", fake_recompose)
+
+    # spy cleanup
+    called = {"rmtree": False}
+    def fake_rmtree(p):
+        called["rmtree"] = True
+    monkeypatch.setattr("shutil.rmtree", fake_rmtree)
+
+    inp = tmp_path / "input.pdf"; inp.write_bytes(b"%PDF-1.4\n")
+    outdir = tmp_path / "outdir"; outdir.mkdir()
+
+    proc = LabProcessor(inp, outdir)
+    assert proc.process() is True
+    assert called["rmtree"] is True
+
+
+def test_process_unpaper_raises_then_cleanup(monkeypatch, tmp_path):
+    _setup_basic_mocks(monkeypatch, tmp_path)
+
+    # override unpaper to raise
+    def raise_unpaper(self, workspace, images):
+        raise RuntimeError("unpaper failed")
+    monkeypatch.setattr("cartaos.lab.LabProcessor._run_unpaper_cleanup", raise_unpaper)
+
+    # spy cleanup
+    cleaned = {"done": False}
+    def fake_rmtree(p):
+        cleaned["done"] = True
+    monkeypatch.setattr("shutil.rmtree", fake_rmtree)
+
+    inp = tmp_path / "input.pdf"; inp.write_bytes(b"%PDF-1.4\n")
+    outdir = tmp_path / "outdir"; outdir.mkdir()
+
+    proc = LabProcessor(inp, outdir)
+    assert proc.process() is False
+    assert cleaned["done"] is True
