@@ -3,12 +3,12 @@
 // We add the necessary imports to run commands and read files
 use std::process::Command;
 use std::fs;
-use std::path::{Path, PathBuf};
-use dotenv::dotenv;
+use std::path::PathBuf;
 use std::env;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use log::info;
+use dotenv; // Only need to import the crate, not the specific function
 
 #[derive(Debug, Error, Serialize)]
 pub enum Error {
@@ -29,10 +29,8 @@ pub enum Error {
 // Helper function to get the project root
 fn get_project_root() -> Result<PathBuf, Error> {
     let current_exe = env::current_exe().map_err(|e| Error::CommandExecution(e.to_string()))?;
-    info!("Current exe path: {:?}", current_exe);
     // We assume the executable is in `src-tauri/target/{debug|release}`
     if let Some(path) = current_exe.ancestors().nth(4) {
-        info!("Project root path: {:?}", path);
         Ok(path.to_path_buf())
     } else {
         Err(Error::ProjectRoot)
@@ -73,7 +71,10 @@ struct AppSettings {
 /// Loads settings from the .env file.
 #[tauri::command]
 async fn load_settings() -> Result<AppSettings, String> {
-    dotenv().ok(); // Load .env file, ignoring if it doesn't exist
+    let project_root = get_project_root().map_err(|e| e.to_string())?;
+    let env_path = project_root.join(".env");
+
+    dotenv::from_path(env_path).ok();
 
     let api_key = env::var("API_KEY").unwrap_or_else(|_| "".to_string());
     let base_dir = env::var("OBSIDIAN_VAULT_PATH").unwrap_or_else(|_| "".to_string());
@@ -88,7 +89,7 @@ async fn save_settings(api_key: String, base_dir: String) -> Result<(), Error> {
     let env_path = project_root.join(".env");
 
     let content = format!(
-        "API_KEY={}\nOBSIDIAN_VAULT_PATH={}\n",
+        "API_KEY={}\nOBSIDIAN_VAULT_PATH=\"{}\"\n", // Add quotes around base_dir
         api_key,
         base_dir
     );
