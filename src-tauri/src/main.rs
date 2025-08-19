@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-  let _ = app_lib::run();
+  app_lib::run().expect("Failed to run Tauri application");
 }

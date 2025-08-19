@@ -8,7 +8,6 @@
 
 	// --- State ---
 	let currentView: 'pipeline' | 'lab' | 'settings' = $state('pipeline');
-
 	let statusMessage = $state('Waiting for action...');
 	let isLoading = $state(false);
 	let triageFiles = $state<string[]>([]);
@@ -47,6 +46,7 @@
 		);
 	const handleFinalize = (fileName: string) =>
 		withLoading(() => invoke('finalize_lab_file', { fileName }), `Finalizing ${fileName}`);
+
 
 	// Função de refresh
 	async function refreshAllQueues(): Promise<void> {
@@ -89,7 +89,7 @@
         <button onclick={() => currentView = 'pipeline'} class:font-bold={currentView === 'pipeline'}>Pipeline</button>
         <button onclick={() => currentView = 'lab'} class:font-bold={currentView === 'lab'}>Lab</button>
         <button onclick={() => currentView = 'settings'} class:font-bold={currentView === 'settings'}>Settings</button>
-  </div>
+    </div>
 
 	{#if currentView === 'pipeline'}
 		<div class="bg-white p-4 rounded-lg shadow-md space-x-4 text-center">
@@ -99,7 +99,7 @@
 			<ActionButton onclick={handleOcr} {isLoading} color="teal">
 				Run OCR Batch
 			</ActionButton>
-			<button onclick={refreshAllQueues}	class="bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-700 transition-colors">
+			<button onclick={refreshAllQueues} class="bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-700 transition-colors">
 				Refresh Queues
 			</button>
 		</div>
@@ -131,7 +131,6 @@
 					</div>
 				{/snippet}
 			</QueueColumn>
-
 			<QueueColumn title="📄 04_ReadyForOCR" files={ocrFiles} />
 			<QueueColumn title="📝 05_ReadyForSummary" files={summaryFiles} />
 		</div>
