@@ -2,17 +2,15 @@
 
 // We add the necessary imports to run commands and read files
 use std::env;
-use std::process::Command;
+
 use std::fs;
 use std::path::PathBuf;
-use std::env;
+use std::process::Command;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use log::info;
-use dotenvy::dotenv;
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
-use log::info;
+
+mod logging;
+use logging::setup_logging;
 
 #[derive(Debug, Error, Serialize)]
 pub enum Error {
@@ -78,7 +76,7 @@ async fn load_settings() -> Result<AppSettings, String> {
     let project_root = get_project_root().map_err(|e| e.to_string())?;
     let env_path = project_root.join(".env");
 
-    dotenv::from_path(env_path).ok();
+    dotenvy::from_path(env_path).ok();
 
     let api_key = env::var("API_KEY").unwrap_or_else(|_| "".to_string());
     let base_dir = env::var("OBSIDIAN_VAULT_PATH").unwrap_or_else(|_| "".to_string());
@@ -231,14 +229,8 @@ pub fn run() -> Result<(), tauri::Error> {
         finalize_lab_file
     ])
     .setup(|app: &mut tauri::App| {
-      if cfg!(debug_assertions) {
-        app.handle().plugin(
-          tauri_plugin_log::Builder::default()
-            .level(log::LevelFilter::Info)
-            .build(),
-        ).expect("failed to initialize log plugin");
-      }
-      Ok(())
+        setup_logging(app).expect("Failed to setup logging");
+        Ok(())
     })
     .run(tauri::generate_context!())
 }

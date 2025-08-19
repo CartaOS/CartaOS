@@ -5,6 +5,7 @@
 	import LabView from '$lib/components/LabView.svelte';
 	import ActionButton from '$lib/components/ActionButton.svelte';
 	import QueueColumn from '$lib/components/QueueColumn.svelte';
+	import LogPanel from '$lib/components/LogPanel.svelte';
 
 	// --- State ---
 	let currentView: 'pipeline' | 'lab' | 'settings' = $state('pipeline');
@@ -96,7 +97,7 @@
 			<ActionButton onclick={handleTriage} {isLoading} color="blue">
 				Run Triage
 			</ActionButton>
-			<ActionButton onclick={handleOcr} {isLoading} color="teal">
+			<ActionButton onclick={handleOcr} {isLoading} color="green">
 				Run OCR Batch
 			</ActionButton>
 			<button onclick={refreshAllQueues} class="bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-700 transition-colors">
@@ -107,6 +108,8 @@
 		<div class="bg-white p-4 rounded-lg shadow-md">
 			<p class="text-sm text-gray-700 font-mono">{statusMessage}</p>
 		</div>
+
+		<LogPanel />
 
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 			<QueueColumn title="📂 02_Triage" files={triageFiles} />
