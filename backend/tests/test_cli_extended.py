@@ -127,3 +127,124 @@ def test_summarize_success_and_failure(tmp_path, monkeypatch):
     result_fail = runner.invoke(cli_module.app, ["summarize", str(pdf)])
     assert result_fail.exit_code == 0  # non-interactive should not exit with error
     assert "Summary failed" in result_fail.output
+
+
+def test_lab_interactive_processor_failure_exits_nonzero(tmp_path, monkeypatch):
+    # simulate interactive TTY by replacing sys in cli module
+    fake_sys = types.SimpleNamespace(stdin=types.SimpleNamespace(isatty=lambda: True))
+    monkeypatch.setattr(cli_module, "sys", fake_sys)
+
+    # set OCR dir
+    monkeypatch.setattr(cli_module, "DIR_READY_FOR_OCR", tmp_path / "04_ReadyForOCR")
+
+    # valid input pdf
+    inp = tmp_path / "bad.pdf"; inp.write_bytes(b"%PDF-1.4\n")
+
+    class FakeLab:
+        def __init__(self, input_path, output_dir):
+            self.input_path = input_path
+            self.output_dir = output_dir
+        def process(self):
+            return False
+
+    monkeypatch.setattr(cli_module, "LabProcessor", FakeLab)
+
+    result = runner.invoke(cli_module.app, ["lab", str(inp)])
+    assert result.exit_code == 1
+    assert "Lab processing reported failure." in result.output
+
+
+def test_ocr_interactive_failure_exits_nonzero(tmp_path, monkeypatch):
+    # simulate interactive TTY by replacing sys in cli module
+    fake_sys = types.SimpleNamespace(stdin=types.SimpleNamespace(isatty=lambda: True))
+    monkeypatch.setattr(cli_module, "sys", fake_sys)
+
+    ready_ocr = tmp_path / "04_ReadyForOCR"; ready_ocr.mkdir()
+    ready_sum = tmp_path / "05_ReadyForSummary"; ready_sum.mkdir()
+
+    monkeypatch.setattr(cli_module, "DIR_READY_FOR_OCR", ready_ocr)
+    monkeypatch.setattr(cli_module, "DIR_READY_FOR_SUMMARY", ready_sum)
+
+    inp = tmp_path / "doc_fail.pdf"; inp.write_bytes(b"%PDF-1.4\n")
+
+    class FailOcr:
+        def __init__(self, input_path, output_path):
+            self.input_path = input_path
+            self.output_path = output_path
+        def process(self):
+            return False
+
+    monkeypatch.setattr(cli_module, "OcrProcessor", FailOcr)
+
+    result = runner.invoke(cli_module.app, ["ocr", str(inp)])
+    assert result.exit_code == 1
+    assert "OCR failed for" in result.output
+
+
+def test_triage_interactive_exception_exits_nonzero(tmp_path, monkeypatch):
+    fake_sys = types.SimpleNamespace(stdin=types.SimpleNamespace(isatty=lambda: True))
+    monkeypatch.setattr(cli_module, "sys", fake_sys)
+
+    triage = tmp_path / "02_Triage"; triage.mkdir()
+    lab = tmp_path / "03_Lab"; lab.mkdir()
+    ready_sum = tmp_path / "05_ReadyForSummary"; ready_sum.mkdir()
+
+    monkeypatch.setattr(cli_module, "DIR_TRIAGE", triage)
+    monkeypatch.setattr(cli_module, "DIR_LAB", lab)
+    monkeypatch.setattr(cli_module, "DIR_READY_FOR_SUMMARY", ready_sum)
+
+    class BoomTriage:
+        def __init__(self, input_dir, summary_dir, lab_dir):
+            pass
+        def process(self):
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(cli_module, "TriageProcessor", BoomTriage)
+
+    result = runner.invoke(cli_module.app, ["triage"]) 
+    assert result.exit_code == 1
+    assert "An error occurred during triage" in result.output
+
+
+def test_summarize_interactive_failure_and_warning_banner(tmp_path, monkeypatch):
+    fake_sys = types.SimpleNamespace(stdin=types.SimpleNamespace(isatty=lambda: True))
+    monkeypatch.setattr(cli_module, "sys", fake_sys)
+
+    pdf = tmp_path / "warn.pdf"; pdf.write_bytes(b"%PDF-1.4\n")
+
+    class WarnProc:
+        def __init__(self, pdf_path, dry_run=False, debug=False, force_ocr=False):
+            self.pdf_path = pdf_path
+            self.captured_warnings = ["low quality"]
+        def process(self):
+            return True
+
+    monkeypatch.setattr(cli_module, "CartaOSProcessor", WarnProc)
+    result_warn = runner.invoke(cli_module.app, ["summarize", str(pdf)])
+    assert result_warn.exit_code == 0
+    assert "DOCUMENT QUALITY WARNING" in result_warn.output
+
+    # Now failing path should exit non-zero when interactive
+    class FailProc:
+        def __init__(self, pdf_path, dry_run=False, debug=False, force_ocr=False):
+            self.pdf_path = pdf_path
+        def process(self):
+            return False
+
+    monkeypatch.setattr(cli_module, "CartaOSProcessor", FailProc)
+    result_fail = runner.invoke(cli_module.app, ["summarize", str(pdf)])
+    assert result_fail.exit_code == 1
+    assert "Summary failed" in result_fail.output
+
+
+def test_ocr_batch_no_files_message(tmp_path, monkeypatch):
+    ready_ocr = tmp_path / "04_ReadyForOCR"; ready_ocr.mkdir()
+    ready_sum = tmp_path / "05_ReadyForSummary"; ready_sum.mkdir()
+
+    monkeypatch.setattr(cli_module, "DIR_READY_FOR_OCR", ready_ocr)
+    monkeypatch.setattr(cli_module, "DIR_READY_FOR_SUMMARY", ready_sum)
+
+    # No PDFs present
+    result = runner.invoke(cli_module.app, ["ocr"])
+    assert result.exit_code == 0
+    assert "No PDF files found" in result.output
