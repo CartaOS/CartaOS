@@ -1,6 +1,7 @@
 // src-tauri/src/lib.rs
 
 // We add the necessary imports to run commands and read files
+use std::env;
 use std::process::Command;
 use std::fs;
 use std::path::PathBuf;
@@ -8,7 +9,10 @@ use std::env;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use log::info;
-use dotenv; // Only need to import the crate, not the specific function
+use dotenvy::dotenv;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use log::info;
 
 #[derive(Debug, Error, Serialize)]
 pub enum Error {
@@ -203,7 +207,6 @@ async fn finalize_lab_file(file_name: String) -> Result<(), Error> {
     let project_root = get_project_root()?;
     let source_path = project_root.join("03_Lab").join(&file_name);
     let destination_path = project_root.join("04_ReadyForOCR").join(&file_name);
-
     fs::rename(&source_path, &destination_path)
         .map_err(|e| Error::FileRename(e.to_string()))?;
 

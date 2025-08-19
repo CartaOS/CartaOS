@@ -70,6 +70,7 @@ build/
 .vscode/
 .idea/
 .DS_Store
+.code-workspace
 
 # Other OS junk
 Thumbs.db
@@ -77,3 +78,10 @@ Thumbs.db
 coverage.xml
 htmlcov/
 backend/.coverage
+
+#ScanTailor
+.ScanTailor
+
+# Gemini/MCP settings
+.gemini/
+.gemini/*
