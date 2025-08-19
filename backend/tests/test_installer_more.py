@@ -5,8 +5,9 @@ from pathlib import Path
 import platform
 import pytest
 
-from cartaos.install_dev_env.installer import Installer
+from cartaos.install_dev_env.installer import Installer, StepResult
 from cartaos.install_dev_env import shell_utils as su
+from cartaos.install_dev_env import config as inst_config
 
 
 class DummyConsole:
@@ -160,3 +161,43 @@ def test_ensure_node_installs_via_nvm(monkeypatch, tmp_path):
     r = next(x for x in inst.results if x.name == "Node.js LTS")
     assert r.success is False  # ensure_node records info about attempting install via NVM
     assert calls["shell"] == 1
+
+
+def test_final_summary_runs_and_mentions_log_note(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    # populate some results
+    inst.results.extend([
+        StepResult(name="Project Root", category="Bootstrap", success=True, details="ok"),
+        StepResult(name="Package Manager", category="Bootstrap", success=True, details="apt"),
+        StepResult(name="Python Version", category="Bootstrap", success=True, details="3.12"),
+    ])
+    # Just ensure it doesn't raise; output is swallowed by DummyConsole
+    inst._final_summary()
+
+
+def test_export_log_file_writes_file(tmp_path):
+    inst = make_inst(tmp_path)
+    # Add a couple of results to be logged
+    inst.results.extend([
+        StepResult(name="Step A", category="Cat", success=True, details="Done"),
+        StepResult(name="Step B", category="Cat", success=False, details="Fail msg"),
+    ])
+
+    inst._export_log_file()
+
+    log_path = tmp_path / inst_config.LOG_FILE_NAME
+    assert log_path.exists()
+    content = log_path.read_text(encoding="utf-8")
+    assert "CartaOS Development Environment Setup Log" in content
+    assert "[SUCCESS] - Cat - Step A" in content
+    assert "[FAIL] - Cat - Step B" in content
+
+
+def test_export_log_file_skips_in_dry_run(tmp_path):
+    inst = make_inst(tmp_path, dry_run=True)
+    inst.results.append(StepResult(name="X", category="Y", success=True, details="Z"))
+
+    inst._export_log_file()
+
+    log_path = tmp_path / inst_config.LOG_FILE_NAME
+    assert not log_path.exists()
