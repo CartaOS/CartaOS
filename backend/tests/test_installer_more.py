@@ -60,6 +60,23 @@ def test_ensure_frontend_deps_runs_npm_ci(monkeypatch, tmp_path):
     assert called["cmd"] == ["npm", "ci"]
 
 
+def test_ensure_frontend_deps_npm_ci_failure(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    frontend = tmp_path / "frontend"
+    frontend.mkdir()
+    (frontend / "package.json").write_text("{}")
+
+    def fake_run(cmd, env=None, cwd=None, read_only=False, login_shell=False):
+        return False, "npm error"
+    monkeypatch.setattr(su, "is_installed", lambda c: c == "npm")
+    monkeypatch.setattr(inst, "_run_cmd", fake_run)
+
+    inst.ensure_frontend_deps()
+    r = next(x for x in inst.results if x.name == "Frontend Dependencies")
+    assert r.success is False
+    assert "npm error" in r.details
+
+
 def test_ensure_backend_deps_missing_poetry(monkeypatch, tmp_path):
     inst = make_inst(tmp_path)
     backend = tmp_path / "backend"
@@ -92,6 +109,46 @@ def test_ensure_backend_deps_runs_poetry_install(monkeypatch, tmp_path):
     assert r.success is True
     assert called["cmd"] == ["poetry", "install"]
     assert called["cwd"] == backend
+
+
+def test_ensure_backend_deps_missing_pyproject(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    (tmp_path / "backend").mkdir()
+    monkeypatch.setattr(su, "is_installed", lambda c: c == "poetry")
+
+    inst.ensure_backend_deps()
+    r = next(x for x in inst.results if x.name == "Project Dependencies")
+    assert r.success is False
+    assert "pyproject.toml not found" in r.details
+
+
+def test_ensure_backend_deps_poetry_install_failure(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    backend = tmp_path / "backend"
+    backend.mkdir()
+    (backend / "pyproject.toml").write_text("[tool.poetry]\nname='x'\n")
+
+    monkeypatch.setattr(su, "is_installed", lambda c: c == "poetry")
+    def fake_run(cmd, env=None, cwd=None, read_only=False, login_shell=False):
+        return False, "poetry error"
+    monkeypatch.setattr(inst, "_run_cmd", fake_run)
+
+    inst.ensure_backend_deps()
+    r = next(x for x in inst.results if x.name == "Project Dependencies")
+    assert r.success is False
+    assert "poetry error" in r.details
+
+
+def test_ensure_tesseract_langs_list_langs_failure(monkeypatch, tmp_path):
+    inst = make_inst(tmp_path)
+    monkeypatch.setattr(su, "is_installed", lambda c: c == "tesseract")
+    # tesseract --list-langs fails
+    monkeypatch.setattr(inst, "_run_cmd", lambda *a, **k: (False, "oops"))
+
+    inst.ensure_tesseract_langs()
+    r = next(x for x in inst.results if x.name == "Tesseract languages")
+    assert r.success is False
+    assert "tesseract command failed" in r.details
 
 
 def test_ensure_tesseract_langs_skip_minimal(monkeypatch, tmp_path):
