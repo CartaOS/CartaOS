@@ -169,9 +169,11 @@ async fn get_files_in_stage(stage: String) -> Result<Vec<String>, Error> {
 
     for entry in entries {
         let entry = entry.map_err(|e| Error::DirectoryRead(e.to_string()))?;
-        if let Some(file_name) = entry.file_name().to_str() {
-            files.push(file_name.to_string());
-        }
+        let name_os = entry.file_name();
+        let name = name_os.to_string_lossy().to_string();
+        // Hide git housekeeping files from the UI
+        if name == ".gitkeep" { continue; }
+        files.push(name);
     }
 
     Ok(files)

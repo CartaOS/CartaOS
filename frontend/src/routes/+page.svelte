@@ -86,30 +86,30 @@
 	onMount(refreshAllQueues);
 </script>
 
-<main class="p-8 max-w-7xl mx-auto space-y-6 bg-gray-100 min-h-screen">
+<main class="p-4 md:p-8 max-w-7xl mx-auto space-y-6 bg-gray-100 min-h-screen">
 	<div class="text-center">
-		<h1 class="text-4xl font-bold text-gray-800">CartaOS</h1>
+		<h1 class="text-3xl md:text-4xl font-bold text-gray-800">CartaOS</h1>
 		<p class="text-lg text-gray-600">Your Document Processing Pipeline</p>
 	</div>
 
-	<div class="flex justify-center space-x-4 mb-6 border-b pb-2">
+	<div class="flex flex-wrap justify-center gap-4 mb-6 border-b pb-2">
         <button onclick={() => currentView = 'pipeline'} class:font-bold={currentView === 'pipeline'}>Pipeline</button>
         <button onclick={() => currentView = 'lab'} class:font-bold={currentView === 'lab'}>Lab</button>
         <button onclick={() => currentView = 'settings'} class:font-bold={currentView === 'settings'}>Settings</button>
     </div>
 
 	{#if currentView === 'pipeline'}
-		<div class="bg-white p-4 rounded-lg shadow-md space-x-4 text-center">
-			<ActionButton onclick={handleTriage} {isLoading} color="blue">
+		<div class="bg-white p-4 rounded-lg shadow-md flex flex-wrap justify-center gap-4 text-center">
+			<ActionButton onclick={handleTriage} {isLoading} color="blue" class="w-full sm:w-auto">
 				Run Triage
 			</ActionButton>
-			<ActionButton onclick={handleOcr} {isLoading} color="green">
+			<ActionButton onclick={handleOcr} {isLoading} color="green" class="w-full sm:w-auto">
 				Run OCR Batch
 			</ActionButton>
-			<ActionButton onclick={handleSummarizeBatch} {isLoading} color="amber">
+			<ActionButton onclick={handleSummarizeBatch} {isLoading} color="amber" class="w-full sm:w-auto">
 				Run Summarization Batch
 			</ActionButton>
-			<button onclick={refreshAllQueues} class="bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-700 transition-colors">
+			<button onclick={refreshAllQueues} class="w-full sm:w-auto bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-700 transition-colors">
 				Refresh Queues
 			</button>
 		</div>

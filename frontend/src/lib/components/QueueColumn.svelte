@@ -13,11 +13,11 @@
 	const { title, files, children } = $props<Props>();
 </script>
 
-<div class="bg-white p-4 rounded-lg shadow-md flex flex-col">
+<div class="bg-white p-4 rounded-lg shadow-md flex flex-col min-w-0">
 	<h2 class="text-lg font-semibold text-gray-700 border-b pb-2 flex-shrink-0">{title}</h2>
-	<ul class="mt-2 space-y-1 text-sm overflow-y-auto flex-grow min-h-[12rem] max-h-[24rem]">
+	<ul class="mt-2 space-y-1 text-sm overflow-y-auto flex-grow min-h-[12rem] max-h-[24rem] min-w-0">
 		{#each files as file (file)}
-			<li class="p-1 rounded hover:bg-gray-100 flex justify-between items-center">
+			<li class="p-1 rounded hover:bg-gray-100 flex justify-between items-center min-w-0">
 				{#if children}
 					{@render children({ file })}
 				{:else}
