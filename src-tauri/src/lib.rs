@@ -8,6 +8,10 @@ use std::path::PathBuf;
 use std::process::Command;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use notify::{RecommendedWatcher, RecursiveMode, Watcher, EventKind};
+use std::sync::mpsc::channel;
+use std::thread;
+use tauri::Emitter;
 
 mod logging;
 use logging::setup_logging;
@@ -286,6 +290,46 @@ pub fn run() -> Result<(), tauri::Error> {
     ])
     .setup(|app: &mut tauri::App| {
         setup_logging(app).expect("Failed to setup logging");
+
+        // Start a filesystem watcher to notify UI on queue changes
+        let handle = app.handle().clone();
+        // Spawn in a thread to keep watcher alive for app lifetime
+        thread::spawn(move || {
+            // Channel for notify events
+            let (tx, rx) = channel();
+            let mut watcher: RecommendedWatcher = notify::recommended_watcher(move |res| {
+                // Forward event results to channel; ignore errors silently
+                let _ = tx.send(res);
+            }).expect("Failed to create FS watcher");
+
+            // Watch the relevant queue directories
+            if let Ok(root) = get_project_root() {
+                let dirs = [
+                    root.join("02_Triage"),
+                    root.join("03_Lab"),
+                    root.join("04_ReadyForOCR"),
+                    root.join("05_ReadyForSummary"),
+                ];
+                for d in dirs.iter() {
+                    // Non-recursive is enough for simple file lists
+                    let _ = watcher.watch(d, RecursiveMode::NonRecursive);
+                }
+            }
+
+            // React to changes and emit a single app-level event
+            while let Ok(event_res) = rx.recv() {
+                if let Ok(event) = event_res {
+                    // Filter to meaningful events (create, modify, remove)
+                    match event.kind {
+                        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                            let _ = tauri::Emitter::emit(&handle, "queues-changed", ());
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        });
+
         Ok(())
     })
     .run(tauri::generate_context!())
