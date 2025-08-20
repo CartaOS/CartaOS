@@ -28,7 +28,8 @@ def get_client() -> Client:
     if _CLIENT is not None:
         return _CLIENT
 
-    dotenv_path = config.BACKEND_DIR / '.env'
+    # Load from project root to stay consistent with the Tauri app
+    dotenv_path = config.ROOT_DIR / '.env'
     load_dotenv(dotenv_path=dotenv_path)
 
     api_key = os.getenv("GEMINI_API_KEY")

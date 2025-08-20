@@ -40,6 +40,12 @@
 
 	const handleTriage = () => withLoading(() => invoke('run_triage'), 'Triage');
 	const handleOcr = () => withLoading(() => invoke('run_ocr_batch'), 'OCR Batch');
+	const handleSummarizeBatch = () => withLoading(() => invoke('run_summarize_batch'), 'Summarization Batch');
+	const handleSummarizeSingle = (fileName: string) =>
+		withLoading(
+			() => invoke('run_summarize_single', { fileName, dryRun: false, debug: false, forceOcr: false }),
+			`Summarizing ${fileName}`
+		);
 	const handleCorrect = (fileName: string) =>
 		withLoading(
 			() => invoke('open_scantailor', { fileName }),
@@ -100,6 +106,9 @@
 			<ActionButton onclick={handleOcr} {isLoading} color="green">
 				Run OCR Batch
 			</ActionButton>
+			<ActionButton onclick={handleSummarizeBatch} {isLoading} color="amber">
+				Run Summarization Batch
+			</ActionButton>
 			<button onclick={refreshAllQueues} class="bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-700 transition-colors">
 				Refresh Queues
 			</button>
@@ -135,7 +144,20 @@
 				{/snippet}
 			</QueueColumn>
 			<QueueColumn title="📄 04_ReadyForOCR" files={ocrFiles} />
-			<QueueColumn title="📝 05_ReadyForSummary" files={summaryFiles} />
+			<QueueColumn title="📝 05_ReadyForSummary" files={summaryFiles}>
+				{#snippet children({ file })}
+					<span class="text-gray-800 break-all pr-2">{file}</span>
+					<div class="flex-shrink-0 space-x-1">
+						<button
+							onclick={() => handleSummarizeSingle(file)}
+							class="px-2 py-1 text-xs font-semibold text-white bg-amber-500 rounded hover:bg-amber-600"
+							title="Summarize this file"
+						>
+							Summarize
+						</button>
+					</div>
+				{/snippet}
+			</QueueColumn>
 		</div>
 	{:else if currentView === 'lab'}
 		<LabView />

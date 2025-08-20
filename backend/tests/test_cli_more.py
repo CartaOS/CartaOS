@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 # backend/tests/test_cli_more.py
 
+import types
 from pathlib import Path
-from typer.testing import CliRunner
+
 import cartaos.cli as cli_module
 import pytest
-import types
+from typer.testing import CliRunner
 
 runner = CliRunner()
 
 
-def test_setup_noninteractive_writes_expected_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_setup_noninteractive_writes_expected_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Redirect cli_module.__file__ so that Path(__file__).parent.parent resolves under tmp_path
     fake_backend_root = tmp_path / "backend"
     fake_backend_root.mkdir(parents=True, exist_ok=True)
@@ -28,10 +31,12 @@ def test_setup_noninteractive_writes_expected_env(tmp_path: Path, monkeypatch: p
     assert result.exit_code == 0
     assert env_path.exists()
     content = env_path.read_text(encoding="utf-8")
-    assert content == 'GEMINI_API_KEY=""\n# Optional: OBISIDIAN_VAULT_PATH=""\n'
+    assert content == 'GEMINI_API_KEY=""\n# Optional: OBSIDIAN_VAULT_PATH=""\n'
 
 
-def test_setup_interactive_writes_full_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_setup_interactive_writes_full_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Simulate interactive TTY
     fake_sys = types.SimpleNamespace(stdin=types.SimpleNamespace(isatty=lambda: True))
     monkeypatch.setattr(cli_module, "sys", fake_sys)

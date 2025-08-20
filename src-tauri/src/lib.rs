@@ -78,7 +78,8 @@ async fn load_settings() -> Result<AppSettings, String> {
 
     dotenvy::from_path(env_path).ok();
 
-    let api_key = env::var("API_KEY").unwrap_or_else(|_| "".to_string());
+    // Use GEMINI_API_KEY consistently with backend
+    let api_key = env::var("GEMINI_API_KEY").unwrap_or_else(|_| "".to_string());
     let base_dir = env::var("OBSIDIAN_VAULT_PATH").unwrap_or_else(|_| "".to_string());
 
     Ok(AppSettings { api_key, base_dir })
@@ -91,7 +92,7 @@ async fn save_settings(api_key: String, base_dir: String) -> Result<(), Error> {
     let env_path = project_root.join(".env");
 
     let content = format!(
-        "API_KEY={}\nOBSIDIAN_VAULT_PATH=\"{}\"\n", // Add quotes around base_dir
+        "GEMINI_API_KEY={}\nOBSIDIAN_VAULT_PATH=\"{}\"\n",
         api_key,
         base_dir
     );
@@ -211,6 +212,57 @@ async fn finalize_lab_file(file_name: String) -> Result<(), Error> {
     Ok(())
 }
 
+/// Run summarize for a single file in 05_ReadyForSummary.
+#[tauri::command]
+async fn run_summarize_single(file_name: String, dry_run: bool, debug: bool, force_ocr: bool) -> Result<String, Error> {
+    let project_root = get_project_root()?;
+    let script_path = project_root.join("backend/cartaos/cli.py");
+    let target_path = project_root.join("05_ReadyForSummary").join(&file_name);
+    let poetry_python_path = get_poetry_python_path()?;
+
+    let mut cmd = Command::new(&poetry_python_path);
+    cmd.arg(&script_path).arg("summarize").arg(&target_path);
+    if dry_run { cmd.arg("--dry-run"); }
+    if debug { cmd.arg("--debug"); }
+    if force_ocr { cmd.arg("--force-ocr"); }
+
+    let output = cmd
+        .current_dir(&project_root)
+        .output()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(Error::CommandFailed(String::from_utf8_lossy(&output.stderr).to_string()))
+    }
+}
+
+/// Run summarize for all files in 05_ReadyForSummary sequentially.
+#[tauri::command]
+async fn run_summarize_batch() -> Result<String, Error> {
+    let project_root = get_project_root()?;
+    let dir_path = project_root.join("05_ReadyForSummary");
+    let mut combined = String::new();
+
+    let entries = fs::read_dir(&dir_path).map_err(|e| Error::DirectoryRead(e.to_string()))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| Error::DirectoryRead(e.to_string()))?;
+        let file_name = entry.file_name();
+        let file_name = file_name.to_string_lossy().to_string();
+        match run_summarize_single(file_name, false, false, false).await {
+            Ok(out) => {
+                combined.push_str(&out);
+                combined.push('\n');
+            }
+            Err(e) => {
+                combined.push_str(&format!("Error summarizing: {}\n", e));
+            }
+        }
+    }
+    Ok(combined)
+}
+
 /// Run the Tauri application.
 ///
 /// This function sets up the Tauri application and runs it.
@@ -226,7 +278,9 @@ pub fn run() -> Result<(), tauri::Error> {
         load_settings,
         save_settings,
         open_scantailor,
-        finalize_lab_file
+        finalize_lab_file,
+        run_summarize_single,
+        run_summarize_batch
     ])
     .setup(|app: &mut tauri::App| {
         setup_logging(app).expect("Failed to setup logging");
