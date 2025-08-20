@@ -5,17 +5,17 @@ Contains the main Installer class that orchestrates the entire setup process.
 """
 
 import os
-import re
-import sys
-import shutil
 import platform
-from pathlib import Path
+import re
+import shutil
+import sys
 from dataclasses import dataclass
-from typing import List, Optional, Callable, Tuple
+from pathlib import Path
+from typing import Callable, List, Optional, Tuple
 
 from rich.console import Console
-from rich.table import Table, box
 from rich.panel import Panel
+from rich.table import Table, box
 
 # Relative imports from within the package
 from . import config
@@ -25,6 +25,7 @@ from . import shell_utils as su
 @dataclass
 class StepResult:
     """Stores the result of a single installation step."""
+
     name: str
     category: str
     success: bool
@@ -33,6 +34,7 @@ class StepResult:
 
 class Installer:
     """Manages the entire installation process."""
+
     def __init__(self, no_confirm: bool, minimal: bool, dry_run: bool, ci_mode: bool):
         self.no_confirm = no_confirm
         self.minimal = minimal
@@ -41,13 +43,21 @@ class Installer:
         self.system = platform.system().lower()
         self.results: List[StepResult] = []
         self.step_categories = {
-            "Project Root": "Bootstrap", "Package Manager": "Bootstrap", "Python Version": "Bootstrap",
-            "System packages (base)": "Essential", "System packages (pipx)": "Essential",
-            "System packages (tauri)": "GUI", "Tesseract languages": "Linguistics",
-            "VS Build Tools": "Prerequisite", "Rust (cargo)": "Build Tool",
-            "Tauri CLI": "Build Tool", "Node.js LTS": "Build Tool",
-            "pipx": "Build Tool", "Poetry": "Build Tool",
-            "Frontend Dependencies": "Project", "Project Dependencies": "Project",
+            "Project Root": "Bootstrap",
+            "Package Manager": "Bootstrap",
+            "Python Version": "Bootstrap",
+            "System packages (base)": "Essential",
+            "System packages (pipx)": "Essential",
+            "System packages (tauri)": "GUI",
+            "Tesseract languages": "Linguistics",
+            "VS Build Tools": "Prerequisite",
+            "Rust (cargo)": "Build Tool",
+            "Tauri CLI": "Build Tool",
+            "Node.js LTS": "Build Tool",
+            "pipx": "Build Tool",
+            "Poetry": "Build Tool",
+            "Frontend Dependencies": "Project",
+            "Project Dependencies": "Project",
         }
         self.project_root = self._detect_project_root()
         self.pkg_manager = self._detect_package_manager()
@@ -62,7 +72,7 @@ class Installer:
         env: Optional[dict] = None,
         cwd: Optional[Path] = None,
         read_only: bool = False,
-        login_shell: bool = False
+        login_shell: bool = False,
     ) -> Tuple[bool, str]:
         """Run a command via shell_utils with optional dry-run and login shell behavior."""
         cmd_str = " ".join(cmd)
@@ -86,16 +96,28 @@ class Installer:
             self._add_result(name, category, True, f"Detected via Git: {path}")
             return path
 
-        self.console.log("[yellow]Warning:[/yellow] Could not use Git to detect project root. Trying fallback search...")
+        self.console.log(
+            "[yellow]Warning:[/yellow] Could not use Git to detect project root. Trying fallback search..."
+        )
         p = Path.cwd()
         markers = {".git", "pyproject.toml", "package.json", "README.md"}
         for parent in [p] + list(p.parents):
             if any((parent / m).exists() for m in markers):
-                self._add_result(name, category, True, f"Detected via marker '{next(m for m in markers if (parent/m).exists())}': {parent}")
+                self._add_result(
+                    name,
+                    category,
+                    True,
+                    f"Detected via marker '{next(m for m in markers if (parent/m).exists())}': {parent}",
+                )
                 return parent
 
         fallback_path = Path(__file__).resolve().parent
-        self._add_result(name, category, False, f"Could not detect project root. Using script location: {fallback_path}")
+        self._add_result(
+            name,
+            category,
+            False,
+            f"Could not detect project root. Using script location: {fallback_path}",
+        )
         return fallback_path
 
     def _get_shell_recommendation(self) -> str:
@@ -108,12 +130,18 @@ class Installer:
         name, category = "Package Manager", "Bootstrap"
         if self.system == "darwin" and not su.is_installed("brew"):
             self._add_result(
-                name, category, False,
-                "Homebrew not found. Please install it via: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+                name,
+                category,
+                False,
+                'Homebrew not found. Please install it via: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
             )
             return None
 
-        managers = {"linux": ["apt", "dnf", "pacman"], "darwin": ["brew"], "windows": ["winget", "choco"]}.get(self.system, [])
+        managers = {
+            "linux": ["apt", "dnf", "pacman"],
+            "darwin": ["brew"],
+            "windows": ["winget", "choco"],
+        }.get(self.system, [])
         for pm in managers:
             if su.is_installed(pm):
                 self._add_result(name, category, True, f"Using {pm}")
@@ -126,7 +154,9 @@ class Installer:
         """Validates the Python version."""
         v = sys.version_info
         ok = (v.major, v.minor) >= config.MIN_PYTHON_VERSION
-        self._add_result("Python Version", "Bootstrap", ok, f"Detected {v.major}.{v.minor}")
+        self._add_result(
+            "Python Version", "Bootstrap", ok, f"Detected {v.major}.{v.minor}"
+        )
         return ok
 
     # --- Installation Logic ---
@@ -140,7 +170,9 @@ class Installer:
 
         pkgs = config.PACKAGE_MAP.get(self.pkg_manager or "", {}).get(group, [])
         if not pkgs:
-            self._add_result(name, category, True, "No packages defined for this platform/group.")
+            self._add_result(
+                name, category, True, "No packages defined for this platform/group."
+            )
             return True
 
         if self.dry_run:
@@ -164,7 +196,11 @@ class Installer:
         if pm in ["winget", "choco"]:
             all_ok, errors = True, []
             for pkg in pkgs:
-                cmd = [pm, "install", "-e", "--id", pkg] if pm == "winget" else [pm, "install", pkg]
+                cmd = (
+                    [pm, "install", "-e", "--id", pkg]
+                    if pm == "winget"
+                    else [pm, "install", pkg]
+                )
                 if self.no_confirm:
                     cmd.extend(confirm_flags.get(pm, []))
                 s, o = self._run_cmd(cmd)
@@ -186,7 +222,14 @@ class Installer:
         self._add_result(name, category, ok, "Done" if ok else out)
         return ok
 
-    def ensure_tool(self, name: str, check_cmd: str, install_logic: Callable[[], None], category: str, skip_minimal: bool = True):
+    def ensure_tool(
+        self,
+        name: str,
+        check_cmd: str,
+        install_logic: Callable[[], None],
+        category: str,
+        skip_minimal: bool = True,
+    ):
         """Generic function to check, install, and verify a command-line tool."""
         if self.minimal and skip_minimal:
             self._add_result(name, category, True, "Skipped (minimal mode)")
@@ -204,26 +247,43 @@ class Installer:
         try:
             install_logic()
         except Exception as e:
-            self._add_result(name, category, False, f"Install failed with an exception: {e}")
+            self._add_result(
+                name, category, False, f"Install failed with an exception: {e}"
+            )
             return
 
         path_after = shutil.which(check_cmd)
         env = os.environ.copy()
-        env["PATH"] = str(Path.home() / ".cargo" / "bin") + os.pathsep + str(Path.home() / ".local/bin") + os.pathsep + env.get("PATH", "")
+        env["PATH"] = (
+            str(Path.home() / ".cargo" / "bin")
+            + os.pathsep
+            + str(Path.home() / ".local/bin")
+            + os.pathsep
+            + env.get("PATH", "")
+        )
         path_after_env = shutil.which(check_cmd, path=env["PATH"])
 
         if path_after or path_after_env:
             final_path = path_after or path_after_env
             self._add_result(name, category, True, f"Installed to: {final_path}")
         else:
-            self._add_result(name, category, False, "Installation ran, but command is not in PATH. A shell restart is likely required.")
+            self._add_result(
+                name,
+                category,
+                False,
+                "Installation ran, but command is not in PATH. A shell restart is likely required.",
+            )
 
     def _install_rust(self):
-        self._run_shell("curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y")
+        self._run_shell(
+            "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+        )
 
     def _install_tauri_cli(self):
         env = os.environ.copy()
-        env["PATH"] = str(Path.home() / ".cargo" / "bin") + os.pathsep + env.get("PATH", "")
+        env["PATH"] = (
+            str(Path.home() / ".cargo" / "bin") + os.pathsep + env.get("PATH", "")
+        )
         self._run_cmd(["cargo", "install", "tauri-cli"], env=env)
 
     def _install_pipx(self):
@@ -249,10 +309,22 @@ class Installer:
                 return
 
         if self.system in ("linux", "darwin"):
-            self._add_result(name, category, False, f"Node {config.MIN_NODE_MAJOR_VERSION}+ not found, attempting install via NVM.")
-            self._run_shell('export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" ; nvm install --lts && nvm use --lts')
+            self._add_result(
+                name,
+                category,
+                False,
+                f"Node {config.MIN_NODE_MAJOR_VERSION}+ not found, attempting install via NVM.",
+            )
+            self._run_shell(
+                'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" ; nvm install --lts && nvm use --lts'
+            )
         else:
-            self._add_result(name, category, False, "Node was not installed via system package manager. Please install manually.")
+            self._add_result(
+                name,
+                category,
+                False,
+                "Node was not installed via system package manager. Please install manually.",
+            )
 
     def ensure_tesseract_langs(self):
         """Checks and installs required Tesseract language data."""
@@ -268,11 +340,20 @@ class Installer:
             self._add_result(name, category, False, "tesseract command failed.")
             return
 
-        installed = {l.strip() for l in out.splitlines() if l.strip() and not l.lower().startswith("list of")}
+        installed = {
+            l.strip()
+            for l in out.splitlines()
+            if l.strip() and not l.lower().startswith("list of")
+        }
         missing = [l for l in config.REQUIRED_TESS_LANGS if l not in installed]
 
         if not missing:
-            self._add_result(name, category, True, f"All present: {', '.join(config.REQUIRED_TESS_LANGS)}")
+            self._add_result(
+                name,
+                category,
+                True,
+                f"All present: {', '.join(config.REQUIRED_TESS_LANGS)}",
+            )
             return
 
         self.install_system_packages("tess_langs")
@@ -289,11 +370,15 @@ class Installer:
             self._add_result(name, category, True, "No package.json found, skipping.")
             return
         if not su.is_installed("npm"):
-            self._add_result(name, category, False, "Cannot install, npm is not available.")
+            self._add_result(
+                name, category, False, "Cannot install, npm is not available."
+            )
             return
 
         ok, out = self._run_cmd(["npm", "ci"], cwd=frontend_dir)
-        self._add_result(name, category, ok, "npm dependencies installed" if ok else out)
+        self._add_result(
+            name, category, ok, "npm dependencies installed" if ok else out
+        )
 
     def ensure_backend_deps(self):
         """Installs Python project dependencies with Poetry."""
@@ -302,7 +387,9 @@ class Installer:
             self._add_result(name, category, True, "Skipped (minimal mode)")
             return
         if not su.is_installed("poetry"):
-            self._add_result(name, category, False, "Cannot install, Poetry is not available.")
+            self._add_result(
+                name, category, False, "Cannot install, Poetry is not available."
+            )
             return
 
         backend_dir = self.project_root / "backend"
@@ -311,13 +398,21 @@ class Installer:
             return
 
         ok, out = self._run_cmd(["poetry", "install"], cwd=backend_dir)
-        self._add_result(name, category, ok, "Poetry dependencies installed" if ok else out)
+        self._add_result(
+            name, category, ok, "Poetry dependencies installed" if ok else out
+        )
 
     def run_all(self):
         """Runs the complete, logical installation sequence."""
-        self.console.print(Panel.fit("[bold blue]🚀 Setting up CartaOS Development Environment[/bold blue]"))
+        self.console.print(
+            Panel.fit(
+                "[bold blue]🚀 Setting up CartaOS Development Environment[/bold blue]"
+            )
+        )
 
-        if not self._check_python_version() or (not self.pkg_manager and not self.dry_run):
+        if not self._check_python_version() or (
+            not self.pkg_manager and not self.dry_run
+        ):
             self.console.print("[red]Aborting due to unmet prerequisites.[/red]")
             self._final_summary()
             sys.exit(1)
@@ -328,8 +423,12 @@ class Installer:
         self.install_system_packages("tauri")
         self.ensure_tesseract_langs()
         self.ensure_tool("Tauri CLI", "tauri", self._install_tauri_cli, "Build Tool")
-        self.ensure_tool("pipx", "pipx", self._install_pipx, "Build Tool", skip_minimal=False)
-        self.ensure_tool("Poetry", "poetry", self._install_poetry, "Build Tool", skip_minimal=False)
+        self.ensure_tool(
+            "pipx", "pipx", self._install_pipx, "Build Tool", skip_minimal=False
+        )
+        self.ensure_tool(
+            "Poetry", "poetry", self._install_poetry, "Build Tool", skip_minimal=False
+        )
         self.ensure_frontend_deps()
         self.ensure_backend_deps()
 
@@ -338,7 +437,11 @@ class Installer:
 
     def _final_summary(self):
         """Displays the final summary table with enhanced details."""
-        table = Table(title="Environment Installation Summary", box=box.ROUNDED, header_style="bold magenta")
+        table = Table(
+            title="Environment Installation Summary",
+            box=box.ROUNDED,
+            header_style="bold magenta",
+        )
         table.add_column("Category", style="dim", width=12)
         table.add_column("Step", style="cyan", no_wrap=True)
         table.add_column("Status", justify="center", width=7)
@@ -353,10 +456,14 @@ class Installer:
         self.console.print()
         self.console.print("[bold green]🎉 Setup complete![/bold green]")
         recommendation = self._get_shell_recommendation()
-        self.console.print(f"[yellow]Note:[/yellow] To ensure all tools are available, you may need to {recommendation}")
+        self.console.print(
+            f"[yellow]Note:[/yellow] To ensure all tools are available, you may need to {recommendation}"
+        )
         if not self.dry_run:
             log_path = self.project_root / config.LOG_FILE_NAME
-            self.console.print(f"[yellow]Note:[/yellow] A detailed log has been saved to [bold cyan]{log_path}[/bold cyan].")
+            self.console.print(
+                f"[yellow]Note:[/yellow] A detailed log has been saved to [bold cyan]{log_path}[/bold cyan]."
+            )
 
     def _export_log_file(self):
         """Saves the installation results to a log file, including in CI."""
@@ -366,13 +473,17 @@ class Installer:
             log_path = self.project_root / config.LOG_FILE_NAME
             with open(log_path, "w", encoding="utf-8") as f:
                 f.write("CartaOS Development Environment Setup Log\n")
-                f.write(f"Timestamp: {__import__('datetime').datetime.now().isoformat()}\n")
+                f.write(
+                    f"Timestamp: {__import__('datetime').datetime.now().isoformat()}\n"
+                )
                 f.write("=" * 50 + "\n\n")
                 for r in self.results:
                     status = "SUCCESS" if r.success else "FAIL"
                     f.write(f"[{status}] - {r.category} - {r.name}\n")
                     f.write(f"  Details: {r.details or 'N/A'}\n")
                     f.write("-" * 50 + "\n")
-            self.console.log(f"Log file successfully exported to [cyan]{log_path}[/cyan]")
+            self.console.log(
+                f"Log file successfully exported to [cyan]{log_path}[/cyan]"
+            )
         except IOError as e:
             self.console.log(f"[red]Error exporting log file: {e}[/red]")
