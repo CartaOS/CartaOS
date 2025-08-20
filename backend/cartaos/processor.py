@@ -6,25 +6,28 @@ processor.py
 Handles the processing of PDF files to generate summaries using AI.
 """
 
-import os
 import logging
+import os
 import shutil
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
+
 from dotenv import load_dotenv
-from slugify import slugify
 from rich.progress import (
-    Progress,
     BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskID,
     TextColumn,
     TimeRemainingColumn,
-    SpinnerColumn,
-    TaskID
 )
-from .utils.utils import WarningCaptureHandler
+from slugify import slugify
+
+from .utils.ai_utils import generate_summary
 from .utils.pdf_utils import extract_text
 from .utils.text_utils import sanitize
-from .utils.ai_utils import generate_summary
+from .utils.utils import WarningCaptureHandler
+
 
 class CartaOSProcessor:
     """Encapsulates the entire process of generating a summary for a PDF file."""
@@ -54,7 +57,7 @@ class CartaOSProcessor:
         self._setup_warning_capture()
 
         self.load_config()
-    
+
     def _setup_warning_capture(self) -> None:
         """Configures a handler to capture pdfminer warnings in memory."""
         pdfminer_logger: logging.Logger = logging.getLogger("pdfminer")
@@ -65,14 +68,16 @@ class CartaOSProcessor:
 
     def load_config(self) -> None:
         """Loads environment configurations from the .env file."""
-        dotenv_path: Path = Path(__file__).parent.parent / '.env'
+        dotenv_path: Path = Path(__file__).parent.parent / ".env"
         load_dotenv(dotenv_path=dotenv_path)
-        
+
         self.api_key: Optional[str] = os.getenv("GEMINI_API_KEY")
         self.obsidian_vault_path: Optional[str] = os.getenv("OBSIDIAN_VAULT_PATH")
 
-        self.processed_pdf_dir: Path = Path(__file__).parent.parent.parent / "07_Processed"
-        
+        self.processed_pdf_dir: Path = (
+            Path(__file__).parent.parent.parent / "07_Processed"
+        )
+
         if self.obsidian_vault_path and Path(self.obsidian_vault_path).is_dir():
             self.summary_dir: Path = Path(self.obsidian_vault_path) / "Summaries"
         else:
@@ -81,13 +86,13 @@ class CartaOSProcessor:
     def _save_summary(self, summary_content: str) -> None:
         """
         Saves the summary content to a .md file.
-        
+
         Args:
             summary_content (str): The content of the summary to be saved.
         """
         base_name: str = self.pdf_path.stem
         safe_name: str = slugify(base_name)
-        
+
         md_output_path: Path = self.summary_dir / f"{safe_name}.md"
         os.makedirs(self.summary_dir, exist_ok=True)
         with open(md_output_path, "w", encoding="utf-8") as f:
@@ -101,7 +106,7 @@ class CartaOSProcessor:
     def process(self) -> bool:
         """
         Orchestrates the entire processing workflow.
-        
+
         Returns:
             bool: True if processing is successful, False otherwise.
         """
@@ -112,7 +117,7 @@ class CartaOSProcessor:
             TimeRemainingColumn(),
         ) as progress:
             task: TaskID = progress.add_task("[cyan]Processing PDF...", total=100)
-            
+
             progress.update(task, advance=20)
             logging.info("Extracting text from the PDF...")
             text: Optional[str] = extract_text(self.pdf_path)
@@ -122,7 +127,9 @@ class CartaOSProcessor:
 
             progress.update(task, advance=20)
             if self.debug:
-                debug_path: Path = self.pdf_path.parent / f"{self.pdf_path.stem}_extracted_text.txt"
+                debug_path: Path = (
+                    self.pdf_path.parent / f"{self.pdf_path.stem}_extracted_text.txt"
+                )
                 with open(debug_path, "w", encoding="utf-8") as f:
                     f.write(text)
                 logging.info(f"DEBUG MODE: Extracted text saved to {debug_path}")
@@ -149,4 +156,3 @@ class CartaOSProcessor:
             self._move_pdf()
             logging.info("File processed successfully.")
             return True
-

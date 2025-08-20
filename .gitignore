@@ -1,87 +1,85 @@
-# Ignore generated workspace files
-00_Inbox/*
-01_Library/*
-02_Triage/*
-03_Lab/*
-04_ReadyForOCR/*
-05_ReadyForSummary/*
-06_TooLarge/*
-07_Processed/*
-gitignore/*
-
-#But also keeps directory structure
-!00_Inbox/.gitkeep
-!01_Library/.gitkeep
-!02_Triage/.gitkeep
-!03_Lab/.gitkeep
-!04_ReadyForOCR/.gitkeep
-!05_ReadyForSummary/.gitkeep
-!06_TooLarge/.gitkeep
-!07_Processed/.gitkeep
-
-# Byte‑compiled / optimized / DLL files (Python)
-__pycache__/
-*.py[cod]
-*.so
-
-# Virtual environments
-.venv/
-venv/
-.env/  # If using .env directory
-
-# Python packaging/build
-*.egg-info/
-dist/
-build/
-*.egg
-
-# Poetry lock file (optional if not committed)
-poetry.lock
-
-# PyTest cache
-.pytest_cache/
-
-# Logs
-*.log
-
-# Environment / secrets
+# ===================================================================
+# Secrets and Environment Variables
+# CRITICAL: Never commit sensitive information.
+# ===================================================================
 .env
 .env.*
 !.env.example
 
-# Rust build artifacts
-target/
-
-# Node / frontend artifacts
-node_modules/
-package-lock.json
-pnpm-lock.yaml
-yarn.lock
-
-# SvelteKit/Vite build outputs and caches
-.build/
-build/
-.svelte-kit/
-.vite/
-.vitepress/
-.cache/
-
-# VSCode, IDE, and OS files
+# ===================================================================
+# IDE and Editor directories
+# User-specific settings that should not be committed.
+# ===================================================================
 .vscode/
 .idea/
-.DS_Store
-.code-workspace
+.sublime-project
+.sublime-workspace
 
-# Other OS junk
-Thumbs.db
+# ===================================================================
+# CartaOS Pipeline Data
+# Ignore all content inside pipeline stages to prevent committing user data,
+# but keep the directory structure using the .gitkeep files.
+# ===================================================================
+/00_Inbox/*
+/01_Library/*
+/02_Triage/*
+/03_Lab/*
+/04_ReadyForOCR/*
+/05_ReadyForSummary/*
+/06_TooLarge/*
+/07_Processed/*
+!/*/.gitkeep
+
+# ===================================================================
+# Python / Backend artifacts
+# Virtual environments, caches, build artifacts, and test reports.
+# ===================================================================
+/.venv/
+/venv/
+/env/
+__pycache__/
+*.py[cod]
+*.so
+/dist/
+/build/
+/*.egg-info/
+.pytest_cache/
 .coverage
-coverage.xml
-htmlcov/
-backend/.coverage
+/htmlcov/
 
-#ScanTailor
-.ScanTailor
+# ===================================================================
+# Frontend (Node.js / Svelte / Vite) artifacts
+# Dependencies, build output, and logs.
+# ===================================================================
+/frontend/node_modules/
+/frontend/.svelte-kit/
+/frontend/build/
+/frontend/dist/
+/frontend/npm-debug.log*
+/frontend/yarn-error.log*
+/frontend/pnpm-debug.log*
 
-# Gemini/MCP settings
+# ===================================================================
+# Tauri / Rust artifacts
+# Compiled code and build output from the Rust backend.
+# ===================================================================
+/src-tauri/target/
+
+# ===================================================================
+# Project-specific Tools & Logs
+# Caches and logs from tools used in the development workflow.
+# ===================================================================
+.ScanTailor/
 .gemini/
-.gemini/*
+*.log
+/cartaos-install.log
+/coverage.xml
+
+# ===================================================================
+# Operating System specific files
+# Junk files created by macOS, Windows, and Linux.
+# ===================================================================
+.DS_Store
+._*
+Thumbs.db
+desktop.ini

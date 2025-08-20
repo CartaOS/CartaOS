@@ -27,10 +27,13 @@ def extract_text(pdf_path: Path) -> Optional[str]:
     """
     logging.info(f"Extracting text from '{pdf_path.name}'...")
 
+    # Ensure variable is defined for all paths
+    text: Optional[str] = None
+
     try:
         # Attempt text extraction using pdfplumber
         with pdfplumber.open(str(pdf_path)) as pdf:
-            text: str = "".join(page.extract_text() or "" for page in pdf.pages)
+            text = "".join(page.extract_text() or "" for page in pdf.pages)
             if text and len(text) >= 100:
                 logging.info(f"Text extracted successfully: {text[:100]}...")
                 return text.strip()
@@ -41,7 +44,7 @@ def extract_text(pdf_path: Path) -> Optional[str]:
     try:
         # Fallback to PyMuPDF if pdfplumber fails
         with fitz.open(str(pdf_path)) as doc:
-            text: str = "".join(page.get_text() for page in doc)
+            text = "".join(page.get_text() for page in doc)
             if text:
                 logging.info(f"Text extracted successfully: {text[:100]}...")
                 return text.strip()
