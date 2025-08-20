@@ -11,7 +11,6 @@ use thiserror::Error;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher, EventKind};
 use std::sync::mpsc::channel;
 use std::thread;
-use tauri::Emitter;
 
 mod logging;
 use logging::setup_logging;
