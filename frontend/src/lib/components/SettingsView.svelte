@@ -5,6 +5,7 @@
   let apiKey = $state('');
   let baseDir = $state('');
   let statusMessage = $state('');
+  let isError = $state(false);
   let isLoading = $state(false);
 
   interface AppSettings {
@@ -15,6 +16,7 @@
   async function loadSettings() {
     isLoading = true;
     statusMessage = 'Loading settings...';
+    isError = false;
     try {
       const settings: AppSettings = await invoke('load_settings');
       apiKey = settings.api_key;
@@ -23,6 +25,7 @@
     } catch (error) {
       console.error('Error loading settings:', error);
       statusMessage = `Error loading settings: ${error}`;
+      isError = true;
     } finally {
       isLoading = false;
     }
@@ -31,12 +34,14 @@
   async function saveSettings() {
     isLoading = true;
     statusMessage = 'Saving settings...';
+    isError = false;
     try {
       await invoke('save_settings', { apiKey, baseDir });
       statusMessage = 'Settings saved successfully!';
     } catch (error) {
       console.error('Error saving settings:', error);
       statusMessage = `Error saving settings: ${error}`;
+      isError = true;
     } finally {
       isLoading = false;
     }
@@ -88,7 +93,7 @@
   </button>
 
   {#if statusMessage}
-    <p class="mt-2 text-sm {statusMessage.startsWith('Erro') ? 'text-red-600' : 'text-green-600'}">
+    <p class="mt-2 text-sm {isError || /error/i.test(statusMessage) ? 'text-red-600' : 'text-green-600'}">
       {statusMessage}
     </p>
   {/if}
