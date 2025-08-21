@@ -54,7 +54,6 @@
 	const handleFinalize = (fileName: string) =>
 		withLoading(() => invoke('finalize_lab_file', { fileName }), `Finalizing ${fileName}`);
 
-
 	// Função de refresh
 	async function refreshAllQueues(): Promise<void> {
 		statusMessage = 'Refreshing all file queues...';
@@ -83,7 +82,19 @@
 		}
 	}
 
-	onMount(refreshAllQueues);
+	// Initial load + auto-refresh polling
+	onMount(() => {
+		// initial refresh
+		void refreshAllQueues();
+		// simple polling every 2s; can be replaced with Tauri FS watcher later
+		const id = window.setInterval(() => {
+			// avoid overlapping runs
+			if (!isLoading) void refreshAllQueues();
+		}, 2000);
+		return () => {
+			clearInterval(id);
+		};
+	});
 </script>
 
 <main class="p-8 max-w-7xl mx-auto space-y-6 bg-gray-100 min-h-screen">
@@ -101,17 +112,14 @@
 	{#if currentView === 'pipeline'}
 		<div class="bg-white p-4 rounded-lg shadow-md space-x-4 text-center">
 			<ActionButton onclick={handleTriage} {isLoading} color="blue">
-				Run Triage
+				Triage
 			</ActionButton>
 			<ActionButton onclick={handleOcr} {isLoading} color="green">
-				Run OCR Batch
+				OCR Batch
 			</ActionButton>
 			<ActionButton onclick={handleSummarizeBatch} {isLoading} color="amber">
-				Run Summarization Batch
+				Summarize Batch
 			</ActionButton>
-			<button onclick={refreshAllQueues} class="bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-700 transition-colors">
-				Refresh Queues
-			</button>
 		</div>
 
 		<div class="bg-white p-4 rounded-lg shadow-md">
@@ -121,8 +129,8 @@
 		<LogPanel />
 
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-			<QueueColumn title="📂 02_Triage" files={triageFiles} />
-			<QueueColumn title="🔧 03_Lab" files={labFiles}>
+			<QueueColumn title="📂 Triage" files={triageFiles} />
+			<QueueColumn title="🔧 Correction Lab" files={labFiles}>
 				{#snippet children({ file })}
 					<span class="text-gray-800 break-all pr-2">{file}</span>
 					<div class="flex-shrink-0 space-x-1">
@@ -143,8 +151,8 @@
 					</div>
 				{/snippet}
 			</QueueColumn>
-			<QueueColumn title="📄 04_ReadyForOCR" files={ocrFiles} />
-			<QueueColumn title="📝 05_ReadyForSummary" files={summaryFiles}>
+			<QueueColumn title="📄 Ready for OCR" files={ocrFiles} />
+			<QueueColumn title="📝 Summarization" files={summaryFiles}>
 				{#snippet children({ file })}
 					<span class="text-gray-800 break-all pr-2">{file}</span>
 					<div class="flex-shrink-0 space-x-1">

@@ -42,7 +42,7 @@ describe('Pipeline moves and refresh behavior', () => {
     });
 
     // Assert doc1 appears in Lab column first
-    const labHeading = screen.getByRole('heading', { name: '🔧 03_Lab' });
+    const labHeading = screen.getByRole('heading', { name: '🔧 Correction Lab' });
     const labColumn = labHeading.parentElement as HTMLElement;
     expect(within(labColumn).getByText('doc1.pdf')).toBeInTheDocument();
 
@@ -59,12 +59,12 @@ describe('Pipeline moves and refresh behavior', () => {
     expect(within(labColumn).getByText('Empty')).toBeInTheDocument();
 
     // OCR has the file
-    const ocrHeading = screen.getByRole('heading', { name: '📄 04_ReadyForOCR' });
+    const ocrHeading = screen.getByRole('heading', { name: '📄 Ready for OCR' });
     const ocrColumn = ocrHeading.parentElement as HTMLElement;
     expect(within(ocrColumn).getByText('doc1.pdf')).toBeInTheDocument();
   });
 
-  it('Refresh Queues button triggers refresh and updates data', async () => {
+  it('auto-refresh updates data when files change', async () => {
     let toggle = 0;
     mockInvoke.mockImplementation(async (cmd: string, args?: { stage?: string }) => {
       if (cmd === 'get_files_in_stage') {
@@ -82,18 +82,17 @@ describe('Pipeline moves and refresh behavior', () => {
     });
 
     // Initially empty
-    const labHeading = screen.getByRole('heading', { name: '🔧 03_Lab' });
+    const labHeading = screen.getByRole('heading', { name: '🔧 Correction Lab' });
     const labColumn = labHeading.parentElement as HTMLElement;
     expect(within(labColumn).getByText('Empty')).toBeInTheDocument();
 
-    // Change mock data and click refresh
+    // Change mock data and rely on auto-refresh (2s polling) to pick it up
     toggle = 1;
-    await fireEvent.click(screen.getByRole('button', { name: 'Refresh Queues' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('File queues refreshed successfully.')).toBeInTheDocument();
-    });
-
-    expect(within(labColumn).getByText('newfile.tif')).toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(within(labColumn).getByText('newfile.tif')).toBeInTheDocument();
+      },
+      { timeout: 4000 }
+    );
   });
 });
