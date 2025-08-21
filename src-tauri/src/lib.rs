@@ -1,3 +1,85 @@
+// ----- IPC JSON Types -----
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct TriageCounts {
+    pub triage: usize,
+}
+
+/// Run the triage command in JSON mode.
+///
+/// Calls the backend Python script with `triage --json` and returns the stdout JSON string.
+#[tauri::command]
+async fn run_triage_json() -> Result<String, Error> {
+    let project_root = get_project_root()?;
+    let script_path = project_root.join("backend/cartaos/cli.py");
+    let poetry_python_path = get_poetry_python_path()?;
+
+    let output = Command::new(&poetry_python_path)
+        .arg(script_path)
+        .arg("triage")
+        .arg("--json")
+        .current_dir(&project_root)
+        .output()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(Error::CommandFailed(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ))
+    }
+}
+
+// ----- Tests -----
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deserialize_triage_success_payload() {
+        let json = r#"{
+            "status": "success",
+            "data": {
+                "triage_files": ["a.pdf", "b.pdf"],
+                "counts": { "triage": 2 }
+            }
+        }"#;
+        let parsed: IpcResponse = serde_json::from_str(json).expect("valid json");
+        match parsed {
+            IpcResponse::Success { data } => {
+                assert_eq!(data.triage_files.len(), 2);
+                assert_eq!(data.counts.triage, 2);
+            }
+            _ => panic!("expected success"),
+        }
+    }
+
+    #[test]
+    fn test_deserialize_triage_error_payload() {
+        let json = r#"{ "status": "error", "message": "boom" }"#;
+        let parsed: IpcResponse = serde_json::from_str(json).expect("valid json");
+        match parsed {
+            IpcResponse::Error { message } => assert_eq!(message, "boom"),
+            _ => panic!("expected error"),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct TriageData {
+    pub triage_files: Vec<String>,
+    pub counts: TriageCounts,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "status")]
+pub enum IpcResponse {
+    #[serde(rename = "success")]
+    Success { data: TriageData },
+    #[serde(rename = "error")]
+    Error { message: String },
+}
+
 // src-tauri/src/lib.rs
 
 // We add the necessary imports to run commands and read files
@@ -294,6 +376,7 @@ pub fn run() -> Result<(), tauri::Error> {
     // and makes them available to be called by `invoke` in Svelte.
     .invoke_handler(tauri::generate_handler![
         run_triage,
+        run_triage_json,
         run_ocr_batch,
         get_files_in_stage,
         load_settings,

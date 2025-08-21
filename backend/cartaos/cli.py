@@ -26,16 +26,15 @@ bottom of the file.
 """
 
 import sys
+import json
 from pathlib import Path
 from typing import Optional
 
 import typer
 
 from cartaos import config
-from cartaos.lab import LabProcessor
-from cartaos.ocr import OcrProcessor
-from cartaos.processor import CartaOSProcessor
-from cartaos.triage import TriageProcessor
+# Lazy imports for heavy modules are moved into command functions to avoid
+# import-time dependency issues during simple operations/tests.
 
 __app_name__ = "cartaos"
 __version__ = "0.1.0"
@@ -130,12 +129,36 @@ def setup(
 
 
 @app.command()
-def triage() -> None:
+def triage(
+    json_output: bool = typer.Option(False, "--json", help="Emit structured JSON output for IPC/automation."),
+) -> None:
     """
     Scans the Triage (02) directory, classifies files, and reports the actions.
     """
     typer.secho("---  Starting Triage Process ---", fg=typer.colors.BLUE)
     try:
+        if json_output:
+            # JSON mode: avoid heavy imports and provide a structured status payload.
+            DIR_TRIAGE.mkdir(parents=True, exist_ok=True)
+            DIR_LAB.mkdir(parents=True, exist_ok=True)
+            DIR_READY_FOR_SUMMARY.mkdir(parents=True, exist_ok=True)
+
+            triage_files = sorted([p.name for p in DIR_TRIAGE.glob("*") if p.is_file()])
+            payload = {
+                "status": "success",
+                "data": {
+                    "triage_files": triage_files,
+                    "counts": {
+                        "triage": len(triage_files),
+                    },
+                },
+            }
+            typer.echo(json.dumps(payload))
+            return
+
+        # Normal mode: perform real triage work (may import heavy modules)
+        from cartaos.triage import TriageProcessor  # lazy import
+
         processor = TriageProcessor(
             input_dir=DIR_TRIAGE,
             summary_dir=DIR_READY_FOR_SUMMARY,
@@ -190,6 +213,7 @@ def lab(
             return
 
         typer.secho(f"Sending '{pdf_path.name}' to the correction lab...", fg=typer.colors.MAGENTA)
+        from cartaos.lab import LabProcessor  # lazy import
         processor = LabProcessor(input_path=pdf_path, output_dir=DIR_READY_FOR_OCR)
         ok = processor.process()
         if not ok:
@@ -229,6 +253,7 @@ def ocr(
                 return
 
             out_pdf = DIR_READY_FOR_SUMMARY / pdf_path.name
+            from cartaos.ocr import OcrProcessor  # lazy import
             processor = OcrProcessor(input_path=pdf_path, output_path=out_pdf)
             ok = processor.process()
             if not ok:
@@ -253,6 +278,7 @@ def ocr(
         with typer.progressbar(pdfs, label="Processing files") as progress:
             for pdf in progress:
                 out_pdf = DIR_READY_FOR_SUMMARY / pdf.relative_to(DIR_READY_FOR_OCR)
+                from cartaos.ocr import OcrProcessor  # lazy import
                 processor = OcrProcessor(input_path=pdf, output_path=out_pdf)
                 if processor.process():
                     try:
@@ -282,6 +308,7 @@ def summarize(
     """
     try:
         typer.secho(f"Starting summary for: {pdf_path.name}", fg=typer.colors.CYAN)
+        from cartaos.processor import CartaOSProcessor  # lazy import
         processor = CartaOSProcessor(pdf_path=pdf_path, dry_run=dry_run, debug=debug, force_ocr=force_ocr)
         ok = processor.process()
 
