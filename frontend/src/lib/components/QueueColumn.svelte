@@ -1,16 +1,6 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-
-	// Uma interface limpa para as props.
-	type Props = {
-		title: string;
-		files: string[];
-		// Opcional: Snippet que recebe 'file' e define como renderizar o item.
-		// Esta é a forma correta de tipar um "scoped slot".
-		children?: Snippet<{ file: string }>;
-	};
-
-	const { title, files, children } = $props<Props>();
+	// Props inferidos via $props(), seguindo o padrão de ActionButton.svelte
+	const { title, files, children } = $props();
 </script>
 
 <div class="bg-white p-4 rounded-lg shadow-md flex flex-col">
@@ -25,7 +15,7 @@
 				{/if}
 			</li>
 		{:else}
-			<li class="text-gray-400 italic p-1">Empty</li>
+			<li class="text-gray-700 italic p-1">Empty</li>
 		{/each}
 	</ul>
 </div>

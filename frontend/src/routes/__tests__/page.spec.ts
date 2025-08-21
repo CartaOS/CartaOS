@@ -4,6 +4,6 @@ import Page from '../+page.svelte';
 describe('Página inicial', () => {
   it('renderiza o título de boas-vindas', () => {
     render(Page);
-    expect(screen.getByRole('heading', { name: /welcome to sveltekit/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'CartaOS' })).toBeInTheDocument();
   });
 });

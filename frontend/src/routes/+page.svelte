@@ -100,7 +100,7 @@
 			<ActionButton onclick={handleOcr} {isLoading} color="green">
 				Run OCR Batch
 			</ActionButton>
-			<button onclick={refreshAllQueues} class="bg-purple-500 text-white font-bold py-2 px-4 rounded hover:bg-purple-700 transition-colors">
+			<button onclick={refreshAllQueues} class="bg-purple-700 text-white font-bold py-2 px-4 rounded hover:bg-purple-800 transition-colors">
 				Refresh Queues
 			</button>
 		</div>
@@ -126,7 +126,7 @@
 						</button>
 						<button
 							onclick={() => handleFinalize(file)}
-							class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded hover:bg-green-600"
+							class="px-2 py-1 text-xs font-semibold text-white bg-green-700 rounded hover:bg-green-800"
 							title="Mark as done and move to OCR"
 						>
 							Finalized

@@ -3,8 +3,24 @@ import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
   plugins: [sveltekit()],
+  resolve: {
+    conditions: ['browser']
+  },
   test: {
     globals: true,      // <— habilita describe/it/expect sem importar
-    environment: 'jsdom'
+    environment: 'jsdom',
+    setupFiles: ['tests/setup.ts'],
+    exclude: [
+      'e2e/**',                 // não rodar specs do Playwright no Vitest
+      '**/node_modules/**',    // garantir exclusão de testes de deps
+      '**/dist/**',
+      '**/build/**'
+    ],
+    coverage: {
+      enabled: true,
+      reporter: ['text-summary', 'lcov'],
+      reportsDirectory: './coverage',
+      all: false
+    }
   }
 });
