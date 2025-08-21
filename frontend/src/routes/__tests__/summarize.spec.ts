@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import Page from '../+page.svelte';
 
 vi.mock('@tauri-apps/api/core', () => ({
