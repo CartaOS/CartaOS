@@ -32,6 +32,7 @@ jobs:
 
   playwright:
     name: Playwright (E2E)
+    if: ${{ hashFiles('frontend/playwright.config.*') != '' }}
     needs: vitest
     runs-on: ubuntu-latest
     defaults:
@@ -53,6 +54,9 @@ jobs:
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
+
+      - name: Build app for preview
+        run: npm run build
 
       - name: Run Playwright tests
         run: npm run e2e
