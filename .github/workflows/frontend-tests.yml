@@ -1,5 +1,9 @@
 name: Frontend Tests
 
+concurrency:
+  group: frontend-tests-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     branches: [ main ]
@@ -29,6 +33,14 @@ jobs:
 
       - name: Run unit tests (Vitest)
         run: npm run test:run
+
+      - name: Upload unit test coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          if-no-files-found: warn
 
   playwright:
     name: Playwright (E2E)
