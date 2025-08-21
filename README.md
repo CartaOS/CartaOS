@@ -8,7 +8,13 @@
 
 <p align="center">
   <a href="https://github.com/CartaOS/CartaOS/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/CartaOS/CartaOS/ci.yml?branch=main&logo=github&style=for-the-badge" alt="Build Status">
+    <img src="https://img.shields.io/github/actions/workflow/status/CartaOS/CartaOS/frontend-tests.yml?branch=main&label=Frontend%20Tests&logo=github&style=for-the-badge" alt="Frontend Tests">
+  </a>
+  <a href="https://github.com/CartaOS/CartaOS/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/CartaOS/CartaOS/backend-ci.yml?branch=main&label=Backend%20CI&logo=github&style=for-the-badge" alt="Backend CI">
+  </a>
+  <a href="https://github.com/CartaOS/CartaOS/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/CartaOS/CartaOS/rust-ci.yml?branch=main&label=Rust%20CI&logo=github&style=for-the-badge" alt="Rust CI">
   </a>
   <a href="https://github.com/CartaOS/CartaOS/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/CartaOS/CartaOS?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="License">
