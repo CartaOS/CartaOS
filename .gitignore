@@ -58,6 +58,7 @@ __pycache__/
 /frontend/npm-debug.log*
 /frontend/yarn-error.log*
 /frontend/pnpm-debug.log*
+/frontend/e2e-artifacts/
 
 # ===================================================================
 # Tauri / Rust artifacts
