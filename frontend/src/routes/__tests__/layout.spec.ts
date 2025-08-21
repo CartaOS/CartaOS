@@ -1,9 +1,10 @@
-import { render } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import Layout from '../+layout.svelte';
 
 describe('Layout', () => {
-  it('renderiza sem erros', () => {
-    const { container } = render(Layout, { props: { children: () => 'Conteúdo' } });
-    expect(container).toBeTruthy();
-  });
+	it('renders without errors', () => {
+		const { container } = render(Layout);
+		expect(container).toBeTruthy();
+		// Not asserting specific DOM since +layout only forwards children
+	});
 });

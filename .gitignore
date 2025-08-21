@@ -55,6 +55,7 @@ __pycache__/
 /frontend/.svelte-kit/
 /frontend/build/
 /frontend/dist/
+/frontend/e2e-artifacts/
 /frontend/npm-debug.log*
 /frontend/yarn-error.log*
 /frontend/pnpm-debug.log*

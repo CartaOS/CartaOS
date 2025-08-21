@@ -48,13 +48,13 @@ app = typer.Typer(
 )
 
 def _version_callback(value: bool) -> None:
-    """Callback para mostrar a versão e sair."""
+    """Callback to show the version and exit."""
     if value:
         typer.echo(f"{__app_name__}, version {__version__}")
         raise typer.Exit()
 
 
-# Diretórios base (iguais aos do seu config)
+# Base directories (must match those in config)
 BASE_DIR: Path = config.ROOT_DIR
 DIR_TRIAGE: Path = BASE_DIR / "02_Triage"
 DIR_LAB: Path = BASE_DIR / "03_Lab"
@@ -74,7 +74,7 @@ def main(
     )
 ) -> None:
     """
-    Callback principal do CartaOS.
+    CartaOS main callback.
     """
     return
 
@@ -99,7 +99,7 @@ def setup(
     backend_root: Path = Path(__file__).parent.parent
     env_path: Path = backend_root / ".env"
 
-    # Detecta modo não interativo automaticamente (como em testes)
+    # Automatically detect non-interactive mode (e.g., tests/CI)
     non_interactive = non_interactive or not sys.stdin.isatty()
 
     if env_path.exists():
@@ -107,15 +107,15 @@ def setup(
         return
 
     if non_interactive:
-        # Cria .env mínimo para não falhar em ambientes sem TTY
+        # Create a minimal .env to avoid failures in non-TTY environments
         env_path.write_text(
-            'GEMINI_API_KEY=""\n# Optional: OBISIDIAN_VAULT_PATH=""\n',
+            'GEMINI_API_KEY=""\n# Optional: OBSIDIAN_VAULT_PATH=""\n',
             encoding="utf-8",
         )
         typer.secho(f"Minimal .env created at: {env_path.as_posix()}", fg=typer.colors.GREEN)
         return
 
-    # Interativo
+    # Interactive mode
     typer.echo("Let's configure your API key for Google Gemini.")
     api_key: str = typer.prompt("Please paste your Google API Key here")
     obsidian_path: str = typer.prompt(
