@@ -10,4 +10,10 @@ declare global {
 	}
 }
 
+// Allow importing SVG assets (e.g., favicon.svg)
+declare module '*.svg' {
+  const src: string;
+  export default src;
+}
+
 export {};
