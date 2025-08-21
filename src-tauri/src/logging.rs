@@ -2,7 +2,7 @@ use chrono::Local;
 use fern::Dispatch;
 use log::LevelFilter;
 use serde::Serialize;
-use tauri::{App, Manager, Wry, Emitter};
+use tauri::{App, Emitter, Manager, Wry};
 
 #[derive(Clone, Serialize)]
 struct LogPayload {
@@ -32,7 +32,8 @@ pub fn setup_logging(app: &mut App<Wry>) -> Result<(), fern::InitError> {
                 message: message.to_string(),
                 timestamp,
             };
-            app_handle.emit("log-message", log_payload)
+            app_handle
+                .emit("log-message", log_payload)
                 .expect("failed to emit log event");
         })
         .level(LevelFilter::Info)
