@@ -1,12 +1,233 @@
+// ----- IPC JSON Types -----
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct TriageCounts {
+    pub triage: usize,
+}
+
+/// Typed variants that deserialize JSON strings into typed envelopes
+#[tauri::command]
+async fn run_triage_json_typed() -> Result<IpcEnvelope<TriageData>, Error> {
+    let raw = run_triage_json().await?;
+    let parsed: IpcEnvelope<TriageData> =
+        serde_json::from_str(&raw).map_err(|e| Error::CommandFailed(e.to_string()))?;
+    Ok(parsed)
+}
+
+#[tauri::command]
+async fn run_ocr_json_typed() -> Result<IpcEnvelope<OcrData>, Error> {
+    let raw = run_ocr_json().await?;
+    let parsed: IpcEnvelope<OcrData> =
+        serde_json::from_str(&raw).map_err(|e| Error::CommandFailed(e.to_string()))?;
+    Ok(parsed)
+}
+
+#[tauri::command]
+async fn run_summarize_json_typed(
+    file_name: String,
+    dry_run: bool,
+    debug: bool,
+    force_ocr: bool,
+) -> Result<IpcEnvelope<SummarizeData>, Error> {
+    let raw = run_summarize_json(file_name, dry_run, debug, force_ocr).await?;
+    let parsed: IpcEnvelope<SummarizeData> =
+        serde_json::from_str(&raw).map_err(|e| Error::CommandFailed(e.to_string()))?;
+    Ok(parsed)
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct OcrCounts {
+    pub queued: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct OcrData {
+    pub queued_for_ocr: Vec<String>,
+    pub counts: OcrCounts,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct SummarizeOptions {
+    pub dry_run: bool,
+    pub debug: bool,
+    pub force_ocr: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct SummarizeData {
+    pub target_file: String,
+    pub options: SummarizeOptions,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct IpcEnvelope<T> {
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+/// Run OCR command in JSON mode.
+#[tauri::command]
+async fn run_ocr_json() -> Result<String, Error> {
+    let project_root = get_project_root()?;
+    let script_path = project_root.join("backend/cartaos/cli.py");
+    let poetry_python_path = get_poetry_python_path()?;
+
+    let output = Command::new(&poetry_python_path)
+        .arg(&script_path)
+        .arg("ocr")
+        .arg("--json")
+        .current_dir(&project_root)
+        .output()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(Error::CommandFailed(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ))
+    }
+}
+
+/// Run summarize command in JSON mode for a single file.
+#[tauri::command]
+async fn run_summarize_json(
+    file_name: String,
+    dry_run: bool,
+    debug: bool,
+    force_ocr: bool,
+) -> Result<String, Error> {
+    let project_root = get_project_root()?;
+    let script_path = project_root.join("backend/cartaos/cli.py");
+    // basic path validation: disallow separators and traversal
+    if file_name.contains('/') || file_name.contains('\\') || file_name.contains("..") {
+        return Err(Error::CommandFailed("Invalid file name".to_string()));
+    }
+    let target_path = project_root.join("05_ReadyForSummary").join(&file_name);
+    if !target_path.exists() {
+        return Err(Error::CommandFailed(format!(
+            "File not found: {}",
+            file_name
+        )));
+    }
+    let poetry_python_path = get_poetry_python_path()?;
+
+    let mut cmd = Command::new(&poetry_python_path);
+    cmd.arg(&script_path)
+        .arg("summarize")
+        .arg(&target_path)
+        .arg("--json");
+    if dry_run {
+        cmd.arg("--dry-run");
+    }
+    if debug {
+        cmd.arg("--debug");
+    }
+    if force_ocr {
+        cmd.arg("--force-ocr");
+    }
+
+    let output = cmd
+        .current_dir(&project_root)
+        .output()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(Error::CommandFailed(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ))
+    }
+}
+
+/// Run the triage command in JSON mode.
+///
+/// Calls the backend Python script with `triage --json` and returns the stdout JSON string.
+#[tauri::command]
+async fn run_triage_json() -> Result<String, Error> {
+    let project_root = get_project_root()?;
+    let script_path = project_root.join("backend/cartaos/cli.py");
+    let poetry_python_path = get_poetry_python_path()?;
+
+    let output = Command::new(&poetry_python_path)
+        .arg(script_path)
+        .arg("triage")
+        .arg("--json")
+        .current_dir(&project_root)
+        .output()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(Error::CommandFailed(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ))
+    }
+}
+
+// ----- Tests -----
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deserialize_triage_success_payload() {
+        let json = r#"{
+            "status": "success",
+            "data": {
+                "triage_files": ["a.pdf", "b.pdf"],
+                "counts": { "triage": 2 }
+            }
+        }"#;
+        let parsed: IpcResponse = serde_json::from_str(json).expect("valid json");
+        match parsed {
+            IpcResponse::Success { data } => {
+                assert_eq!(data.triage_files.len(), 2);
+                assert_eq!(data.counts.triage, 2);
+            }
+            _ => panic!("expected success"),
+        }
+    }
+
+    #[test]
+    fn test_deserialize_triage_error_payload() {
+        let json = r#"{ "status": "error", "message": "boom" }"#;
+        let parsed: IpcResponse = serde_json::from_str(json).expect("valid json");
+        match parsed {
+            IpcResponse::Error { message } => assert_eq!(message, "boom"),
+            _ => panic!("expected error"),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct TriageData {
+    pub triage_files: Vec<String>,
+    pub counts: TriageCounts,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "status")]
+pub enum IpcResponse {
+    #[serde(rename = "success")]
+    Success { data: TriageData },
+    #[serde(rename = "error")]
+    Error { message: String },
+}
+
 // src-tauri/src/lib.rs
 
 // We add the necessary imports to run commands and read files
 use std::env;
 
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 mod logging;
@@ -93,8 +314,7 @@ async fn save_settings(api_key: String, base_dir: String) -> Result<(), Error> {
 
     let content = format!(
         "GEMINI_API_KEY={}\nOBSIDIAN_VAULT_PATH=\"{}\"\n",
-        api_key,
-        base_dir
+        api_key, base_dir
     );
 
     fs::write(env_path, content).map_err(|e| Error::FileWrite(e.to_string()))?;
@@ -172,7 +392,9 @@ async fn get_files_in_stage(stage: String) -> Result<Vec<String>, Error> {
 
         // Only consider regular files; skip directories and others
         if let Ok(ft) = entry.file_type() {
-            if !ft.is_file() { continue; }
+            if !ft.is_file() {
+                continue;
+            }
         }
 
         if let Some(file_name) = entry.file_name().to_str() {
@@ -227,15 +449,19 @@ async fn finalize_lab_file(file_name: String) -> Result<(), Error> {
     let project_root = get_project_root()?;
     let source_path = project_root.join("03_Lab").join(&file_name);
     let destination_path = project_root.join("04_ReadyForOCR").join(&file_name);
-    fs::rename(&source_path, &destination_path)
-        .map_err(|e| Error::FileRename(e.to_string()))?;
+    fs::rename(&source_path, &destination_path).map_err(|e| Error::FileRename(e.to_string()))?;
 
     Ok(())
 }
 
 /// Run summarize for a single file in 05_ReadyForSummary.
 #[tauri::command]
-async fn run_summarize_single(file_name: String, dry_run: bool, debug: bool, force_ocr: bool) -> Result<String, Error> {
+async fn run_summarize_single(
+    file_name: String,
+    dry_run: bool,
+    debug: bool,
+    force_ocr: bool,
+) -> Result<String, Error> {
     let project_root = get_project_root()?;
     let script_path = project_root.join("backend/cartaos/cli.py");
     let target_path = project_root.join("05_ReadyForSummary").join(&file_name);
@@ -243,9 +469,15 @@ async fn run_summarize_single(file_name: String, dry_run: bool, debug: bool, for
 
     let mut cmd = Command::new(&poetry_python_path);
     cmd.arg(&script_path).arg("summarize").arg(&target_path);
-    if dry_run { cmd.arg("--dry-run"); }
-    if debug { cmd.arg("--debug"); }
-    if force_ocr { cmd.arg("--force-ocr"); }
+    if dry_run {
+        cmd.arg("--dry-run");
+    }
+    if debug {
+        cmd.arg("--debug");
+    }
+    if force_ocr {
+        cmd.arg("--force-ocr");
+    }
 
     let output = cmd
         .current_dir(&project_root)
@@ -255,7 +487,9 @@ async fn run_summarize_single(file_name: String, dry_run: bool, debug: bool, for
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        Err(Error::CommandFailed(String::from_utf8_lossy(&output.stderr).to_string()))
+        Err(Error::CommandFailed(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ))
     }
 }
 
@@ -289,23 +523,29 @@ async fn run_summarize_batch() -> Result<String, Error> {
 /// This function sets up the Tauri application and runs it.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> Result<(), tauri::Error> {
-  tauri::Builder::default()
-    // The line below is the most important: it "registers" our functions
-    // and makes them available to be called by `invoke` in Svelte.
-    .invoke_handler(tauri::generate_handler![
-        run_triage,
-        run_ocr_batch,
-        get_files_in_stage,
-        load_settings,
-        save_settings,
-        open_scantailor,
-        finalize_lab_file,
-        run_summarize_single,
-        run_summarize_batch
-    ])
-    .setup(|app: &mut tauri::App| {
-        setup_logging(app).expect("Failed to setup logging");
-        Ok(())
-    })
-    .run(tauri::generate_context!())
+    tauri::Builder::default()
+        // The line below is the most important: it "registers" our functions
+        // and makes them available to be called by `invoke` in Svelte.
+        .invoke_handler(tauri::generate_handler![
+            run_triage,
+            run_triage_json,
+            run_triage_json_typed,
+            run_ocr_json,
+            run_ocr_json_typed,
+            run_ocr_batch,
+            get_files_in_stage,
+            load_settings,
+            save_settings,
+            open_scantailor,
+            finalize_lab_file,
+            run_summarize_single,
+            run_summarize_json,
+            run_summarize_json_typed,
+            run_summarize_batch
+        ])
+        .setup(|app: &mut tauri::App| {
+            setup_logging(app).expect("Failed to setup logging");
+            Ok(())
+        })
+        .run(tauri::generate_context!())
 }

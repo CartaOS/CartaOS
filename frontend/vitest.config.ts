@@ -20,7 +20,13 @@ export default defineConfig({
       enabled: true,
       reporter: ['text-summary', 'lcov'],
       reportsDirectory: './coverage',
-      all: false
+      all: false,
+      thresholds: {
+        lines: 90,
+        statements: 90,
+        branches: 85,
+        functions: 70
+      }
     }
   }
 });

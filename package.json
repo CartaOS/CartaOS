@@ -1,5 +1,6 @@
 {
   "devDependencies": {
-    "@tauri-apps/api": "^2.7.0"
+    "@tauri-apps/api": "^2.7.0",
+    "vitest": "^3.2.4"
   }
 }
