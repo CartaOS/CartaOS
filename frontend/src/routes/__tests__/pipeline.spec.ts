@@ -10,6 +10,55 @@ describe('Pipeline view (+page.svelte)', () => {
     mockInvoke.mockReset();
   });
 
+  it('runs OCR batch with JSON enrichment and shows queued count', async () => {
+    mockInvoke.mockImplementation(async (cmd: string) => {
+      if (cmd === 'run_ocr_batch') return 'ok';
+      if (cmd === 'run_ocr_json') {
+        return JSON.stringify({ status: 'success', data: { counts: { queued: 7 }, queued_for_ocr: ['a.pdf'] } });
+      }
+      if (cmd === 'get_files_in_stage') return [];
+      return undefined;
+    });
+
+    render(Page);
+
+    // Wait for initial refresh completion
+    await waitFor(() => {
+      expect(screen.getByText('File queues refreshed successfully.')).toBeInTheDocument();
+    });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'OCR Batch' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('OCR Batch: 7 files queued')).toBeInTheDocument();
+    });
+  });
+
+  it('runs triage with JSON enrichment and shows counts', async () => {
+    mockInvoke.mockImplementation(async (cmd: string) => {
+      if (cmd === 'run_triage') return 'ok';
+      if (cmd === 'run_triage_json') {
+        return JSON.stringify({ status: 'success', data: { counts: { triage: 42 } } });
+      }
+      if (cmd === 'get_files_in_stage') return [];
+      return undefined;
+    });
+
+    render(Page);
+
+    // Wait for initial refresh completion
+    await waitFor(() => {
+      expect(screen.getByText('File queues refreshed successfully.')).toBeInTheDocument();
+    });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Triage' }));
+
+    // Expect enriched status to include counts
+    await waitFor(() => {
+      expect(screen.getByText('Triage: 42 files in triage')).toBeInTheDocument();
+    });
+  });
+
   it('loads queues on mount and shows status message', async () => {
     mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
       if (cmd === 'get_files_in_stage') {

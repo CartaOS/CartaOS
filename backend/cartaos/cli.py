@@ -25,17 +25,21 @@ The code is organized into a single module, with the main entry point at the
 bottom of the file.
 """
 
+from __future__ import annotations
+
 import sys
+import json
+from typing import Any, Dict, Optional
 from pathlib import Path
-from typing import Optional
 
 import typer
 
 from cartaos import config
-from cartaos.lab import LabProcessor
-from cartaos.ocr import OcrProcessor
-from cartaos.processor import CartaOSProcessor
-from cartaos.triage import TriageProcessor
+# Monkeypatch-friendly placeholders for heavy processors. Tests may set these.
+OcrProcessor: Optional[Any] = None
+LabProcessor: Optional[Any] = None
+TriageProcessor: Optional[Any] = None
+CartaOSProcessor: Optional[Any] = None
 
 __app_name__ = "cartaos"
 __version__ = "0.1.0"
@@ -130,12 +134,39 @@ def setup(
 
 
 @app.command()
-def triage() -> None:
+def triage(
+    json_output: bool = typer.Option(False, "--json", help="Emit structured JSON output for IPC/automation."),
+) -> None:
     """
     Scans the Triage (02) directory, classifies files, and reports the actions.
     """
-    typer.secho("---  Starting Triage Process ---", fg=typer.colors.BLUE)
+    if not json_output:
+        typer.secho("---  Starting Triage Process ---", fg=typer.colors.BLUE)
     try:
+        global TriageProcessor
+        if json_output:
+            # JSON mode: avoid heavy imports and provide a structured status payload.
+            DIR_TRIAGE.mkdir(parents=True, exist_ok=True)
+            DIR_LAB.mkdir(parents=True, exist_ok=True)
+            DIR_READY_FOR_SUMMARY.mkdir(parents=True, exist_ok=True)
+
+            triage_files = sorted([p.name for p in DIR_TRIAGE.glob("*") if p.is_file()])
+            payload: Dict[str, Any] = {
+                "status": "success",
+                "data": {
+                    "counts": {
+                        "triage": len(triage_files),
+                    },
+                },
+            }
+            typer.echo(json.dumps(payload))
+            return
+
+        # Normal mode: perform real triage work (may import heavy modules)
+        if TriageProcessor is None:
+            from cartaos.triage import TriageProcessor as _TriageProcessor  # lazy import
+            TriageProcessor = _TriageProcessor
+
         processor = TriageProcessor(
             input_dir=DIR_TRIAGE,
             summary_dir=DIR_READY_FOR_SUMMARY,
@@ -180,8 +211,9 @@ def lab(
     In non-interactive mode (tests/CI), just enqueues the file into 04_ReadyForOCR.
     """
     try:
+        global LabProcessor
         if not sys.stdin.isatty():
-            # Modo não interativo: só enfileira
+            # Non-interactive mode: just enqueue
             DIR_READY_FOR_OCR.mkdir(parents=True, exist_ok=True)
             target = DIR_READY_FOR_OCR / pdf_path.name
             if pdf_path.resolve() != target.resolve():
@@ -190,6 +222,9 @@ def lab(
             return
 
         typer.secho(f"Sending '{pdf_path.name}' to the correction lab...", fg=typer.colors.MAGENTA)
+        if LabProcessor is None:
+            from cartaos.lab import LabProcessor as _LabProcessor  # lazy import
+            LabProcessor = _LabProcessor
         processor = LabProcessor(input_path=pdf_path, output_dir=DIR_READY_FOR_OCR)
         ok = processor.process()
         if not ok:
@@ -210,17 +245,32 @@ def ocr(
         None,
         dir_okay=False,
         help="Optional single PDF to OCR; if omitted, runs batch on 04_ReadyForOCR.",
-    )
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Emit structured JSON output for IPC/automation."),
 ) -> None:
     """
     Runs OCR on a single PDF (if provided) or batch on 04_ReadyForOCR.
     In non-interactive mode, failures don't exit with non-zero code.
     """
     try:
+        global OcrProcessor
         DIR_READY_FOR_OCR.mkdir(parents=True, exist_ok=True)
         DIR_READY_FOR_SUMMARY.mkdir(parents=True, exist_ok=True)
 
-        # Modo arquivo único
+        if json_output:
+            # JSON mode: do not run OCR; just report queue state
+            queued = sorted([p.name for p in DIR_READY_FOR_OCR.rglob("*.pdf")])
+            payload = {
+                "status": "success",
+                "data": {
+                    "queued_for_ocr": queued,
+                    "counts": {"queued": len(queued)},
+                },
+            }
+            typer.echo(json.dumps(payload))
+            return
+
+        # Single-file mode
         if pdf_path is not None:
             if not pdf_path.exists():
                 typer.secho(f"File not found: {pdf_path}", fg=typer.colors.RED)
@@ -229,6 +279,9 @@ def ocr(
                 return
 
             out_pdf = DIR_READY_FOR_SUMMARY / pdf_path.name
+            if OcrProcessor is None:
+                from cartaos.ocr import OcrProcessor as _OcrProcessor  # lazy import
+                OcrProcessor = _OcrProcessor
             processor = OcrProcessor(input_path=pdf_path, output_path=out_pdf)
             ok = processor.process()
             if not ok:
@@ -236,7 +289,7 @@ def ocr(
                 if sys.stdin.isatty():
                     raise typer.Exit(code=1)
             else:
-                # Opcionalmente remover o original
+                # Optionally remove the original
                 try:
                     pdf_path.unlink(missing_ok=True)
                 except Exception:
@@ -244,7 +297,7 @@ def ocr(
                 typer.secho(f"OCR complete: {out_pdf}", fg=typer.colors.GREEN)
             return
 
-        # Modo batch
+        # Batch mode
         pdfs = sorted(DIR_READY_FOR_OCR.rglob("*.pdf"))
         if not pdfs:
             typer.secho("No PDF files found to process in the OCR queue.", fg=typer.colors.YELLOW)
@@ -253,6 +306,9 @@ def ocr(
         with typer.progressbar(pdfs, label="Processing files") as progress:
             for pdf in progress:
                 out_pdf = DIR_READY_FOR_SUMMARY / pdf.relative_to(DIR_READY_FOR_OCR)
+                if OcrProcessor is None:
+                    from cartaos.ocr import OcrProcessor as _OcrProcessor  # lazy import
+                    OcrProcessor = _OcrProcessor
                 processor = OcrProcessor(input_path=pdf, output_path=out_pdf)
                 if processor.process():
                     try:
@@ -275,13 +331,35 @@ def summarize(
     dry_run: bool = typer.Option(False, "--dry-run", help="Run without saving or moving files."),
     debug: bool = typer.Option(False, "--debug", help="Save extracted text and stop before AI call."),
     force_ocr: bool = typer.Option(False, "--force-ocr", help="Force OCR processing before summarization."),
+    json_output: bool = typer.Option(False, "--json", help="Emit structured JSON output for IPC/automation."),
 ) -> None:
     """
     Generates an analytical summary for a given PDF file.
     In non-interactive mode, failures do not cause non-zero exit (to satisfy CI/tests).
     """
     try:
-        typer.secho(f"Starting summary for: {pdf_path.name}", fg=typer.colors.CYAN)
+        global CartaOSProcessor
+        if not json_output:
+            typer.secho(f"Starting summary for: {pdf_path.name}", fg=typer.colors.CYAN)
+
+        if json_output:
+            # JSON mode: validate and report intent/errors without heavy imports
+            if not pdf_path.exists():
+                payload: Dict[str, Any] = {"status": "error", "error": f"File not found: {pdf_path.name}"}
+                typer.echo(json.dumps(payload))
+                raise typer.Exit(code=1)
+            payload = {
+                "status": "success",
+                "data": {
+                    "target_file": pdf_path.name,
+                    "options": {"dry_run": dry_run, "debug": debug, "force_ocr": force_ocr},
+                },
+            }
+            typer.echo(json.dumps(payload))
+            return
+        if CartaOSProcessor is None:
+            from cartaos.processor import CartaOSProcessor as _CartaOSProcessor  # lazy import
+            CartaOSProcessor = _CartaOSProcessor
         processor = CartaOSProcessor(pdf_path=pdf_path, dry_run=dry_run, debug=debug, force_ocr=force_ocr)
         ok = processor.process()
 

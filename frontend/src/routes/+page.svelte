@@ -6,6 +6,7 @@
 	import ActionButton from '$lib/components/ActionButton.svelte';
 	import QueueColumn from '$lib/components/QueueColumn.svelte';
 	import LogPanel from '$lib/components/LogPanel.svelte';
+	import { triageJson, ocrJson, type TriageJson, type OcrJson } from '$lib/ipc';
 
 	// --- State ---
 	let currentView: 'pipeline' | 'lab' | 'settings' = $state('pipeline');
@@ -21,13 +22,18 @@
 		statusMessage = `Running ${baseMessage}...`;
 		isLoading = true;
 		try {
+			let finalMessage: string | undefined;
 			const result = await action();
 			if (typeof result === 'string' && result.trim()) {
-				statusMessage = result.trim();
+				finalMessage = result.trim();
+				statusMessage = finalMessage;
 			} else {
-				statusMessage = `${baseMessage} completed successfully.`;
+				finalMessage = `${baseMessage} completed successfully.`;
+				statusMessage = finalMessage;
 			}
 			await refreshAllQueues();
+			// Preserve enriched message after refresh
+			if (finalMessage) statusMessage = finalMessage;
 		} catch (error) {
 			console.error("Caught error in withLoading:", error);
 			const errorMessage = typeof error === 'string' ? error : (error instanceof Error ? error.message : `An unknown error occurred during ${baseMessage}.`);
@@ -38,12 +44,60 @@
 		}
 	}
 
-	const handleTriage = () => withLoading(() => invoke('run_triage'), 'Triage');
-	const handleOcr = () => withLoading(() => invoke('run_ocr_batch'), 'OCR Batch');
-	const handleSummarizeBatch = () => withLoading(() => invoke('run_summarize_batch'), 'Summarization Batch');
+	const handleTriage = () =>
+		withLoading(async () => {
+			// Keep legacy command for compatibility/tests
+			await invoke('run_triage');
+			// Then fetch JSON summary for a richer status
+			try {
+				const t: TriageJson = await triageJson();
+				if (t.status === 'success' && t.data?.counts) {
+					return `Triage: ${t.data.counts.triage} files in triage`;
+				}
+			} catch (e) {
+				// Best-effort enrichment only; ignore when not available (e.g., unit tests)
+			}
+			return 'Triage completed successfully.';
+		}, 'Triage');
+
+	const handleOcr = () =>
+		withLoading(async () => {
+			await invoke('run_ocr_batch');
+			try {
+				const o: OcrJson = await ocrJson();
+				if (o.status === 'success') {
+					const q = o.data?.counts?.queued ?? o.data?.queued_for_ocr?.length ?? 0;
+					return `OCR Batch: ${q} files queued`;
+				}
+			} catch (e) {
+				// Best-effort enrichment only
+			}
+			return 'OCR Batch completed successfully.';
+		}, 'OCR Batch');
+	const handleSummarizeBatch = () =>
+		withLoading(async () => {
+			await invoke('run_summarize_batch');
+			try {
+				const files: string[] = await invoke('get_files_in_stage', { stage: '05_ReadyForSummary' });
+				return `Summarization Batch: ${files.length} files ready`;
+			} catch {
+				// Best-effort enrichment only
+			}
+			return 'Summarization Batch completed successfully.';
+		}, 'Summarization Batch');
 	const handleSummarizeSingle = (fileName: string) =>
 		withLoading(
-			() => invoke('run_summarize_single', { fileName, dryRun: false, debug: false, forceOcr: false }),
+			async () => {
+				await invoke('run_summarize_single', { fileName, dryRun: false, debug: false, forceOcr: false });
+				try {
+					// Best-effort enrichment via JSON endpoint
+					const res = await import('$lib/ipc').then(m => m.summarizeJson(fileName, { dry_run: false, debug: false, force_ocr: false }));
+					if (res.status === 'success' && res.data?.target_file) {
+						return `Summarize: ${res.data.target_file} acknowledged`;
+					}
+				} catch {}
+				return `Summarizing ${fileName} completed successfully.`;
+			},
 			`Summarizing ${fileName}`
 		);
 	const handleCorrect = (fileName: string) =>

@@ -177,7 +177,7 @@ class LabProcessor:
             next_id += 1
 
         disambiguation_el = SubElement(root, 'file-name-disambiguation')
-        for img_path, file_id in file_map.items():
+        for img_path_str, file_id in file_map.items():
             SubElement(disambiguation_el, 'mapping', file=str(file_id), label="0")
 
         filters_el = SubElement(root, 'filters')
