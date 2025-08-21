@@ -13,9 +13,11 @@
 		"lint": "eslint . && prettier --check .",
 		"format": "prettier --write .",
 		"test": "vitest",
-		"test:run": "vitest run"
+		"test:run": "vitest run",
+		"e2e": "playwright test"
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.47.1",
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
 		"@sveltejs/adapter-auto": "^6.0.0",
