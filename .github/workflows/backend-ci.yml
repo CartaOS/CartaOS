@@ -39,7 +39,7 @@ jobs:
         run: pipx runpip ruff install ruff || pip install ruff
 
       - name: Run ruff
-        run: ruff check .
+        run: ruff check . --output-format=github
 
       - name: Run mypy (type checking)
         run: poetry run mypy .
@@ -71,12 +71,19 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          poetry run pytest --cov --cov-report=term-missing --cov-report=xml
-          echo "Generated coverage.xml"
+          poetry run pytest -W error --cov --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=pytest-junit.xml
+          echo "Generated coverage.xml and pytest-junit.xml"
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
           path: backend/coverage.xml
+          if-no-files-found: warn
+
+      - name: Upload JUnit test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-junit
+          path: backend/pytest-junit.xml
           if-no-files-found: warn
