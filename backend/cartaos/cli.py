@@ -138,7 +138,8 @@ def triage(
     """
     Scans the Triage (02) directory, classifies files, and reports the actions.
     """
-    typer.secho("---  Starting Triage Process ---", fg=typer.colors.BLUE)
+    if not json_output:
+        typer.secho("---  Starting Triage Process ---", fg=typer.colors.BLUE)
     try:
         global TriageProcessor
         if json_output:
@@ -151,7 +152,6 @@ def triage(
             payload = {
                 "status": "success",
                 "data": {
-                    "triage_files": triage_files,
                     "counts": {
                         "triage": len(triage_files),
                     },
@@ -211,7 +211,7 @@ def lab(
     try:
         global LabProcessor
         if not sys.stdin.isatty():
-            # Modo não interativo: só enfileira
+            # Non-interactive mode: just enqueue
             DIR_READY_FOR_OCR.mkdir(parents=True, exist_ok=True)
             target = DIR_READY_FOR_OCR / pdf_path.name
             if pdf_path.resolve() != target.resolve():
@@ -268,7 +268,7 @@ def ocr(
             typer.echo(json.dumps(payload))
             return
 
-        # Modo arquivo único
+        # Single-file mode
         if pdf_path is not None:
             if not pdf_path.exists():
                 typer.secho(f"File not found: {pdf_path}", fg=typer.colors.RED)
@@ -287,7 +287,7 @@ def ocr(
                 if sys.stdin.isatty():
                     raise typer.Exit(code=1)
             else:
-                # Opcionalmente remover o original
+                # Optionally remove the original
                 try:
                     pdf_path.unlink(missing_ok=True)
                 except Exception:
@@ -295,7 +295,7 @@ def ocr(
                 typer.secho(f"OCR complete: {out_pdf}", fg=typer.colors.GREEN)
             return
 
-        # Modo batch
+        # Batch mode
         pdfs = sorted(DIR_READY_FOR_OCR.rglob("*.pdf"))
         if not pdfs:
             typer.secho("No PDF files found to process in the OCR queue.", fg=typer.colors.YELLOW)
@@ -337,10 +337,15 @@ def summarize(
     """
     try:
         global CartaOSProcessor
-        typer.secho(f"Starting summary for: {pdf_path.name}", fg=typer.colors.CYAN)
+        if not json_output:
+            typer.secho(f"Starting summary for: {pdf_path.name}", fg=typer.colors.CYAN)
 
         if json_output:
-            # JSON mode: do not run summarization; just report intent
+            # JSON mode: validate and report intent/errors without heavy imports
+            if not pdf_path.exists():
+                payload = {"status": "error", "error": f"File not found: {pdf_path.name}"}
+                typer.echo(json.dumps(payload))
+                raise typer.Exit(code=1)
             payload = {
                 "status": "success",
                 "data": {
