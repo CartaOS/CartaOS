@@ -169,7 +169,28 @@ async fn get_files_in_stage(stage: String) -> Result<Vec<String>, Error> {
 
     for entry in entries {
         let entry = entry.map_err(|e| Error::DirectoryRead(e.to_string()))?;
+
+        // Only consider regular files; skip directories and others
+        if let Ok(ft) = entry.file_type() {
+            if !ft.is_file() { continue; }
+        }
+
         if let Some(file_name) = entry.file_name().to_str() {
+            // Skip hidden files and common placeholder/system files
+            let lower = file_name.to_ascii_lowercase();
+            let is_hidden = file_name.starts_with('.') || file_name.starts_with("._");
+            let is_known_system = matches!(
+                lower.as_str(),
+                ".gitkeep" | ".ds_store" | "thumbs.db" | "desktop.ini"
+            );
+            let has_temp_suffix = ["~", ".tmp", ".temp", ".swp", ".swo", ".part", ".crdownload"]
+                .iter()
+                .any(|suf| lower.ends_with(suf));
+
+            if is_hidden || is_known_system || has_temp_suffix {
+                continue;
+            }
+
             files.push(file_name.to_string());
         }
     }
