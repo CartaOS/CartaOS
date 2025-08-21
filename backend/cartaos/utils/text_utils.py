@@ -19,6 +19,6 @@ def sanitize(text: str) -> str:
         str: The sanitized text.
     """
     sanitized_text: str = unicodedata.normalize('NFC', text)
-    sanitized_text: str = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', sanitized_text)
+    sanitized_text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', sanitized_text)
     return sanitized_text
 

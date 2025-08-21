@@ -25,19 +25,21 @@ The code is organized into a single module, with the main entry point at the
 bottom of the file.
 """
 
+from __future__ import annotations
+
 import sys
 import json
+from typing import Any, Dict, Optional
 from pathlib import Path
-from typing import Optional
 
 import typer
 
 from cartaos import config
 # Monkeypatch-friendly placeholders for heavy processors. Tests may set these.
-OcrProcessor = None  # type: ignore
-LabProcessor = None  # type: ignore
-TriageProcessor = None  # type: ignore
-CartaOSProcessor = None  # type: ignore
+OcrProcessor: Optional[Any] = None
+LabProcessor: Optional[Any] = None
+TriageProcessor: Optional[Any] = None
+CartaOSProcessor: Optional[Any] = None
 
 __app_name__ = "cartaos"
 __version__ = "0.1.0"
@@ -149,7 +151,7 @@ def triage(
             DIR_READY_FOR_SUMMARY.mkdir(parents=True, exist_ok=True)
 
             triage_files = sorted([p.name for p in DIR_TRIAGE.glob("*") if p.is_file()])
-            payload = {
+            payload: Dict[str, Any] = {
                 "status": "success",
                 "data": {
                     "counts": {
@@ -343,7 +345,7 @@ def summarize(
         if json_output:
             # JSON mode: validate and report intent/errors without heavy imports
             if not pdf_path.exists():
-                payload = {"status": "error", "error": f"File not found: {pdf_path.name}"}
+                payload: Dict[str, Any] = {"status": "error", "error": f"File not found: {pdf_path.name}"}
                 typer.echo(json.dumps(payload))
                 raise typer.Exit(code=1)
             payload = {

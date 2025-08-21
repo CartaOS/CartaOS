@@ -6,6 +6,7 @@
 	import ActionButton from '$lib/components/ActionButton.svelte';
 	import QueueColumn from '$lib/components/QueueColumn.svelte';
 	import LogPanel from '$lib/components/LogPanel.svelte';
+	import { triageJson, ocrJson, type TriageJson, type OcrJson } from '$lib/ipc';
 
 	// --- State ---
 	let currentView: 'pipeline' | 'lab' | 'settings' = $state('pipeline');
@@ -38,8 +39,28 @@
 		}
 	}
 
-	const handleTriage = () => withLoading(() => invoke('run_triage'), 'Triage');
-	const handleOcr = () => withLoading(() => invoke('run_ocr_batch'), 'OCR Batch');
+	const handleTriage = () =>
+		withLoading(async () => {
+			// Keep legacy command for compatibility/tests
+			await invoke('run_triage');
+			// Then fetch JSON summary for a richer status
+			const t: TriageJson = await triageJson();
+			if (t.status === 'success' && t.data?.counts) {
+				return `Triage: ${t.data.counts.triage} files in triage`;
+			}
+			return 'Triage completed successfully.';
+		}, 'Triage');
+
+	const handleOcr = () =>
+		withLoading(async () => {
+			await invoke('run_ocr_batch');
+			const o: OcrJson = await ocrJson();
+			if (o.status === 'success') {
+				const q = o.data?.counts?.queued ?? o.data?.queued_for_ocr?.length ?? 0;
+				return `OCR Batch: ${q} files queued`;
+			}
+			return 'OCR Batch completed successfully.';
+		}, 'OCR Batch');
 	const handleSummarizeBatch = () => withLoading(() => invoke('run_summarize_batch'), 'Summarization Batch');
 	const handleSummarizeSingle = (fileName: string) =>
 		withLoading(

@@ -78,10 +78,10 @@ class CartaOSProcessor:
             Path(__file__).parent.parent.parent / "07_Processed"
         )
 
+        # Initialize with default; override if OBSIDIAN_VAULT_PATH is set
+        self.summary_dir: Path = self.processed_pdf_dir / "Summaries"
         if self.obsidian_vault_path and Path(self.obsidian_vault_path).is_dir():
-            self.summary_dir: Path = Path(self.obsidian_vault_path) / "Summaries"
-        else:
-            self.summary_dir: Path = self.processed_pdf_dir / "Summaries"
+            self.summary_dir = Path(self.obsidian_vault_path) / "Summaries"
 
     def _save_summary(self, summary_content: str) -> None:
         """
