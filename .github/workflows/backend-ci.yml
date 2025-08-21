@@ -1,5 +1,9 @@
 name: Backend CI
 
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     branches: [ main ]
@@ -63,4 +67,13 @@ jobs:
         run: poetry install --no-interaction --no-root
 
       - name: Run tests with coverage
-        run: poetry run pytest --cov --cov-report=term-missing
+        run: |
+          poetry run pytest --cov --cov-report=term-missing --cov-report=xml
+          echo "Generated coverage.xml"
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          if-no-files-found: warn
