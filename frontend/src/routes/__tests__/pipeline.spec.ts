@@ -51,8 +51,8 @@ describe('Pipeline view (+page.svelte)', () => {
       expect(screen.getByText('File queues refreshed successfully.')).toBeInTheDocument();
     });
 
-    // Click Run Triage button
-    await fireEvent.click(screen.getByRole('button', { name: 'Run Triage' }));
+    // Click Triage button (label changed)
+    await fireEvent.click(screen.getByRole('button', { name: 'Triage' }));
 
     // Ensure command invoked
     await waitFor(() => {
@@ -79,7 +79,7 @@ describe('Pipeline view (+page.svelte)', () => {
       expect(screen.getByText('File queues refreshed successfully.')).toBeInTheDocument();
     });
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Run OCR Batch' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'OCR Batch' }));
 
     await waitFor(() => {
       expect(screen.getByText(/ERROR in OCR Batch:/)).toBeInTheDocument();
