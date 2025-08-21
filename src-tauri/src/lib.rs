@@ -4,6 +4,57 @@ pub struct TriageCounts {
     pub triage: usize,
 }
 
+/// Run OCR command in JSON mode.
+#[tauri::command]
+async fn run_ocr_json() -> Result<String, Error> {
+    let project_root = get_project_root()?;
+    let script_path = project_root.join("backend/cartaos/cli.py");
+    let poetry_python_path = get_poetry_python_path()?;
+
+    let output = Command::new(&poetry_python_path)
+        .arg(&script_path)
+        .arg("ocr")
+        .arg("--json")
+        .current_dir(&project_root)
+        .output()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(Error::CommandFailed(String::from_utf8_lossy(&output.stderr).to_string()))
+    }
+}
+
+/// Run summarize command in JSON mode for a single file.
+#[tauri::command]
+async fn run_summarize_json(file_name: String, dry_run: bool, debug: bool, force_ocr: bool) -> Result<String, Error> {
+    let project_root = get_project_root()?;
+    let script_path = project_root.join("backend/cartaos/cli.py");
+    let target_path = project_root.join("05_ReadyForSummary").join(&file_name);
+    let poetry_python_path = get_poetry_python_path()?;
+
+    let mut cmd = Command::new(&poetry_python_path);
+    cmd.arg(&script_path)
+        .arg("summarize")
+        .arg(&target_path)
+        .arg("--json");
+    if dry_run { cmd.arg("--dry-run"); }
+    if debug { cmd.arg("--debug"); }
+    if force_ocr { cmd.arg("--force-ocr"); }
+
+    let output = cmd
+        .current_dir(&project_root)
+        .output()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(Error::CommandFailed(String::from_utf8_lossy(&output.stderr).to_string()))
+    }
+}
+
 /// Run the triage command in JSON mode.
 ///
 /// Calls the backend Python script with `triage --json` and returns the stdout JSON string.
@@ -377,6 +428,7 @@ pub fn run() -> Result<(), tauri::Error> {
     .invoke_handler(tauri::generate_handler![
         run_triage,
         run_triage_json,
+        run_ocr_json,
         run_ocr_batch,
         get_files_in_stage,
         load_settings,
@@ -384,6 +436,7 @@ pub fn run() -> Result<(), tauri::Error> {
         open_scantailor,
         finalize_lab_file,
         run_summarize_single,
+        run_summarize_json,
         run_summarize_batch
     ])
     .setup(|app: &mut tauri::App| {

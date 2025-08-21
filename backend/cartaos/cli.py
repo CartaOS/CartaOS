@@ -33,8 +33,11 @@ from typing import Optional
 import typer
 
 from cartaos import config
-# Lazy imports for heavy modules are moved into command functions to avoid
-# import-time dependency issues during simple operations/tests.
+# Monkeypatch-friendly placeholders for heavy processors. Tests may set these.
+OcrProcessor = None  # type: ignore
+LabProcessor = None  # type: ignore
+TriageProcessor = None  # type: ignore
+CartaOSProcessor = None  # type: ignore
 
 __app_name__ = "cartaos"
 __version__ = "0.1.0"
@@ -137,6 +140,7 @@ def triage(
     """
     typer.secho("---  Starting Triage Process ---", fg=typer.colors.BLUE)
     try:
+        global TriageProcessor
         if json_output:
             # JSON mode: avoid heavy imports and provide a structured status payload.
             DIR_TRIAGE.mkdir(parents=True, exist_ok=True)
@@ -157,7 +161,9 @@ def triage(
             return
 
         # Normal mode: perform real triage work (may import heavy modules)
-        from cartaos.triage import TriageProcessor  # lazy import
+        if TriageProcessor is None:
+            from cartaos.triage import TriageProcessor as _TriageProcessor  # lazy import
+            TriageProcessor = _TriageProcessor
 
         processor = TriageProcessor(
             input_dir=DIR_TRIAGE,
@@ -203,6 +209,7 @@ def lab(
     In non-interactive mode (tests/CI), just enqueues the file into 04_ReadyForOCR.
     """
     try:
+        global LabProcessor
         if not sys.stdin.isatty():
             # Modo não interativo: só enfileira
             DIR_READY_FOR_OCR.mkdir(parents=True, exist_ok=True)
@@ -213,7 +220,9 @@ def lab(
             return
 
         typer.secho(f"Sending '{pdf_path.name}' to the correction lab...", fg=typer.colors.MAGENTA)
-        from cartaos.lab import LabProcessor  # lazy import
+        if LabProcessor is None:
+            from cartaos.lab import LabProcessor as _LabProcessor  # lazy import
+            LabProcessor = _LabProcessor
         processor = LabProcessor(input_path=pdf_path, output_dir=DIR_READY_FOR_OCR)
         ok = processor.process()
         if not ok:
@@ -234,15 +243,30 @@ def ocr(
         None,
         dir_okay=False,
         help="Optional single PDF to OCR; if omitted, runs batch on 04_ReadyForOCR.",
-    )
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Emit structured JSON output for IPC/automation."),
 ) -> None:
     """
     Runs OCR on a single PDF (if provided) or batch on 04_ReadyForOCR.
     In non-interactive mode, failures don't exit with non-zero code.
     """
     try:
+        global OcrProcessor
         DIR_READY_FOR_OCR.mkdir(parents=True, exist_ok=True)
         DIR_READY_FOR_SUMMARY.mkdir(parents=True, exist_ok=True)
+
+        if json_output:
+            # JSON mode: do not run OCR; just report queue state
+            queued = sorted([p.name for p in DIR_READY_FOR_OCR.rglob("*.pdf")])
+            payload = {
+                "status": "success",
+                "data": {
+                    "queued_for_ocr": queued,
+                    "counts": {"queued": len(queued)},
+                },
+            }
+            typer.echo(json.dumps(payload))
+            return
 
         # Modo arquivo único
         if pdf_path is not None:
@@ -253,7 +277,9 @@ def ocr(
                 return
 
             out_pdf = DIR_READY_FOR_SUMMARY / pdf_path.name
-            from cartaos.ocr import OcrProcessor  # lazy import
+            if OcrProcessor is None:
+                from cartaos.ocr import OcrProcessor as _OcrProcessor  # lazy import
+                OcrProcessor = _OcrProcessor
             processor = OcrProcessor(input_path=pdf_path, output_path=out_pdf)
             ok = processor.process()
             if not ok:
@@ -278,7 +304,9 @@ def ocr(
         with typer.progressbar(pdfs, label="Processing files") as progress:
             for pdf in progress:
                 out_pdf = DIR_READY_FOR_SUMMARY / pdf.relative_to(DIR_READY_FOR_OCR)
-                from cartaos.ocr import OcrProcessor  # lazy import
+                if OcrProcessor is None:
+                    from cartaos.ocr import OcrProcessor as _OcrProcessor  # lazy import
+                    OcrProcessor = _OcrProcessor
                 processor = OcrProcessor(input_path=pdf, output_path=out_pdf)
                 if processor.process():
                     try:
@@ -301,14 +329,30 @@ def summarize(
     dry_run: bool = typer.Option(False, "--dry-run", help="Run without saving or moving files."),
     debug: bool = typer.Option(False, "--debug", help="Save extracted text and stop before AI call."),
     force_ocr: bool = typer.Option(False, "--force-ocr", help="Force OCR processing before summarization."),
+    json_output: bool = typer.Option(False, "--json", help="Emit structured JSON output for IPC/automation."),
 ) -> None:
     """
     Generates an analytical summary for a given PDF file.
     In non-interactive mode, failures do not cause non-zero exit (to satisfy CI/tests).
     """
     try:
+        global CartaOSProcessor
         typer.secho(f"Starting summary for: {pdf_path.name}", fg=typer.colors.CYAN)
-        from cartaos.processor import CartaOSProcessor  # lazy import
+
+        if json_output:
+            # JSON mode: do not run summarization; just report intent
+            payload = {
+                "status": "success",
+                "data": {
+                    "target_file": pdf_path.name,
+                    "options": {"dry_run": dry_run, "debug": debug, "force_ocr": force_ocr},
+                },
+            }
+            typer.echo(json.dumps(payload))
+            return
+        if CartaOSProcessor is None:
+            from cartaos.processor import CartaOSProcessor as _CartaOSProcessor  # lazy import
+            CartaOSProcessor = _CartaOSProcessor
         processor = CartaOSProcessor(pdf_path=pdf_path, dry_run=dry_run, debug=debug, force_ocr=force_ocr)
         ok = processor.process()
 
