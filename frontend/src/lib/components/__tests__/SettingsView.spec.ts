@@ -84,4 +84,44 @@ describe('SettingsView (integration)', () => {
 		const saveStatus = await screen.findByRole('status');
 		expect(saveStatus).toHaveTextContent(/Error saving settings:/);
 	});
+
+	it('displays error status messages in red color', async () => {
+		mockInvoke.mockImplementation(async (cmd: string) => {
+			if (cmd === 'load_settings') throw new Error('Connection failed');
+			return undefined;
+		});
+
+		render(SettingsView);
+
+		const status = await screen.findByRole('status');
+		expect(status).toHaveTextContent(/Error loading settings:/);
+		expect(status).toHaveClass('text-red-600');
+	});
+
+	it('displays success status messages in green color', async () => {
+		mockInvoke.mockImplementation(async (cmd: string) => {
+			if (cmd === 'load_settings') return { api_key: 'test', base_dir: '/test' };
+			return undefined;
+		});
+
+		render(SettingsView);
+
+		const status = await screen.findByRole('status');
+		await waitFor(() => {
+			expect(status).toHaveTextContent('Settings loaded.');
+			expect(status).toHaveClass('text-green-600');
+		});
+	});
+
+	it('masks API key input field', async () => {
+		mockInvoke.mockImplementation(async (cmd: string) => {
+			if (cmd === 'load_settings') return { api_key: 'secret123', base_dir: '/vault' };
+			return undefined;
+		});
+
+		render(SettingsView);
+
+		const apiInput = await screen.findByLabelText('API Key (Google Gemini):');
+		expect(apiInput).toHaveAttribute('type', 'password');
+	});
 });

@@ -97,6 +97,33 @@ The system follows a **multi-stage pipeline**, where documents move through stru
 
 ## 🚀 Installation
 
+### Quick Start (Recommended)
+
+Download the latest release for your platform:
+
+#### Linux
+```bash
+# Debian/Ubuntu (.deb package)
+wget https://github.com/CartaOS/CartaOS/releases/latest/download/CartaOS_0.1.0_amd64.deb
+sudo dpkg -i CartaOS_0.1.0_amd64.deb
+
+# Fedora/RHEL (.rpm package)
+wget https://github.com/CartaOS/CartaOS/releases/latest/download/CartaOS-0.1.0-1.x86_64.rpm
+sudo dnf install CartaOS-0.1.0-1.x86_64.rpm
+
+# Universal (.AppImage)
+wget https://github.com/CartaOS/CartaOS/releases/latest/download/CartaOS_0.1.0_amd64.AppImage
+chmod +x CartaOS_0.1.0_amd64.AppImage
+./CartaOS_0.1.0_amd64.AppImage
+```
+
+#### Windows & macOS
+*Coming soon - installers in development*
+
+### Development Setup
+
+For developers who want to build from source:
+
 ```bash
 git clone https://github.com/CartaOS/CartaOS.git
 cd CartaOS
@@ -104,20 +131,37 @@ python3 backend/cartaos/install_dev_env.py
 ```
 
 This installer:
+* Detects your OS and package manager
+* Installs dependencies (Tesseract, unpaper, poppler-utils, etc.)
+* Sets up Rust, Node.js, Poetry, and Tauri CLI
 
-* Detects your OS and package manager.
-* Installs dependencies (Tesseract, unpaper, poppler-utils, etc.).
-* Sets up Rust, Node.js, Poetry, and Tauri CLI.
+### System Requirements
+
+- **OS**: Linux (Windows/macOS support coming soon)
+- **RAM**: 4GB minimum, 8GB+ recommended
+- **Storage**: 100MB for app + space for document processing
+- **Network**: Internet connection for AI features
 
 ---
 
-## 📸 Screenshots *(coming soon)*
+## 📸 Screenshots
 
-| Pipeline Stage | Screenshot                   |
-| -------------- | ---------------------------- |
-| Triage         | ![](docs/assets/triage.png)  |
-| OCR            | ![](docs/assets/ocr.png)     |
-| Summary        | ![](docs/assets/summary.png) |
+### Main Interface
+![CartaOS Main Interface](docs/assets/main-interface.png)
+*The main CartaOS interface showing the Pipeline view with document queue management and processing controls.*
+
+### Key Features
+
+| Feature | Screenshot | Description |
+|---------|------------|-------------|
+| **Pipeline Management** | ![Pipeline View](docs/assets/pipeline-view.png) | Document queue with triage, OCR, and summarization controls |
+| **Settings Configuration** | ![Settings View](docs/assets/settings-view.png) | API key and vault path configuration with validation |
+| **Lab Workspace** | ![Lab View](docs/assets/lab-view.png) | Document analysis and manual correction workspace |
+| **Summaries Display** | ![Summaries View](docs/assets/summaries-view.png) | AI-generated document summaries and insights |
+
+### Processing Workflow
+![Processing Workflow](docs/assets/workflow-diagram.png)
+*Visual representation of the document processing pipeline from inbox to final processed documents.*
 
 ---
 

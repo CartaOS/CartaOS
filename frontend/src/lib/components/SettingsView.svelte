@@ -111,9 +111,7 @@
 			role="status"
 			aria-live="polite"
 			aria-atomic="true"
-			class="mt-2 text-sm {isError || /error/i.test(statusMessage)
-				? 'text-red-600'
-				: 'text-green-600'}"
+			class="mt-2 text-sm {isError ? 'text-red-600' : 'text-green-600'}"
 		>
 			{statusMessage}
 		</p>
