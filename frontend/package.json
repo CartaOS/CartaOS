@@ -14,7 +14,9 @@
 		"format": "prettier --write .",
 		"test": "vitest",
 		"test:run": "vitest run",
-		"e2e": "playwright test"
+		"e2e": "playwright test",
+		"perf": "npm run build && npm run preview & sleep 3 && node scripts/lighthouse-ci.mjs && kill %1",
+		"perf:e2e": "playwright test e2e/performance.spec.ts"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.10.2",
@@ -36,6 +38,7 @@
 		"globals": "^16.0.0",
 		"jest-axe": "^10.0.0",
 		"jsdom": "^26.1.0",
+		"lighthouse": "^12.8.1",
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.3.3",
 		"prettier-plugin-tailwindcss": "^0.6.5",
