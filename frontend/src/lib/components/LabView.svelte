@@ -65,7 +65,7 @@
 
 <div class="lab-view">
 	<h2>Lab (03_Lab)</h2>
-	<p>Here you will see files that need manual correction in ScanTailor.</p>
+	<p>Here you will see files that need human correction in ScanTailor.</p>
 
 	<div class="controls">
 		<button onclick={refresh} aria-busy={isLoading} class="refresh">Refresh Lab Files</button>
