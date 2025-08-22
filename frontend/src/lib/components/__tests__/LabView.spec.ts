@@ -6,10 +6,10 @@ describe('LabView', () => {
 	it('renders heading and description', async () => {
 		const { container } = render(LabView);
 		expect(
-			screen.getByRole('heading', { level: 2, name: 'Laboratório (03_Lab)' })
+			screen.getByRole('heading', { level: 2, name: 'Lab (03_Lab)' })
 		).toBeInTheDocument();
 		expect(
-			screen.getByText('Aqui você verá os arquivos que precisam de correção manual no ScanTailor.')
+			screen.getByText('Here you will see files that need manual correction in ScanTailor.')
 		).toBeInTheDocument();
 
 		const results = await axe(container);

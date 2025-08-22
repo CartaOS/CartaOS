@@ -6,7 +6,7 @@ import pytest
 from cartaos.install_dev_env.installer import Installer
 from cartaos.install_dev_env import shell_utils
 
-# Evita poluir a saída com Rich
+# Avoid polluting output with Rich
 class DummyConsole:
     def __init__(self, *args, **kwargs):
         pass
@@ -35,7 +35,7 @@ def test_detect_project_root_fallback(monkeypatch, tmp_path):
     inst = Installer(no_confirm=True, minimal=True, dry_run=True, ci_mode=True)
     # Git falha
     monkeypatch.setattr(inst, "_run_cmd", lambda *a, **k: (False, ""))
-    # Cria um marker no tmp_path
+    # Create a marker in tmp_path
     (tmp_path / "pyproject.toml").write_text("")
     sub = tmp_path / "subdir"; sub.mkdir()
     monkeypatch.chdir(sub)

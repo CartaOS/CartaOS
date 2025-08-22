@@ -19,7 +19,7 @@
 	let ocrFiles = $state<string[]>([]);
 	let summaryFiles = $state<string[]>([]);
 
-	// --- Lógica de Ações ---
+	// --- Action Logic ---
 	async function withLoading<T>(action: () => Promise<T>, baseMessage: string): Promise<void> {
 		statusMessage = `Running ${baseMessage}...`;
 		isLoading = true;

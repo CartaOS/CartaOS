@@ -39,7 +39,7 @@ vi.mock('@tauri-apps/api/event', () => {
 	for (const cb of listeners) cb(evt);
 };
 
-// Expose stats for tests to assert cleanup behavior
+// Expose stats for tests to assert clean up behavior
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).__getTauriEventStats = () => ({
 	unlistenCount: { ..._unlistenCount }

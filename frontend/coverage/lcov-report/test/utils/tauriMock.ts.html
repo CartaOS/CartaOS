@@ -108,8 +108,14 @@
 <a name='L43'></a><a href='#L43'>43</a>
 <a name='L44'></a><a href='#L44'>44</a>
 <a name='L45'></a><a href='#L45'>45</a>
-<a name='L46'></a><a href='#L46'>46</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -156,47 +162,50 @@
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import type { Mock } from 'vitest';
 import { invoke as realInvoke } from '@tauri-apps/api/core';
 &nbsp;
-export type InvokeHandler = (cmd: string, args?: Record&lt;string, unknown&gt;) =&gt; unknown | Promise&lt;unknown&gt;;
+export type InvokeHandler = (
+	cmd: string,
+	args?: Record&lt;string, unknown&gt;
+) =&gt; unknown | Promise&lt;unknown&gt;;
 &nbsp;
 export function makeInvokeMock(handlers: Record&lt;string, InvokeHandler | unknown&gt;): Mock {
-  const fn = vi.fn(async (cmd: string, args?: Record&lt;string, unknown&gt;) =&gt; {
-    const h = handlers[cmd];
-    if (typeof h === 'function') return (h as InvokeHandler)(cmd, args<span class="branch-0 cbranch-no" title="branch not covered" >);</span>
-<span class="cstat-no" title="statement not covered" >    if (h !== undefined) return h;</span>
-<span class="cstat-no" title="statement not covered" >    return undefined;</span>
-  });
-  // Swap the module's invoke to our mock
-  (realInvoke as unknown as Mock).mockImplementation(fn);
-  return fn as unknown as Mock;
+	const fn = vi.fn(async (cmd: string, args?: Record&lt;string, unknown&gt;) =&gt; {
+		const h = handlers[cmd];
+		if (typeof h === 'function') return (h as InvokeHandler)(cmd, args<span class="branch-0 cbranch-no" title="branch not covered" >);</span>
+<span class="cstat-no" title="statement not covered" >		if (h !== undefined) return h;</span>
+<span class="cstat-no" title="statement not covered" >		return undefined;</span>
+	});
+	// Swap the module's invoke to our mock
+	(realInvoke as unknown as Mock).mockImplementation(fn);
+	return fn as unknown as Mock;
 }
 &nbsp;
 export type Queues = {
-  triage?: string[];
-  lab?: string[];
-  ocr?: string[];
-  summary?: string[];
+	triage?: string[];
+	lab?: string[];
+	ocr?: string[];
+	summary?: string[];
 };
 &nbsp;
 export function withQueues(q: Queues = {}): InvokeHandler {
-  const triage = q.<span class="branch-0 cbranch-no" title="branch not covered" >triage ?? [];</span>
-  const lab = q.<span class="branch-0 cbranch-no" title="branch not covered" >lab ?? [];</span>
-  const ocr = q.<span class="branch-0 cbranch-no" title="branch not covered" >ocr ?? [];</span>
-  const summary = q.<span class="branch-0 cbranch-no" title="branch not covered" >summary ?? [];</span>
-  return async (_cmd: string, args?: Record&lt;string, unknown&gt;) =&gt; {
-    const stage = args?.stage as string | undefined;
-    if (stage === '02_Triage') return triage;
-    if (stage === '03_Lab') return lab;
-    if (stage === '04_ReadyForOCR') return ocr;
-    if (stage === '05_ReadyForSummary') return <span class="branch-0 cbranch-no" title="branch not covered" >summary;</span>
-<span class="cstat-no" title="statement not covered" >    return [];</span>
-  };
+	const triage = q.<span class="branch-0 cbranch-no" title="branch not covered" >triage ?? [];</span>
+	const lab = q.<span class="branch-0 cbranch-no" title="branch not covered" >lab ?? [];</span>
+	const ocr = q.<span class="branch-0 cbranch-no" title="branch not covered" >ocr ?? [];</span>
+	const summary = q.<span class="branch-0 cbranch-no" title="branch not covered" >summary ?? [];</span>
+	return async (_cmd: string, args?: Record&lt;string, unknown&gt;) =&gt; {
+		const stage = args?.stage as string | undefined;
+		if (stage === '02_Triage') return triage;
+		if (stage === '03_Lab') return lab;
+		if (stage === '04_ReadyForOCR') return ocr;
+		if (stage === '05_ReadyForSummary') return <span class="branch-0 cbranch-no" title="branch not covered" >summary;</span>
+<span class="cstat-no" title="statement not covered" >		return [];</span>
+	};
 }
 &nbsp;
 export <span class="fstat-no" title="function not covered" >function withError(cmd: string, error: unknown = new Error('mock error')): InvokeHandler {</span>
-<span class="cstat-no" title="statement not covered" >  return async (c: string) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    if (c === cmd) throw error;</span>
-<span class="cstat-no" title="statement not covered" >    return undefined;</span>
-<span class="cstat-no" title="statement not covered" >  };</span>
+<span class="cstat-no" title="statement not covered" >	return async (c: string) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >		if (c === cmd) throw error;</span>
+<span class="cstat-no" title="statement not covered" >		return undefined;</span>
+<span class="cstat-no" title="statement not covered" >	};</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;</pre></td></tr></table></pre>
 
@@ -205,7 +214,7 @@ export <span class="fstat-no" title="function not covered" >function withError(c
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-08-22T00:47:41.029Z
+                at 2025-08-22T01:10:50.694Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

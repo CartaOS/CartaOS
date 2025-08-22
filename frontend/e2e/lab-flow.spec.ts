@@ -13,7 +13,7 @@ test.describe('Lab flow (UI only)', () => {
 	test('navigate to Lab and see empty state safely', async ({ page }) => {
 		await page.getByRole('button', { name: 'Lab' }).click();
 
-		await expect(page.getByRole('heading', { name: /Laboratório/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Lab/i })).toBeVisible();
 		await expect(page.getByText('Empty')).toBeVisible();
 
 		// Ensure action buttons are not present in empty state

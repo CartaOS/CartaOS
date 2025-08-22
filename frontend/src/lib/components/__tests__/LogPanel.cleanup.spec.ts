@@ -4,13 +4,13 @@ import LogPanel from '../LogPanel.svelte';
 
 declare const globalThis: any;
 
-describe('LogPanel cleanup', () => {
+describe('LogPanel clean up', () => {
 	it('unlistens on destroy to avoid leaks', async () => {
 		const { unmount } = render(LogPanel);
 		// Ensure onMount async work (listen) has run
 		await tick();
 
-		// Unmount to trigger onDestroy cleanup
+		// Unmount to trigger onDestroy clean up
 		unmount();
 
 		const stats = globalThis.__getTauriEventStats();

@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">95.65% </span>
+                <span class="strong">95.91% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>44/46</span>
+                <span class='fraction'>47/49</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">95.65% </span>
+                <span class="strong">95.83% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>22/23</span>
+                <span class='fraction'>23/24</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">95.65% </span>
+                <span class="strong">95.91% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>44/46</span>
+                <span class='fraction'>47/49</span>
             </div>
         
             
@@ -156,7 +156,8 @@
 <a name='L91'></a><a href='#L91'>91</a>
 <a name='L92'></a><a href='#L92'>92</a>
 <a name='L93'></a><a href='#L93'>93</a>
-<a name='L94'></a><a href='#L94'>94</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -222,6 +223,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -237,8 +241,6 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -275,7 +277,7 @@
 			]);
 			summaries = summariesResult as Summary[];
 			vaultPath = (vaultResult as string) || '';
-		} catch (e) {
+		} catch {
 			error = 'Error loading summaries';
 		} finally {
 			loading = false;
@@ -286,7 +288,7 @@
 		selectedSummary = summary;
 		try {
 			summaryContent = await invoke('read_summary', { path: summary.path });
-		}<span class="branch-0 cbranch-no" title="branch not covered" > catch (e) {</span>
+		}<span class="branch-0 cbranch-no" title="branch not covered" > catch {</span>
 <span class="cstat-no" title="statement not covered" >			summaryContent = 'Error loading summary content';</span>
 <span class="cstat-no" title="statement not covered" >		}</span>
 	}
@@ -301,7 +303,7 @@
 &lt;div class="flex h-full"&gt;
 	&lt;div class="w-1/3 border-r border-gray-300 p-4"&gt;
 		&lt;h2 class="mb-4 text-xl font-bold"&gt;Summaries&lt;/h2&gt;
-		
+&nbsp;
 		{#if loading}
 			&lt;p&gt;Loading summaries...&lt;/p&gt;
 		{:else if error}
@@ -309,11 +311,14 @@
 		{:else if summaries.length === 0}
 			&lt;p class="text-gray-600"&gt;No summaries found&lt;/p&gt;
 		{:else}
-			&lt;ul role="list" class="max-h-96 overflow-y-auto space-y-2"&gt;
-				{#each summaries as summary}
+			&lt;ul role="list" class="max-h-96 space-y-2 overflow-y-auto"&gt;
+				{#each summaries as summary (summary.path)}
 					&lt;li&gt;
 						&lt;button
-							class="w-full text-left p-2 rounded hover:bg-gray-100 {selectedSummary?.path === summary.path ? 'bg-blue-100' : ''}"
+							class="w-full rounded p-2 text-left hover:bg-gray-100 {selectedSummary?.path ===
+							summary.path
+								? 'bg-blue-100'
+								: ''}"
 							onclick={() =&gt; selectSummary(summary)}
 						&gt;
 							{summary.name}
@@ -329,13 +334,11 @@
 			&lt;div class="mb-4 flex items-center justify-between"&gt;
 				&lt;h3 class="text-lg font-semibold"&gt;{selectedSummary.name}&lt;/h3&gt;
 				{#if vaultPath}
-					&lt;ActionButton onclick={openInVault} color="blue"&gt;
-						Open in Vault
-					&lt;/ActionButton&gt;
+					&lt;ActionButton onclick={openInVault} color="blue"&gt;Open in Vault&lt;/ActionButton&gt;
 				{/if}
 			&lt;/div&gt;
 			&lt;div class="prose max-w-none"&gt;
-				{@html summaryContent.replace(/\n/g, '&lt;br&gt;')}
+				&lt;pre class="whitespace-pre-wrap"&gt;{summaryContent}&lt;/pre&gt;
 			&lt;/div&gt;
 		{:else}
 			&lt;p class="text-gray-600"&gt;Select a summary to view&lt;/p&gt;
@@ -349,7 +352,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-08-22T00:47:41.029Z
+                at 2025-08-22T01:10:50.694Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

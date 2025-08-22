@@ -17,7 +17,7 @@ def touch(filename, parent):
 
 def test_triage_moves_ebook_and_pdf(monkeypatch, setup_dirs):
     inp, summary, lab = setup_dirs
-    # cria arquivos de teste
+    # create test files
     epub = touch("book.epub", inp)
     pdf_good = touch("good.pdf", inp)
     pdf_bad = touch("bad.pdf", inp)

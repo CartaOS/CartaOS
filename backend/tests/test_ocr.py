@@ -8,7 +8,7 @@ from cartaos.ocr import OcrProcessor
 def paths(tmp_path):
     inp = tmp_path / "input.pdf"
     out = tmp_path / "output.pdf"
-    inp.write_bytes(b"%PDF-1.4")  # cria um PDF vazio válido
+    inp.write_bytes(b"%PDF-1.4")  # create a valid empty PDF
     return inp, out
 
 def test_process_success(monkeypatch, paths):
@@ -19,7 +19,7 @@ def test_process_success(monkeypatch, paths):
     
     processor = OcrProcessor(inp, out)
     assert processor.process() is True
-    assert out.parent.exists()  # 04_ReadyForSummary ou o diretório que você configurou
+    assert out.parent.exists()  # 04_ReadyForSummary or the directory you configured
 
 
 def test_process_failure(monkeypatch, paths):

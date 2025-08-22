@@ -29,7 +29,7 @@ def test_run_full(monkeypatch, tmp_path):
 
     # 3) Fake o recompose_pdf para criar de fato um PDF de saída vazio
     def fake_recompose(images, output_path):
-        output_path.write_bytes(b"%PDF-1.4\n")  # cria um arquivo mínimo
+        output_path.write_bytes(b"%PDF-1.4\n")  # create a minimal file
         return output_path
 
     monkeypatch.setattr(
@@ -59,7 +59,7 @@ def test_run_full(monkeypatch, tmp_path):
     processor = LabProcessor(input_path=inp, output_dir=outdir)
     assert processor.process() is True
 
-    # 7) Verifica que o PDF final foi “recomposed” no outdir
+    # 7) Verify that the final PDF was "recomposed" in the outdir
     final_pdf = outdir / f"corrected_{inp.name}"
     assert final_pdf.exists()
     # E opcionalmente: é um PDF (começa com %PDF)

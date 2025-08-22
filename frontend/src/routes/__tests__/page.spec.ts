@@ -27,7 +27,7 @@ describe('Home page (+page.svelte)', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Lab' }));
 
 		// Heading from LabView (currently Portuguese title)
-		expect(screen.getByRole('heading', { name: /Laboratório \(03_Lab\)/ })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: /Lab \(03_Lab\)/ })).toBeInTheDocument();
 		// Refresh control present
 		expect(screen.getByRole('button', { name: 'Refresh Lab Files' })).toBeInTheDocument();
 	});

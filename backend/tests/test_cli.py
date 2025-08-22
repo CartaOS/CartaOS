@@ -17,9 +17,9 @@ def test_version_flag():
 
 def test_setup_noninteractive(monkeypatch):
     """
-    Simula um ambiente sem .env e respostas automáticas ao prompt.
-    Depois verifica se o arquivo .env foi criado em backend/.
-    Por fim, faz cleanup para não “poluir” o repositório.
+    Simulates an environment without .env and automatic prompt responses.
+    Then verifies that the .env file was created in backend/.
+    Finally, does cleanup to avoid "polluting" the repository.
     """
     # 1) Preenche o prompt duas vezes: API_KEY e OBSIDIAN_VAULT_PATH
     answers = ["FAKE_KEY", ""]  # segunda string em branco => pula vault
@@ -37,8 +37,8 @@ def test_setup_noninteractive(monkeypatch):
     result = runner.invoke(cli_module.app, ["setup"])
     assert result.exit_code == 0
 
-    # 4) Verifica que o .env foi criado ali
-    assert env_path.exists(), f".env não encontrado em {env_path}"
+    # 4) Verify that the .env was created there
+    assert env_path.exists(), f".env not found at {env_path}"
 
-    # 5) Cleanup imediato
+    # 5) Immediate cleanup
     env_path.unlink()
