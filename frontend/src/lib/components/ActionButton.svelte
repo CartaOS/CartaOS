@@ -25,7 +25,7 @@
 		blue: 'bg-blue-600 hover:enabled:bg-blue-700',
 		green: 'bg-green-700 hover:enabled:bg-green-800',
 		purple: 'bg-purple-700 hover:enabled:bg-purple-800',
-		amber: 'bg-amber-600 hover:enabled:bg-amber-700'
+		amber: 'bg-amber-700 hover:enabled:bg-amber-800'
 	};
 
 	function handleClick() {
