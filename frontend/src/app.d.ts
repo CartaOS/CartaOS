@@ -12,8 +12,11 @@ declare global {
 
 // Allow importing SVG assets (e.g., favicon.svg)
 declare module '*.svg' {
-  const src: string;
-  export default src;
+	const src: string;
+	export default src;
 }
 
 export {};
+
+// Provide ambient declaration for jest-axe so svelte-check finds it
+declare module 'jest-axe';
