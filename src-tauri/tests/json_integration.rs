@@ -50,7 +50,11 @@ fn triage_cli_json_is_pure_and_parses() {
         .output()
         .expect("run cli triage json");
 
-    assert!(out.status.success(), "triage failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "triage failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
 
     let stdout = String::from_utf8_lossy(&out.stdout);
 

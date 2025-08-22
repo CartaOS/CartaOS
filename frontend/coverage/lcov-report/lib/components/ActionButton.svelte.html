@@ -25,14 +25,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>18/18</span>
+                <span class='fraction'>20/20</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">88.88% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>9/9</span>
+                <span class='fraction'>8/9</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>18/18</span>
+                <span class='fraction'>20/20</span>
             </div>
         
             
@@ -113,7 +113,10 @@
 <a name='L48'></a><a href='#L48'>48</a>
 <a name='L49'></a><a href='#L49'>49</a>
 <a name='L50'></a><a href='#L50'>50</a>
-<a name='L51'></a><a href='#L51'>51</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -123,13 +126,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -139,12 +135,7 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -154,9 +145,24 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -164,16 +170,18 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">&lt;script lang="ts"&gt;
+	import type { Snippet } from 'svelte';
 &nbsp;
-	type Color = 'blue' | 'green' | 'purple';
+	type Color = 'blue' | 'green' | 'purple' | 'amber';
 &nbsp;
-	// Props (implicit via $props usage below):
-	// - onclick: () =&gt; unknown
-	// - isLoading: boolean
-	// - color?: Color
-	// - loadingText?: string
-	// - label?: string
-	// - children?: Snippet
+	type Props = {
+		onclick: () =&gt; unknown;
+		isLoading?: boolean;
+		color?: Color;
+		loadingText?: string;
+		label?: string;
+		children?: Snippet;
+	};
 &nbsp;
 	const {
 		onclick,
@@ -182,45 +190,46 @@
 		loadingText = 'Loading...',
 		label,
 		children
-	} = $props();
+	}: Props = $props();
 &nbsp;
-	// Using Record for stricter typing, eliminating the need for 'as Color'
-	// Colors adjusted for better contrast with white text (aim &gt;= 4.5:1)
-	const colorClasses: Record&lt;Color, string&gt; = { 
+	const colorClasses: Record&lt;Color, string&gt; = {
 		blue: 'bg-blue-600 hover:enabled:bg-blue-700',
 		green: 'bg-green-700 hover:enabled:bg-green-800',
-		purple: 'bg-purple-700 hover:enabled:bg-purple-800'
+		purple: 'bg-purple-700 hover:enabled:bg-purple-800',
+		amber: 'bg-amber-600 hover:enabled:bg-amber-700'
 	};
 &nbsp;
 	function handleClick() {
 		if (!isLoading) onclick();
 	}
-&lt;/script&gt; 
+&lt;/script&gt;
 &nbsp;
 &lt;button
+	type="button"
 	onclick={handleClick}
 	disabled={isLoading}
 	aria-busy={isLoading}
 	aria-label={isLoading ? loadingText : (label ?? undefined)}
-	class="text-white font-bold py-2 px-4 rounded transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed {colorClasses[color as Color]}"
+	class="rounded px-4 py-2 font-bold text-white transition-colors disabled:cursor-not-allowed disabled:bg-gray-400 {colorClasses[
+		color<span class="branch-0 cbranch-no" title="branch not covered" > as Color</span>
+	]}"
 &gt;
 	{#if isLoading}
 		{loadingText}
-	{:else}
-		{#if children}
-			{@render children()}
-		{:else if label}
-			{label}
-		{/if}
+	{:else if children}
+		{@render children()}
+	{:else if label}
+		{label}
 	{/if}
-&lt;/button&gt;</pre></td></tr></table></pre>
+&lt;/button&gt;
+&nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-08-21T05:20:49.646Z
+                at 2025-08-22T00:47:41.029Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

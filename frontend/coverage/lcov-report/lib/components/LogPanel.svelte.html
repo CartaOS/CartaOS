@@ -25,14 +25,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>10/10</span>
+                <span class='fraction'>15/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>3/3</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>10/10</span>
+                <span class='fraction'>15/15</span>
             </div>
         
             
@@ -130,7 +130,14 @@
 <a name='L65'></a><a href='#L65'>65</a>
 <a name='L66'></a><a href='#L66'>66</a>
 <a name='L67'></a><a href='#L67'>67</a>
-<a name='L68'></a><a href='#L68'>68</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -142,9 +149,16 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">41x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">41x</span>
+<span class="cline-any cline-yes">41x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">41x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -198,7 +212,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">&lt;script lang="ts"&gt;
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { listen, type Event } from '@tauri-apps/api/event';
 &nbsp;
 	interface LogEntry {
@@ -208,61 +222,68 @@
 &nbsp;
 	let logs = $state&lt;LogEntry[]&gt;([]);
 &nbsp;
+	let unlisten: (() =&gt; void) | undefined;
+&nbsp;
 	onMount(async () =&gt; {
-		await listen('log-message', (event: Event&lt;LogEntry&gt;) =&gt; {
+		const un = await listen('log-message', (event: Event&lt;LogEntry&gt;) =&gt; {
 			logs.push(event.payload);
 		});
+		unlisten = un;
+	});
+&nbsp;
+	onDestroy(() =&gt; {
+		if (unlisten) unlisten();
 	});
 &lt;/script&gt;
 &nbsp;
 &lt;div class="log-panel"&gt;
-  &lt;h2&gt;Real-Time Logs&lt;/h2&gt;
-  &lt;div class="logs-container"&gt;
-    {#each logs as log, i (i)}
-      &lt;div class="log-entry"&gt;
-        &lt;span class="timestamp"&gt;{log.timestamp}&lt;/span&gt;
-        &lt;span class="message"&gt;{log.message}&lt;/span&gt;
-      &lt;/div&gt;
-    {/each}
-  &lt;/div&gt;
+	&lt;h2&gt;Real-Time Logs&lt;/h2&gt;
+	&lt;div class="logs-container"&gt;
+		{#each logs as log, i (i)}
+			&lt;div class="log-entry"&gt;
+				&lt;span class="timestamp"&gt;{log.timestamp}&lt;/span&gt;
+				&lt;span class="message"&gt;{log.message}&lt;/span&gt;
+			&lt;/div&gt;
+		{/each}
+	&lt;/div&gt;
 &lt;/div&gt;
 &nbsp;
 &lt;style&gt;
-  .log-panel {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
+	.log-panel {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+	}
 &nbsp;
-  h2 {
-    margin: 0;
-    padding: 0.5rem;
-    border-bottom: 1px solid #ccc;
-    background-color: #f7f7f7;
-  }
+	h2 {
+		margin: 0;
+		padding: 0.5rem;
+		border-bottom: 1px solid #ccc;
+		background-color: #f7f7f7;
+	}
 &nbsp;
-  .logs-container {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 0.5rem;
-  }
+	.logs-container {
+		flex-grow: 1;
+		overflow-y: auto;
+		padding: 0.5rem;
+	}
 &nbsp;
-  .log-entry {
-    display: flex;
-    margin-bottom: 0.25rem;
-  }
+	.log-entry {
+		display: flex;
+		margin-bottom: 0.25rem;
+	}
 &nbsp;
-  .timestamp {
-    font-family: monospace;
-    margin-right: 1rem;
-    color: #888;
-  }
+	.timestamp {
+		font-family: monospace;
+		margin-right: 1rem;
+		color: #888;
+	}
 &nbsp;
-  .message {
-    font-family: monospace;
-  }
+	.message {
+		font-family: monospace;
+	}
 &lt;/style&gt;
 &nbsp;</pre></td></tr></table></pre>
 
@@ -271,7 +292,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-08-21T05:20:49.646Z
+                at 2025-08-22T00:47:41.029Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

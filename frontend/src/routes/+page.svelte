@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/core';
+	import { openFilesDialog } from '$lib/dialog';
 	import { onMount } from 'svelte';
 	import SettingsView from '$lib/components/SettingsView.svelte';
 	import LabView from '$lib/components/LabView.svelte';
+	import SummariesView from '$lib/components/SummariesView.svelte';
 	import ActionButton from '$lib/components/ActionButton.svelte';
 	import QueueColumn from '$lib/components/QueueColumn.svelte';
 	import LogPanel from '$lib/components/LogPanel.svelte';
 	import { triageJson, ocrJson, type TriageJson, type OcrJson } from '$lib/ipc';
 
 	// --- State ---
-	let currentView: 'pipeline' | 'lab' | 'settings' = $state('pipeline');
+	let currentView: 'pipeline' | 'lab' | 'settings' | 'summaries' = $state('pipeline');
 	let statusMessage = $state('Waiting for action...');
 	let isLoading = $state(false);
 	let triageFiles = $state<string[]>([]);
@@ -35,8 +37,13 @@
 			// Preserve enriched message after refresh
 			if (finalMessage) statusMessage = finalMessage;
 		} catch (error) {
-			console.error("Caught error in withLoading:", error);
-			const errorMessage = typeof error === 'string' ? error : (error instanceof Error ? error.message : `An unknown error occurred during ${baseMessage}.`);
+			console.error('Caught error in withLoading:', error);
+			const errorMessage =
+				typeof error === 'string'
+					? error
+					: error instanceof Error
+						? error.message
+						: `An unknown error occurred during ${baseMessage}.`;
 			statusMessage = `ERROR in ${baseMessage}: ${errorMessage}`;
 			console.error(statusMessage, error);
 		} finally {
@@ -54,8 +61,9 @@
 				if (t.status === 'success' && t.data?.counts) {
 					return `Triage: ${t.data.counts.triage} files in triage`;
 				}
-			} catch (e) {
+			} catch {
 				// Best-effort enrichment only; ignore when not available (e.g., unit tests)
+				void 0;
 			}
 			return 'Triage completed successfully.';
 		}, 'Triage');
@@ -69,11 +77,47 @@
 					const q = o.data?.counts?.queued ?? o.data?.queued_for_ocr?.length ?? 0;
 					return `OCR Batch: ${q} files queued`;
 				}
-			} catch (e) {
+			} catch {
 				// Best-effort enrichment only
+				void 0;
 			}
 			return 'OCR Batch completed successfully.';
 		}, 'OCR Batch');
+
+	const handleImportToTriage = () =>
+		withLoading(async () => {
+			const selection = await openFilesDialog({ multiple: true, title: 'Select files to import' });
+			let paths: string[] = [];
+			if (Array.isArray(selection)) paths = selection as string[];
+			else if (typeof selection === 'string') paths = [selection];
+			return await importToTriageWithPaths(paths);
+		}, 'Import to Triage');
+
+	async function importToTriageWithPaths(paths: string[]): Promise<string> {
+		if (!paths || paths.length === 0) {
+			return 'No files selected.';
+		}
+		await invoke('import_to_triage', { paths });
+		return `Imported ${paths.length} file(s) to triage.`;
+	}
+
+	function extractPathsFromDataTransfer(dt: DataTransfer | null): string[] {
+		if (!dt) return [];
+		const files: string[] = [];
+		for (let i = 0; i < dt.files.length; i++) {
+			const f = dt.files.item(i) as File & { path?: string };
+			if (!f) continue;
+			const p = (f as unknown as { path?: string }).path ?? f.name;
+			if (p) files.push(p);
+		}
+		return files;
+	}
+
+	const handleDropToTriage = (event: DragEvent) => {
+		event.preventDefault();
+		const paths = extractPathsFromDataTransfer(event.dataTransfer);
+		void withLoading(() => importToTriageWithPaths(paths), 'Import to Triage');
+	};
 	const handleSummarizeBatch = () =>
 		withLoading(async () => {
 			await invoke('run_summarize_batch');
@@ -82,24 +126,46 @@
 				return `Summarization Batch: ${files.length} files ready`;
 			} catch {
 				// Best-effort enrichment only
+				void 0;
 			}
 			return 'Summarization Batch completed successfully.';
 		}, 'Summarization Batch');
 	const handleSummarizeSingle = (fileName: string) =>
-		withLoading(
-			async () => {
-				await invoke('run_summarize_single', { fileName, dryRun: false, debug: false, forceOcr: false });
-				try {
-					// Best-effort enrichment via JSON endpoint
-					const res = await import('$lib/ipc').then(m => m.summarizeJson(fileName, { dry_run: false, debug: false, force_ocr: false }));
-					if (res.status === 'success' && res.data?.target_file) {
-						return `Summarize: ${res.data.target_file} acknowledged`;
-					}
-				} catch {}
-				return `Summarizing ${fileName} completed successfully.`;
-			},
-			`Summarizing ${fileName}`
-		);
+		withLoading(async () => {
+			await invoke('run_summarize_single', {
+				fileName,
+				dryRun: false,
+				debug: false,
+				forceOcr: false
+			});
+			try {
+				// Best-effort enrichment via JSON endpoint
+				const res = await import('$lib/ipc').then((m) =>
+					m.summarizeJson(fileName, { dry_run: false, debug: false, force_ocr: false })
+				);
+				if (res.status === 'success' && res.data?.target_file) {
+					return `Summarize: ${res.data.target_file} acknowledged`;
+				}
+			} catch {
+				void 0;
+			}
+			return `Summarizing ${fileName} completed successfully.`;
+		}, `Summarizing ${fileName}`);
+
+	const handleOcrSingle = (fileName: string) =>
+		withLoading(async () => {
+			await invoke('run_ocr_single', { fileName });
+			try {
+				const o: OcrJson = await ocrJson();
+				if (o.status === 'success') {
+					const q = o.data?.counts?.queued ?? o.data?.queued_for_ocr?.length ?? 0;
+					return `OCR Batch: ${q} files queued`;
+				}
+			} catch {
+				void 0;
+			}
+			return `OCR for ${fileName} completed successfully.`;
+		}, `OCR for ${fileName}`);
 	const handleCorrect = (fileName: string) =>
 		withLoading(
 			() => invoke('open_scantailor', { fileName }),
@@ -127,8 +193,13 @@
 
 			statusMessage = 'File queues refreshed successfully.';
 		} catch (error) {
-			console.error("Caught error in refreshAllQueues:", error);
-			const errorMessage = typeof error === 'string' ? error : (error instanceof Error ? error.message : 'An unknown error occurred while refreshing queues.');
+			console.error('Caught error in refreshAllQueues:', error);
+			const errorMessage =
+				typeof error === 'string'
+					? error
+					: error instanceof Error
+						? error.message
+						: 'An unknown error occurred while refreshing queues.';
 			statusMessage = `ERROR refreshing queues: ${errorMessage}`;
 			console.error(statusMessage, error);
 		} finally {
@@ -151,53 +222,79 @@
 	});
 </script>
 
-<main class="p-8 max-w-7xl mx-auto space-y-6 bg-gray-100 min-h-screen">
+<main class="mx-auto min-h-screen max-w-7xl space-y-6 bg-gray-100 p-8">
 	<div class="text-center">
 		<h1 class="text-4xl font-bold text-gray-800">CartaOS</h1>
 		<p class="text-lg text-gray-600">Your Document Processing Pipeline</p>
 	</div>
 
-	<div class="flex justify-center space-x-4 mb-6 border-b pb-2">
-        <button onclick={() => currentView = 'pipeline'} class:font-bold={currentView === 'pipeline'}>Pipeline</button>
-        <button onclick={() => currentView = 'lab'} class:font-bold={currentView === 'lab'}>Lab</button>
-        <button onclick={() => currentView = 'settings'} class:font-bold={currentView === 'settings'}>Settings</button>
-    </div>
+	<div class="mb-6 flex justify-center space-x-4 border-b pb-2">
+		<button onclick={() => (currentView = 'pipeline')} class:font-bold={currentView === 'pipeline'}
+			>Pipeline</button
+		>
+		<button onclick={() => (currentView = 'lab')} class:font-bold={currentView === 'lab'}
+			>Lab</button
+		>
+		<button
+			onclick={() => (currentView = 'summaries')}
+			class:font-bold={currentView === 'summaries'}>Summaries</button
+		>
+		<button onclick={() => (currentView = 'settings')} class:font-bold={currentView === 'settings'}
+			>Settings</button
+		>
+	</div>
 
 	{#if currentView === 'pipeline'}
-		<div class="bg-white p-4 rounded-lg shadow-md space-x-4 text-center">
-			<ActionButton onclick={handleTriage} {isLoading} color="blue">
-				Triage
-			</ActionButton>
-			<ActionButton onclick={handleOcr} {isLoading} color="green">
-				OCR Batch
-			</ActionButton>
+		<div class="space-x-4 rounded-lg bg-white p-4 text-center shadow-md">
+			<ActionButton onclick={handleTriage} {isLoading} color="blue">Triage</ActionButton>
+			<ActionButton onclick={handleOcr} {isLoading} color="green">OCR Batch</ActionButton>
 			<ActionButton onclick={handleSummarizeBatch} {isLoading} color="amber">
 				Summarize Batch
 			</ActionButton>
+			<ActionButton onclick={handleImportToTriage} {isLoading} color="purple">
+				Import to Triage
+			</ActionButton>
 		</div>
 
-		<div class="bg-white p-4 rounded-lg shadow-md">
-			<p class="text-sm text-gray-700 font-mono">{statusMessage}</p>
+		<div
+			role="region"
+			aria-label="Drop files to import"
+			ondragover={(e) => e.preventDefault()}
+			ondrop={handleDropToTriage}
+			class="rounded-lg border-2 border-dashed border-gray-300 bg-white p-6 text-center text-gray-700 shadow-sm"
+		>
+			Drop files to import
+		</div>
+
+		<div class="rounded-lg bg-white p-4 shadow-md">
+			<p
+				role="status"
+				aria-live="polite"
+				aria-atomic="true"
+				class="font-mono text-sm text-gray-700"
+			>
+				{statusMessage}
+			</p>
 		</div>
 
 		<LogPanel />
 
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
 			<QueueColumn title="📂 Triage" files={triageFiles} />
 			<QueueColumn title="🔧 Correction Lab" files={labFiles}>
-				{#snippet children({ file })}
-					<span class="text-gray-800 break-all pr-2">{file}</span>
+				{#snippet children({ file }: { file: string })}
+					<span class="break-all pr-2 text-gray-800">{file}</span>
 					<div class="flex-shrink-0 space-x-1">
 						<button
 							onclick={() => handleCorrect(file)}
-							class="px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded hover:bg-blue-600"
+							class="rounded bg-blue-500 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-600"
 							title="Correct in ScanTailor"
 						>
 							Correct
 						</button>
 						<button
 							onclick={() => handleFinalize(file)}
-							class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded hover:bg-green-600"
+							class="rounded bg-green-500 px-2 py-1 text-xs font-semibold text-white hover:bg-green-600"
 							title="Mark as done and move to OCR"
 						>
 							Finalized
@@ -205,14 +302,29 @@
 					</div>
 				{/snippet}
 			</QueueColumn>
-			<QueueColumn title="📄 Ready for OCR" files={ocrFiles} />
+			<QueueColumn title="📄 Ready for OCR" files={ocrFiles}>
+				{#snippet children({ file }: { file: string })}
+					<span class="break-all pr-2 text-gray-800">{file}</span>
+					<div class="flex-shrink-0 space-x-1">
+						<button
+							onclick={() => handleOcrSingle(file)}
+							class="rounded bg-green-500 px-2 py-1 text-xs font-semibold text-white hover:bg-green-600 disabled:opacity-50"
+							disabled={isLoading}
+							title="OCR this file"
+							aria-label={`OCR ${file}`}
+						>
+							OCR {file}
+						</button>
+					</div>
+				{/snippet}
+			</QueueColumn>
 			<QueueColumn title="📝 Summarization" files={summaryFiles}>
-				{#snippet children({ file })}
-					<span class="text-gray-800 break-all pr-2">{file}</span>
+				{#snippet children({ file }: { file: string })}
+					<span class="break-all pr-2 text-gray-800">{file}</span>
 					<div class="flex-shrink-0 space-x-1">
 						<button
 							onclick={() => handleSummarizeSingle(file)}
-							class="px-2 py-1 text-xs font-semibold text-white bg-amber-500 rounded hover:bg-amber-600"
+							class="rounded bg-amber-500 px-2 py-1 text-xs font-semibold text-white hover:bg-amber-600"
 							title="Summarize this file"
 						>
 							Summarize
@@ -223,6 +335,8 @@
 		</div>
 	{:else if currentView === 'lab'}
 		<LabView />
+	{:else if currentView === 'summaries'}
+		<SummariesView />
 	{:else if currentView === 'settings'}
 		<SettingsView />
 	{/if}

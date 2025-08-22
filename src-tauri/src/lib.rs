@@ -4,6 +4,63 @@ pub struct TriageCounts {
     pub triage: usize,
 }
 
+/// Import external files into 02_Triage by copying them into the project structure.
+#[tauri::command]
+async fn import_to_triage(paths: Vec<String>) -> Result<(), Error> {
+    let project_root = get_project_root()?;
+    let triage_dir = project_root.join("02_Triage");
+    for p in paths {
+        let src = PathBuf::from(&p);
+        if !src.exists() {
+            return Err(Error::CommandFailed(format!("Source not found: {}", p)));
+        }
+        let file_name = src
+            .file_name()
+            .and_then(|s| s.to_str())
+            .ok_or_else(|| Error::CommandFailed("Invalid source file name".to_string()))?
+            .to_string();
+        let dest = triage_dir.join(file_name);
+        // Copy file; overwrite if exists by removing then copying
+        if dest.exists() {
+            fs::remove_file(&dest).map_err(|e| Error::FileWrite(e.to_string()))?;
+        }
+        fs::copy(&src, &dest).map_err(|e| Error::FileWrite(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// Run OCR for a single file in 04_ReadyForOCR.
+#[tauri::command]
+async fn run_ocr_single(file_name: String) -> Result<String, Error> {
+    let project_root = get_project_root()?;
+    let script_path = project_root.join("backend/cartaos/cli.py");
+    // Basic validation: avoid separators or traversal
+    if file_name.contains('/') || file_name.contains('\\') || file_name.contains("..") {
+        return Err(Error::CommandFailed("Invalid file name".to_string()));
+    }
+    let target_path = project_root.join("04_ReadyForOCR").join(&file_name);
+    if !target_path.exists() {
+        return Err(Error::CommandFailed(format!("File not found: {}", file_name)));
+    }
+    let poetry_python_path = get_poetry_python_path()?;
+
+    let output = Command::new(&poetry_python_path)
+        .arg(&script_path)
+        .arg("ocr")
+        .arg(&target_path)
+        .current_dir(&project_root)
+        .output()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(Error::CommandFailed(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ))
+    }
+}
+
 /// Typed variants that deserialize JSON strings into typed envelopes
 #[tauri::command]
 async fn run_triage_json_typed() -> Result<IpcEnvelope<TriageData>, Error> {
@@ -518,6 +575,114 @@ async fn run_summarize_batch() -> Result<String, Error> {
     Ok(combined)
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Summary {
+    pub name: String,
+    pub path: String,
+    pub modified: String,
+}
+
+/// List all summary files from 07_Processed/Summaries or vault summaries directory.
+#[tauri::command]
+async fn list_summaries() -> Result<Vec<Summary>, Error> {
+    let project_root = get_project_root()?;
+    
+    // Try vault path first, fall back to processed summaries
+    let vault_path = env::var("OBSIDIAN_VAULT_PATH").ok();
+    let summaries_dir = if let Some(vault) = vault_path {
+        PathBuf::from(vault).join("Summaries")
+    } else {
+        project_root.join("07_Processed").join("Summaries")
+    };
+
+    let mut summaries = Vec::new();
+    
+    if !summaries_dir.exists() {
+        return Ok(summaries);
+    }
+
+    let entries = fs::read_dir(&summaries_dir).map_err(|e| Error::DirectoryRead(e.to_string()))?;
+    
+    for entry in entries {
+        let entry = entry.map_err(|e| Error::DirectoryRead(e.to_string()))?;
+        let path = entry.path();
+        
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
+            if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                let metadata = fs::metadata(&path).map_err(|e| Error::DirectoryRead(e.to_string()))?;
+                let modified = metadata.modified()
+                    .map_err(|e| Error::DirectoryRead(e.to_string()))?
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_err(|e| Error::DirectoryRead(e.to_string()))?
+                    .as_secs();
+                
+                summaries.push(Summary {
+                    name: name.to_string(),
+                    path: path.to_string_lossy().to_string(),
+                    modified: format!("{}", modified),
+                });
+            }
+        }
+    }
+    
+    // Sort by modified date (newest first)
+    summaries.sort_by(|a, b| b.modified.cmp(&a.modified));
+    
+    Ok(summaries)
+}
+
+/// Read the content of a summary file.
+#[tauri::command]
+async fn read_summary(path: String) -> Result<String, Error> {
+    let path_buf = PathBuf::from(&path);
+    
+    // Basic security check - ensure it's a markdown file
+    if path_buf.extension().and_then(|s| s.to_str()) != Some("md") {
+        return Err(Error::CommandFailed("Invalid file type".to_string()));
+    }
+    
+    fs::read_to_string(&path_buf).map_err(|e| Error::DirectoryRead(e.to_string()))
+}
+
+/// Get the configured vault path.
+#[tauri::command]
+async fn get_vault_path() -> Result<Option<String>, Error> {
+    Ok(env::var("OBSIDIAN_VAULT_PATH").ok())
+}
+
+/// Open a file in the Obsidian vault.
+#[tauri::command]
+async fn open_in_vault(path: String) -> Result<(), Error> {
+    let vault_path = env::var("OBSIDIAN_VAULT_PATH")
+        .map_err(|_| Error::CommandFailed("Vault path not configured".to_string()))?;
+    
+    let path_buf = PathBuf::from(&path);
+    let relative_path = path_buf.strip_prefix(&vault_path)
+        .map_err(|_| Error::CommandFailed("File not in vault".to_string()))?;
+    
+    let obsidian_url = format!("obsidian://open?vault={}&file={}", 
+        PathBuf::from(&vault_path).file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("vault"),
+        relative_path.to_string_lossy()
+    );
+    
+    // Open URL using system default handler
+    #[cfg(target_os = "windows")]
+    Command::new("cmd").args(["/C", "start", &obsidian_url]).spawn()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+    
+    #[cfg(target_os = "macos")]
+    Command::new("open").arg(&obsidian_url).spawn()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+    
+    #[cfg(target_os = "linux")]
+    Command::new("xdg-open").arg(&obsidian_url).spawn()
+        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+    
+    Ok(())
+}
+
 /// Run the Tauri application.
 ///
 /// This function sets up the Tauri application and runs it.
@@ -533,6 +698,7 @@ pub fn run() -> Result<(), tauri::Error> {
             run_ocr_json,
             run_ocr_json_typed,
             run_ocr_batch,
+            run_ocr_single,
             get_files_in_stage,
             load_settings,
             save_settings,
@@ -541,7 +707,12 @@ pub fn run() -> Result<(), tauri::Error> {
             run_summarize_single,
             run_summarize_json,
             run_summarize_json_typed,
-            run_summarize_batch
+            run_summarize_batch,
+            import_to_triage,
+            list_summaries,
+            read_summary,
+            get_vault_path,
+            open_in_vault
         ])
         .setup(|app: &mut tauri::App| {
             setup_logging(app).expect("Failed to setup logging");
