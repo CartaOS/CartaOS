@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Optional
 
 from cartaos import config
+from .keychain import get_secure_api_key
 
 _CLIENT: Optional[Client] = None
 
@@ -28,13 +29,10 @@ def get_client() -> Client:
     if _CLIENT is not None:
         return _CLIENT
 
-    # Load from project root to stay consistent with the Tauri app
-    dotenv_path = config.ROOT_DIR / '.env'
-    load_dotenv(dotenv_path=dotenv_path)
-
-    api_key = os.getenv("GEMINI_API_KEY")
+    # Try secure keychain first, then fallback to .env
+    api_key = get_secure_api_key("GEMINI_API_KEY")
     if not api_key:
-        logging.error("GEMINI_API_KEY not found in %s", dotenv_path)
+        logging.error("GEMINI_API_KEY not found in keychain or environment")
         raise ValueError("API key is not configured.")
 
     _CLIENT = Client(api_key=api_key)
