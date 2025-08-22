@@ -15,8 +15,11 @@ from pathlib import Path
 from typing import Optional
 
 from cartaos import config
+from .keychain import get_secure_api_key
+from .external_calls import ExternalCallManager
 
 _CLIENT: Optional[Client] = None
+_EXTERNAL_CALL_MANAGER: Optional[ExternalCallManager] = None
 
 def get_client() -> Client:
     """
@@ -28,18 +31,67 @@ def get_client() -> Client:
     if _CLIENT is not None:
         return _CLIENT
 
-    # Load from project root to stay consistent with the Tauri app
-    dotenv_path = config.ROOT_DIR / '.env'
-    load_dotenv(dotenv_path=dotenv_path)
-
-    api_key = os.getenv("GEMINI_API_KEY")
+    # Try secure keychain first, then fallback to .env
+    api_key = get_secure_api_key("GEMINI_API_KEY")
     if not api_key:
-        logging.error("GEMINI_API_KEY not found in %s", dotenv_path)
+        logging.error("GEMINI_API_KEY not found in keychain or environment")
         raise ValueError("API key is not configured.")
 
     _CLIENT = Client(api_key=api_key)
     logging.info("Gemini AI client initialized successfully.")
     return _CLIENT
+
+
+def get_client_with_retries() -> Client:
+    """
+    Creates and returns a Gemini AI client with retry capabilities.
+    """
+    return get_client()  # For now, just return the regular client
+
+
+def get_external_call_manager() -> ExternalCallManager:
+    """Get or create the external call manager for AI operations."""
+    global _EXTERNAL_CALL_MANAGER
+    if _EXTERNAL_CALL_MANAGER is None:
+        _EXTERNAL_CALL_MANAGER = ExternalCallManager(
+            timeout=60.0,  # Longer timeout for AI calls
+            max_retries=3,
+            base_delay=2.0,
+            circuit_breaker_threshold=5
+        )
+    return _EXTERNAL_CALL_MANAGER
+
+async def generate_content_with_retries(prompt: str, model: str = 'models/gemini-2.5-pro') -> Optional[str]:
+    """
+    Generate content using Gemini AI with timeout and retry protection.
+    
+    Args:
+        prompt (str): The prompt to send to the AI
+        model (str): The model to use for generation
+        
+    Returns:
+        Optional[str]: Generated content or None if generation fails
+    """
+    manager = get_external_call_manager()
+    
+    async def ai_call():
+        client = get_client()
+        response = client.models.generate_content(
+            model=model,
+            contents=prompt
+        )
+        
+        if response and hasattr(response, 'text'):
+            return response.text
+        else:
+            raise ValueError("AI response was empty or did not contain text")
+    
+    try:
+        return await manager.call_with_retry(ai_call)
+    except Exception as e:
+        logging.error("Error during Gemini AI API call with retries: %s", e, exc_info=True)
+        return None
+
 
 def generate_summary(text: str) -> Optional[str]:
     """
@@ -84,4 +136,33 @@ def generate_summary(text: str) -> Optional[str]:
 
     except Exception as e:
         logging.error("Error during Gemini AI API call: %s", e, exc_info=True)
+        return None
+
+
+async def generate_summary_with_retries(text: str) -> Optional[str]:
+    """
+    Generates the analytical summary using the Gemini AI API with retry protection.
+
+    Args:
+        text (str): The text to be summarized.
+
+    Returns:
+        Optional[str]: Generated summary or None if generation fails.
+    """
+    prompt_path = config.PROMPTS_DIR / 'summary_prompt.md'
+
+    try:
+        if not prompt_path.exists():
+            logging.error("Prompt file not found at: %s", prompt_path)
+            return None
+
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            prompt_template = f.read()
+
+        prompt = prompt_template.format(text=text)
+        
+        return await generate_content_with_retries(prompt)
+
+    except Exception as e:
+        logging.error("Error preparing summary generation: %s", e, exc_info=True)
         return None
