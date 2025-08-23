@@ -13,14 +13,8 @@ from pathlib import Path
 from typing import List, Optional
 
 from dotenv import load_dotenv
-from rich.progress import (
-    BarColumn,
-    Progress,
-    SpinnerColumn,
-    TaskID,
-    TextColumn,
-    TimeRemainingColumn,
-)
+from rich.progress import (BarColumn, Progress, SpinnerColumn, TaskID,
+                           TextColumn, TimeRemainingColumn)
 from slugify import slugify
 
 from .utils.ai_utils import generate_summary

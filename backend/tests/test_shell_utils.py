@@ -2,14 +2,18 @@
 # tests/test_shell_utils.py
 
 import os
-import pytest
-from subprocess import CompletedProcess
-from typing import List, Any, Optional
-from pathlib import Path
-import subprocess
 import platform
-from cartaos.install_dev_env.shell_utils import run_command, get_shell_recommendation, check_vs_build_tools
+import subprocess
+from pathlib import Path
 from pathlib import Path as SysPath
+from subprocess import CompletedProcess
+from typing import Any, List, Optional
+
+import pytest
+
+from cartaos.install_dev_env.shell_utils import (check_vs_build_tools,
+                                                 get_shell_recommendation,
+                                                 run_command)
 
 
 def test_run_command_success(
@@ -21,6 +25,7 @@ def test_run_command_success(
     Args:
         monkeypatch: pytest.MonkeyPatch for mocking subprocess.run.
     """
+
     def fake_run(
         args: List[str],
         capture_output: bool = True,
@@ -33,6 +38,7 @@ def test_run_command_success(
         Mocked implementation of subprocess.run that returns a CompletedProcess with returncode=0 and stdout="OK".
         """
         return CompletedProcess(args, returncode=0, stdout="OK", stderr="")
+
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     ok, output = run_command(["echo", "hello"])
@@ -49,11 +55,13 @@ def test_run_command_not_found(
     Args:
         monkeypatch: pytest.MonkeyPatch for mocking subprocess.run.
     """
+
     def fake_run(*args: Any, **kwargs: Any) -> None:
         """
         Mocked implementation of subprocess.run that raises FileNotFoundError.
         """
         raise FileNotFoundError()
+
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     ok, output = run_command(["doesnotexist"])
@@ -70,6 +78,7 @@ def test_run_command_login_shell_unix(
     Args:
         monkeypatch: pytest.MonkeyPatch for mocking platform.system and subprocess.run.
     """
+
     def fake_run(
         called: List[str],
         **kwargs: Any,
@@ -80,6 +89,7 @@ def test_run_command_login_shell_unix(
         # called should be ['bash','-lc','command']
         assert called[:2] == ["bash", "-lc"]
         return CompletedProcess(called, returncode=0, stdout="done", stderr="")
+
     monkeypatch.setattr(platform, "system", lambda: "Linux")
     monkeypatch.setattr(subprocess, "run", fake_run)
 
@@ -96,6 +106,7 @@ def test_run_command_login_shell_windows(
     Args:
         monkeypatch: pytest.MonkeyPatch for mocking platform.system and subprocess.run.
     """
+
     def fake_run(
         called: List[str],
         **kwargs: Any,
@@ -105,6 +116,7 @@ def test_run_command_login_shell_windows(
         """
         assert called[:2] == ["powershell", "-Command"]
         return CompletedProcess(called, returncode=0, stdout="done", stderr="")
+
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setattr(subprocess, "run", fake_run)
 
@@ -117,10 +129,13 @@ def test_run_command_nonzero_combined_output(monkeypatch: pytest.MonkeyPatch) ->
         args: List[str],
         **kwargs: Any,
     ) -> CompletedProcess:
-        return CompletedProcess(args, returncode=1, stdout="some out", stderr="some err")
+        return CompletedProcess(
+            args, returncode=1, stdout="some out", stderr="some err"
+        )
+
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    ok, out = run_command(["cmd"]) 
+    ok, out = run_command(["cmd"])
     assert ok is False
     assert out == "some out\nsome err"
 
@@ -131,9 +146,10 @@ def test_run_command_nonzero_empty_output(monkeypatch: pytest.MonkeyPatch) -> No
         **kwargs: Any,
     ) -> CompletedProcess:
         return CompletedProcess(args, returncode=1, stdout="", stderr="")
+
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    ok, out = run_command(["cmd"]) 
+    ok, out = run_command(["cmd"])
     assert ok is False
     assert out == ""
 
@@ -141,9 +157,10 @@ def test_run_command_nonzero_empty_output(monkeypatch: pytest.MonkeyPatch) -> No
 def test_run_command_generic_exception(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run(*args: Any, **kwargs: Any):
         raise RuntimeError("boom")
+
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    ok, out = run_command(["cmd"]) 
+    ok, out = run_command(["cmd"])
     assert ok is False
     assert "An unexpected error occurred" in out
 
@@ -163,33 +180,57 @@ def test_get_shell_recommendation_variants(monkeypatch: pytest.MonkeyPatch) -> N
     assert "restart your terminal" in get_shell_recommendation()
 
 
-def test_run_command_passes_env_and_cwd(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_run_command_passes_env_and_cwd(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     called = {"env": None, "cwd": None}
-    def fake_run(args: List[str], capture_output=True, text=True, encoding=None, env=None, cwd=None):
+
+    def fake_run(
+        args: List[str],
+        capture_output=True,
+        text=True,
+        encoding=None,
+        env=None,
+        cwd=None,
+    ):
         called["env"] = env
         called["cwd"] = cwd
         return CompletedProcess(args, returncode=0, stdout="ok", stderr="")
+
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     env = {"A": "1"}
-    cwd = tmp_path / "wd"; cwd.mkdir()
+    cwd = tmp_path / "wd"
+    cwd.mkdir()
     ok, out = run_command(["echo", "x"], env=env, cwd=cwd)
     assert ok and out == "ok"
     assert called["env"] == env
     assert called["cwd"] == cwd
 
 
-def test_run_command_passes_env_and_cwd_with_login_shell(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_run_command_passes_env_and_cwd_with_login_shell(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     called = {"env": None, "cwd": None}
-    def fake_run(args: List[str], capture_output=True, text=True, encoding=None, env=None, cwd=None):
+
+    def fake_run(
+        args: List[str],
+        capture_output=True,
+        text=True,
+        encoding=None,
+        env=None,
+        cwd=None,
+    ):
         called["env"] = env
         called["cwd"] = cwd
         return CompletedProcess(args, returncode=0, stdout="ok", stderr="")
+
     monkeypatch.setattr(platform, "system", lambda: "Linux")
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     env = {"B": "2"}
-    cwd = tmp_path / "wd2"; cwd.mkdir()
+    cwd = tmp_path / "wd2"
+    cwd.mkdir()
     ok, out = run_command(["echo", "y"], env=env, cwd=cwd, use_login_shell=True)
     assert ok and out == "ok"
     assert called["env"] == env
@@ -201,12 +242,15 @@ def test_check_vs_build_tools_non_windows(monkeypatch: pytest.MonkeyPatch) -> No
     assert check_vs_build_tools() is True
 
 
-def test_check_vs_build_tools_windows_paths(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_check_vs_build_tools_windows_paths(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Simulate Windows
     monkeypatch.setattr(platform, "system", lambda: "Windows")
 
     # Point ProgramFiles(x86) to temp and create vswhere.exe
-    pf86 = tmp_path / "PF86"; pf86.mkdir()
+    pf86 = tmp_path / "PF86"
+    pf86.mkdir()
     monkeypatch.setenv("ProgramFiles(x86)", str(pf86))
     vswhere = pf86 / "Microsoft Visual Studio/Installer/vswhere.exe"
     vswhere.parent.mkdir(parents=True, exist_ok=True)
@@ -215,6 +259,7 @@ def test_check_vs_build_tools_windows_paths(tmp_path, monkeypatch: pytest.Monkey
     # Make run_command succeed
     def fake_run_cmd(args: List[str], **kwargs: Any):
         return True, "id"
+
     monkeypatch.setattr(
         pytest.importorskip("cartaos.install_dev_env.shell_utils"),
         "run_command",
@@ -226,4 +271,3 @@ def test_check_vs_build_tools_windows_paths(tmp_path, monkeypatch: pytest.Monkey
     # Remove vswhere and expect False
     vswhere.unlink()
     assert check_vs_build_tools() is False
-

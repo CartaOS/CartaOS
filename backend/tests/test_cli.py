@@ -1,19 +1,24 @@
-import pytest
-from typer.testing import CliRunner
-import cartaos.cli as cli_module
 from pathlib import Path
 
+import pytest
+from typer.testing import CliRunner
+
+import cartaos.cli as cli_module
+
 runner = CliRunner()
+
 
 def test_help():
     result = runner.invoke(cli_module.app, ["--help"])
     assert result.exit_code == 0
     assert "Usage: cartaos" in result.output
 
+
 def test_version_flag():
     result = runner.invoke(cli_module.app, ["--version"])
     assert result.exit_code == 0
     assert "cartaos, version" in result.output
+
 
 def test_setup_noninteractive(monkeypatch):
     """

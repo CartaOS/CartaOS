@@ -18,7 +18,16 @@ CARTAOS_DIR: pathlib.Path = BACKEND_DIR / "cartaos"
 PROMPTS_DIR: pathlib.Path = CARTAOS_DIR / "prompts"
 
 # Pipeline directories
-PIPELINE_STAGES: list[str] = ["00_Inbox", "02_Triage", "03_Lab", "04_ReadyForOCR", "05_ReadyForSummary", "06_TooLarge", "07_Processed"]
+PIPELINE_STAGES: list[str] = [
+    "00_Inbox",
+    "02_Triage",
+    "03_Lab",
+    "04_ReadyForOCR",
+    "05_ReadyForSummary",
+    "06_TooLarge",
+    "07_Processed",
+]
+
 
 class PipelineDirs:
     def __init__(self):
@@ -32,8 +41,8 @@ class PipelineDirs:
             "07_Processed": ROOT_DIR / "07_Processed",
         }
 
+
 PIPELINE_DIRS = PipelineDirs()
 
 # Example of how to access a specific directory:
 # PIPELINE_DIRS["03_Lab"]
-

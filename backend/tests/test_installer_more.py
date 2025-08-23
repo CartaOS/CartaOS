@@ -1,23 +1,26 @@
 # -*- coding: utf-8 -*-
 # backend/tests/test_installer_more.py
 
-from pathlib import Path
 import platform
 import shutil
-import types
 import sys
+import types
+from pathlib import Path
+
 import pytest
 
-from cartaos.install_dev_env.installer import Installer, StepResult
-from cartaos.install_dev_env import shell_utils as su
 from cartaos.install_dev_env import config as inst_config
+from cartaos.install_dev_env import shell_utils as su
+from cartaos.install_dev_env.installer import Installer, StepResult
 
 
 class DummyConsole:
     def __init__(self, *args, **kwargs):
         pass
+
     def print(self, *args, **kwargs):
         pass
+
     def log(self, *args, **kwargs):
         pass
 
@@ -51,9 +54,11 @@ def test_ensure_frontend_deps_runs_npm_ci(monkeypatch, tmp_path):
     (frontend / "package.json").write_text("{}")
 
     called = {"cmd": None}
+
     def fake_run(cmd, env=None, cwd=None, read_only=False, login_shell=False):
         called["cmd"] = cmd
         return True, "ok"
+
     monkeypatch.setattr(su, "is_installed", lambda c: c == "npm")
     monkeypatch.setattr(inst, "_run_cmd", fake_run)
 
@@ -71,6 +76,7 @@ def test_ensure_frontend_deps_npm_ci_failure(monkeypatch, tmp_path):
 
     def fake_run(cmd, env=None, cwd=None, read_only=False, login_shell=False):
         return False, "npm error"
+
     monkeypatch.setattr(su, "is_installed", lambda c: c == "npm")
     monkeypatch.setattr(inst, "_run_cmd", fake_run)
 
@@ -102,9 +108,11 @@ def test_ensure_backend_deps_runs_poetry_install(monkeypatch, tmp_path):
 
     monkeypatch.setattr(su, "is_installed", lambda c: c == "poetry")
     called = {"cmd": None, "cwd": None}
+
     def fake_run(cmd, env=None, cwd=None, read_only=False, login_shell=False):
         called["cmd"], called["cwd"] = cmd, cwd
         return True, "installed"
+
     monkeypatch.setattr(inst, "_run_cmd", fake_run)
 
     inst.ensure_backend_deps()
@@ -132,8 +140,10 @@ def test_ensure_backend_deps_poetry_install_failure(monkeypatch, tmp_path):
     (backend / "pyproject.toml").write_text("[tool.poetry]\nname='x'\n")
 
     monkeypatch.setattr(su, "is_installed", lambda c: c == "poetry")
+
     def fake_run(cmd, env=None, cwd=None, read_only=False, login_shell=False):
         return False, "poetry error"
+
     monkeypatch.setattr(inst, "_run_cmd", fake_run)
 
     inst.ensure_backend_deps()
@@ -167,7 +177,10 @@ def test_ensure_tesseract_langs_missing_binary(monkeypatch, tmp_path):
     monkeypatch.setattr(su, "is_installed", lambda c: False)
     inst.ensure_tesseract_langs()
     # Should not add a result if tesseract missing? The code returns early; assert no entry added.
-    assert not any(x.name == "Tesseract languages" and x.details == "tesseract command failed." for x in inst.results)
+    assert not any(
+        x.name == "Tesseract languages" and x.details == "tesseract command failed."
+        for x in inst.results
+    )
 
 
 def test_ensure_tesseract_langs_ok_when_all_present(monkeypatch, tmp_path):
@@ -205,11 +218,13 @@ def test_ensure_node_installs_via_nvm(monkeypatch, tmp_path):
     monkeypatch.setattr(inst, "system", "linux")
 
     calls = {"shell": 0}
+
     def fake_run_cmd(cmd, env=None, cwd=None, read_only=False, login_shell=False):
         # First call is node -v read_only
         if read_only:
             return False, ""
         return True, "installed"
+
     def fake_run_shell(command, read_only=False):
         calls["shell"] += 1
         return True, "nvm ok"
@@ -219,18 +234,34 @@ def test_ensure_node_installs_via_nvm(monkeypatch, tmp_path):
 
     inst.ensure_node()
     r = next(x for x in inst.results if x.name == "Node.js LTS")
-    assert r.success is False  # ensure_node records info about attempting install via NVM
+    assert (
+        r.success is False
+    )  # ensure_node records info about attempting install via NVM
     assert calls["shell"] == 1
 
 
 def test_final_summary_runs_and_mentions_log_note(monkeypatch, tmp_path):
     inst = make_inst(tmp_path)
     # populate some results
-    inst.results.extend([
-        StepResult(name="Project Root", category="Bootstrap", success=True, details="ok"),
-        StepResult(name="Package Manager", category="Bootstrap", success=True, details="apt"),
-        StepResult(name="Python Version", category="Bootstrap", success=True, details="3.12"),
-    ])
+    inst.results.extend(
+        [
+            StepResult(
+                name="Project Root", category="Bootstrap", success=True, details="ok"
+            ),
+            StepResult(
+                name="Package Manager",
+                category="Bootstrap",
+                success=True,
+                details="apt",
+            ),
+            StepResult(
+                name="Python Version",
+                category="Bootstrap",
+                success=True,
+                details="3.12",
+            ),
+        ]
+    )
     # Just ensure it doesn't raise; output is swallowed by DummyConsole
     inst._final_summary()
 
@@ -238,10 +269,14 @@ def test_final_summary_runs_and_mentions_log_note(monkeypatch, tmp_path):
 def test_export_log_file_writes_file(tmp_path):
     inst = make_inst(tmp_path)
     # Add a couple of results to be logged
-    inst.results.extend([
-        StepResult(name="Step A", category="Cat", success=True, details="Done"),
-        StepResult(name="Step B", category="Cat", success=False, details="Fail msg"),
-    ])
+    inst.results.extend(
+        [
+            StepResult(name="Step A", category="Cat", success=True, details="Done"),
+            StepResult(
+                name="Step B", category="Cat", success=False, details="Fail msg"
+            ),
+        ]
+    )
 
     inst._export_log_file()
 
@@ -265,13 +300,18 @@ def test_export_log_file_skips_in_dry_run(tmp_path):
 
 def test_install_system_packages_flags_pacman_dnf_brew(monkeypatch, tmp_path):
     # Prepare package map with sample pkgs
-    monkeypatch.setattr(inst_config, "PACKAGE_MAP", {
-        "pacman": {"base": ["a", "b"]},
-        "dnf": {"base": ["c"]},
-        "brew": {"base": ["d"]},
-    })
+    monkeypatch.setattr(
+        inst_config,
+        "PACKAGE_MAP",
+        {
+            "pacman": {"base": ["a", "b"]},
+            "dnf": {"base": ["c"]},
+            "brew": {"base": ["d"]},
+        },
+    )
 
     recorded = []
+
     def rec_run(cmd, **kw):
         recorded.append(cmd)
         return True, "ok"
@@ -282,7 +322,9 @@ def test_install_system_packages_flags_pacman_dnf_brew(monkeypatch, tmp_path):
     monkeypatch.setattr(inst, "_run_cmd", rec_run)
     inst.install_system_packages("base")
     assert ["sudo", "pacman", "-Syu", "--noconfirm"] in recorded
-    assert any(cmd[:3] == ["sudo", "pacman", "-S"] and "--noconfirm" in cmd for cmd in recorded)
+    assert any(
+        cmd[:3] == ["sudo", "pacman", "-S"] and "--noconfirm" in cmd for cmd in recorded
+    )
 
     # dnf
     recorded.clear()
@@ -290,7 +332,9 @@ def test_install_system_packages_flags_pacman_dnf_brew(monkeypatch, tmp_path):
     inst.pkg_manager = "dnf"
     monkeypatch.setattr(inst, "_run_cmd", rec_run)
     inst.install_system_packages("base")
-    assert any(cmd[:3] == ["sudo", "dnf", "install"] and "-y" in cmd for cmd in recorded)
+    assert any(
+        cmd[:3] == ["sudo", "dnf", "install"] and "-y" in cmd for cmd in recorded
+    )
 
     # brew
     recorded.clear()
@@ -307,16 +351,21 @@ def test_ensure_tool_success_path(monkeypatch, tmp_path):
 
     # not installed initially, becomes installed after install_logic
     state = {"installed": False}
+
     def fake_which(cmd, path=None):
         return "/usr/bin/tauri" if state["installed"] else None
+
     monkeypatch.setattr(shutil, "which", fake_which)
 
     called = {"did": False}
+
     def install_logic():
         called["did"] = True
         state["installed"] = True
 
-    inst.ensure_tool("Tauri CLI", "tauri", install_logic, "Build Tool", skip_minimal=False)
+    inst.ensure_tool(
+        "Tauri CLI", "tauri", install_logic, "Build Tool", skip_minimal=False
+    )
 
     r = next(x for x in inst.results if x.name == "Tauri CLI")
     assert called["did"] is True
@@ -332,6 +381,7 @@ def test_ensure_node_windows_manual_note(monkeypatch, tmp_path):
         if cmd[:2] == ["node", "-v"]:
             return False, ""
         return True, ""
+
     monkeypatch.setattr(inst, "_run_cmd", fake_run)
 
     inst.ensure_node()
@@ -422,6 +472,7 @@ def test_run_all_dry_run_executes_pipeline(monkeypatch, tmp_path):
         if read_only:
             return False, ""
         return True, "ok"
+
     monkeypatch.setattr(inst, "_run_cmd", fake_run)
 
     # Mock which to force ensure_tool to go through DRY RUN path
@@ -463,7 +514,8 @@ def test_detect_project_root_total_fallback(monkeypatch, tmp_path):
     monkeypatch.setattr(inst, "_run_cmd", lambda *a, **k: (False, ""))
 
     # Use a directory with no markers
-    empty = tmp_path / "empty"; empty.mkdir()
+    empty = tmp_path / "empty"
+    empty.mkdir()
     monkeypatch.chdir(empty)
 
     root = inst._detect_project_root()
@@ -476,7 +528,8 @@ def test_detect_project_root_total_fallback(monkeypatch, tmp_path):
 
 def test_ensure_frontend_deps_missing_npm(monkeypatch, tmp_path):
     inst = make_inst(tmp_path)
-    frontend = tmp_path / "frontend"; frontend.mkdir()
+    frontend = tmp_path / "frontend"
+    frontend.mkdir()
     (frontend / "package.json").write_text("{}")
 
     monkeypatch.setattr(su, "is_installed", lambda c: False)
@@ -498,7 +551,11 @@ eng
     monkeypatch.setattr(inst, "_run_cmd", lambda *a, **k: (True, langs_output))
 
     called = {"group": None}
-    monkeypatch.setattr(inst, "install_system_packages", lambda g: called.__setitem__("group", g) or True)
+    monkeypatch.setattr(
+        inst,
+        "install_system_packages",
+        lambda g: called.__setitem__("group", g) or True,
+    )
 
     inst.ensure_tesseract_langs()
     assert called["group"] == "tess_langs"
@@ -510,22 +567,28 @@ def test_install_system_packages_apt_flow(monkeypatch, tmp_path):
     monkeypatch.setattr(inst_config, "PACKAGE_MAP", {"apt": {"base": ["curl"]}})
 
     recorded = []
+
     def rec(cmd, **kw):
         recorded.append(cmd)
         return True, "ok"
+
     monkeypatch.setattr(inst, "_run_cmd", rec)
 
     inst.install_system_packages("base")
     # Ensure apt-get update ran
     assert ["sudo", "apt-get", "update"] in recorded
     # Ensure install with -y
-    assert any(cmd[:3] == ["sudo", "apt-get", "install"] and "-y" in cmd for cmd in recorded)
+    assert any(
+        cmd[:3] == ["sudo", "apt-get", "install"] and "-y" in cmd for cmd in recorded
+    )
 
 
 def test_install_system_packages_winget_branch(monkeypatch, tmp_path):
     inst = make_inst(tmp_path)
     inst.pkg_manager = "winget"
-    monkeypatch.setattr(inst_config, "PACKAGE_MAP", {"winget": {"base": ["Vendor.App"]}})
+    monkeypatch.setattr(
+        inst_config, "PACKAGE_MAP", {"winget": {"base": ["Vendor.App"]}}
+    )
 
     # First and only pkg fails
     monkeypatch.setattr(inst, "_run_cmd", lambda *a, **k: (False, "fail"))
@@ -548,7 +611,11 @@ def test_ensure_tool_minimal_skip(tmp_path):
 def test_run_cmd_dry_run(monkeypatch, tmp_path):
     inst = make_inst(tmp_path, dry_run=True)
     # su.run_command must not be called
-    monkeypatch.setattr(su, "run_command", lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not call")))
+    monkeypatch.setattr(
+        su,
+        "run_command",
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not call")),
+    )
 
     ok, out = inst._run_cmd(["echo", "hi"])  # not read_only
     assert ok is True and out == "Dry run mode"
@@ -580,12 +647,14 @@ def test_install_system_packages_choco_mixed_results(monkeypatch, tmp_path):
     monkeypatch.setattr(inst_config, "PACKAGE_MAP", {"choco": {"base": ["A", "B"]}})
 
     recorded = []
+
     def fake_run(cmd, **kw):
         recorded.append(cmd)
         # Fail first, succeed second
         if "A" in cmd:
             return False, "errA"
         return True, "ok"
+
     monkeypatch.setattr(inst, "_run_cmd", fake_run)
 
     ok = inst.install_system_packages("base")
@@ -626,13 +695,22 @@ def test_minimal_skips(monkeypatch, tmp_path):
     inst = make_inst(tmp_path, minimal=True)
     # Node
     inst.ensure_node()
-    assert inst.results[-1].name == "Node.js LTS" and "Skipped (minimal mode)" in inst.results[-1].details
+    assert (
+        inst.results[-1].name == "Node.js LTS"
+        and "Skipped (minimal mode)" in inst.results[-1].details
+    )
     # Frontend
     inst.ensure_frontend_deps()
-    assert inst.results[-1].name == "Frontend Dependencies" and "Skipped (minimal mode)" in inst.results[-1].details
+    assert (
+        inst.results[-1].name == "Frontend Dependencies"
+        and "Skipped (minimal mode)" in inst.results[-1].details
+    )
     # Backend
     inst.ensure_backend_deps()
-    assert inst.results[-1].name == "Project Dependencies" and "Skipped (minimal mode)" in inst.results[-1].details
+    assert (
+        inst.results[-1].name == "Project Dependencies"
+        and "Skipped (minimal mode)" in inst.results[-1].details
+    )
 
 
 def test_detect_package_manager_darwin_no_brew(monkeypatch, tmp_path):
@@ -654,10 +732,16 @@ def test_run_all_aborts_on_prereq_failure(monkeypatch, tmp_path):
 
     # Capture sys.exit by raising SystemExit, and verify _final_summary is called once
     calls = {"summary": 0}
+
     def fake_exit(code=0):
         raise SystemExit(code)
+
     monkeypatch.setattr(sys, "exit", fake_exit)
-    monkeypatch.setattr(inst, "_final_summary", lambda: calls.__setitem__("summary", calls["summary"] + 1))
+    monkeypatch.setattr(
+        inst,
+        "_final_summary",
+        lambda: calls.__setitem__("summary", calls["summary"] + 1),
+    )
 
     with pytest.raises(SystemExit) as exc:
         inst.run_all()

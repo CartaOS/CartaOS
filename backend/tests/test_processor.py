@@ -1,11 +1,15 @@
 import os
-import pytest
-import cartaos.config as _conf
 from pathlib import Path
+
+import pytest
+
+import cartaos.config as _conf
 from cartaos.processor import CartaOSProcessor
+
 
 class DummyGen:
     text = "Resumo AI"
+
 
 @pytest.fixture(autouse=True)
 def mock_ai(monkeypatch, tmp_path):
@@ -18,8 +22,10 @@ def mock_ai(monkeypatch, tmp_path):
     monkeypatch.setattr("cartaos.processor.generate_summary", lambda t: DummyGen.text)
     return p
 
+
 def test_process_full_flow(tmp_path, monkeypatch):
-    pdf = tmp_path / "doc.pdf"; pdf.write_bytes(b"%PDF-1.4")
+    pdf = tmp_path / "doc.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
     # mock extract_text para retornar texto suficiente
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "conteúdo longo")
     # monkeypatch move/save

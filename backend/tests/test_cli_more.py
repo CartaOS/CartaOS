@@ -4,9 +4,10 @@
 import types
 from pathlib import Path
 
-import cartaos.cli as cli_module
 import pytest
 from typer.testing import CliRunner
+
+import cartaos.cli as cli_module
 
 runner = CliRunner()
 

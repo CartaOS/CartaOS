@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 # backend/cartaos/utils/pdf_utils.py
 
-from pathlib import Path
-from typing import Optional, List
-
-import pdfplumber
-import fitz
 import logging
+from pathlib import Path
+from typing import List, Optional
+
+import fitz
 import pdf2image
+import pdfplumber
 from img2pdf import convert
+
 
 def extract_text(pdf_path: Path) -> Optional[str]:
     """
@@ -52,6 +53,7 @@ def extract_text(pdf_path: Path) -> Optional[str]:
         logging.error(f"PyMuPDF extraction failed: {e}")
     return text
 
+
 def extract_pages(input_path: Path, output_dir: Path) -> List[Path]:
     """
     Extract the pages from the input PDF.
@@ -64,7 +66,9 @@ def extract_pages(input_path: Path, output_dir: Path) -> List[Path]:
         List[Path]: A list of paths to the extracted TIFF images.
     """
     images: List[Path] = []
-    for i, image in enumerate(pdf2image.convert_from_path(input_path, dpi=300, grayscale=True)):
+    for i, image in enumerate(
+        pdf2image.convert_from_path(input_path, dpi=300, grayscale=True)
+    ):
         image_path: Path = output_dir / f"page_{i+1}.tiff"
         image.save(image_path)
         images.append(image_path)

@@ -2,6 +2,7 @@
 # backend/tests/test_utils.py
 
 import logging
+
 import pytest
 
 from cartaos.utils.utils import WarningCaptureHandler
@@ -12,7 +13,7 @@ def test_warning_capture_handler():
     # 1. Setup
     log_messages = []
     handler = WarningCaptureHandler(log_messages)
-    logger = logging.getLogger('test_logger')
+    logger = logging.getLogger("test_logger")
     logger.setLevel(logging.WARNING)
     logger.addHandler(handler)
 
