@@ -52,6 +52,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect Playwright config
         id: detect
@@ -74,13 +76,21 @@ jobs:
         if: ${{ steps.detect.outputs.has_config == 'true' }}
         run: npm ci
 
-      - name: Install Playwright Browsers
+      - name: Install Playwright Browsers (Chromium only)
         if: ${{ steps.detect.outputs.has_config == 'true' }}
-        run: npx playwright install --with-deps
+        run: npx playwright install chromium
 
       - name: Build app for preview
         if: ${{ steps.detect.outputs.has_config == 'true' }}
         run: npm run build
+
+      
+
+      - name: Start Vite Preview Server (Foreground, direct output)
+        if: ${{ steps.detect.outputs.has_config == 'true' }}
+        run: npm run preview -- --port=4173
+
+      
 
       - name: Run Playwright tests
         if: ${{ steps.detect.outputs.has_config == 'true' }}

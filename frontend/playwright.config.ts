@@ -23,12 +23,5 @@ export default defineConfig({
 		deviceScaleFactor: 1
 	},
 	projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-	webServer: {
-		command: 'npm run preview -- --port=4173',
-		url: 'http://127.0.0.1:4173',
-		reuseExistingServer: !process.env.CI,
-		timeout: 120 * 1000,
-		stdout: 'pipe',
-		stderr: 'pipe'
-	}
+	
 });

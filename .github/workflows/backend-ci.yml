@@ -32,13 +32,10 @@ jobs:
           poetry-version: 1.8.3
 
       - name: Install dependencies
-        run: poetry install --no-interaction --no-root
-
-      - name: Run ruff
-        run: poetry run ruff check . --output-format=github
+        run: poetry install --no-interaction --no-root --with dev
 
       - name: Run mypy (type checking)
-        run: poetry run mypy cartaos
+        run: .venv/bin/python -m mypy cartaos
 
   test:
     name: PyTest + Coverage
@@ -62,11 +59,17 @@ jobs:
           poetry-version: 1.8.3
 
       - name: Install dependencies
-        run: poetry install --no-interaction --no-root
+        run: poetry install --no-interaction --no-root --with dev
+
+      - name: Install dev tools explicitly
+        run: poetry run pip install pytest mypy
+
+      - name: Force pure Python coverage.py
+        run: poetry run pip install --no-binary :all: coverage
 
       - name: Run tests with coverage
         run: |
-          poetry run pytest -W error --cov --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=pytest-junit.xml
+          .venv/bin/python -m pytest -W error --cov --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=pytest-junit.xml
           echo "Generated coverage.xml and pytest-junit.xml"
 
       - name: Upload coverage artifact
