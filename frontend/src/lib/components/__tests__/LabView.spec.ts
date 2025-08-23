@@ -9,7 +9,7 @@ describe('LabView', () => {
 			screen.getByRole('heading', { level: 2, name: 'Lab (03_Lab)' })
 		).toBeInTheDocument();
 		expect(
-			screen.getByText('Here you will see files that need manual correction in ScanTailor.')
+			screen.getByText('Here you will see files that need human correction in ScanTailor.')
 		).toBeInTheDocument();
 
 		const results = await axe(container);

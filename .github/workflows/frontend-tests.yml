@@ -44,7 +44,6 @@ jobs:
 
   playwright:
     name: Playwright (E2E)
-    if: ${{ hashFiles('frontend/playwright.config.*') != '' }}
     needs: vitest
     runs-on: ubuntu-latest
     defaults:
@@ -54,27 +53,41 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Detect Playwright config
+        id: detect
+        run: |
+          if [ -f "playwright.config.ts" ] || [ -f "playwright.config.mjs" ] || [ -f "playwright.config.js" ] || [ -f "playwright.config.cjs" ]; then
+            echo "has_config=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_config=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
+        if: ${{ steps.detect.outputs.has_config == 'true' }}
         with:
           node-version: 20
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
+        if: ${{ steps.detect.outputs.has_config == 'true' }}
         run: npm ci
 
       - name: Install Playwright Browsers
+        if: ${{ steps.detect.outputs.has_config == 'true' }}
         run: npx playwright install --with-deps
 
       - name: Build app for preview
+        if: ${{ steps.detect.outputs.has_config == 'true' }}
         run: npm run build
 
       - name: Run Playwright tests
+        if: ${{ steps.detect.outputs.has_config == 'true' }}
         run: npm run e2e
 
       - name: Upload Playwright artifacts
-        if: always()
+        if: ${{ always() && steps.detect.outputs.has_config == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: e2e-artifacts

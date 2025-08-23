@@ -420,7 +420,7 @@ class ContentAwareTriage:
                 return TriageDecision(
                     target_stage='02_Triage',
                     confidence=TriageConfidence.LOW,
-                    reasoning='Unknown document type requires manual review'
+                    reasoning='Unknown document type requires human review'
                 )
             
             if analysis.is_large_file:
@@ -458,7 +458,7 @@ class ContentAwareTriage:
             return TriageDecision(
                 target_stage='02_Triage',
                 confidence=TriageConfidence.LOW,
-                reasoning='Fallback to manual triage due to analysis error'
+                reasoning='Fallback to human triage due to analysis error'
             )
 
 

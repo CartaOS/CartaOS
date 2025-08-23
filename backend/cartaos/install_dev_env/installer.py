@@ -33,34 +33,29 @@ class StepResult:
 
 
 class Installer:
-    """Manages the entire installation process."""
+    """Legacy installer - DEPRECATED. Use SimplifiedInstaller instead."""
 
     def __init__(self, no_confirm: bool, minimal: bool, dry_run: bool, ci_mode: bool):
-        self.no_confirm = no_confirm
-        self.minimal = minimal
-        self.dry_run = dry_run
         self.console = Console(force_terminal=not ci_mode, no_color=ci_mode)
-        self.system = platform.system().lower()
-        self.results: List[StepResult] = []
-        self.step_categories = {
-            "Project Root": "Bootstrap",
-            "Package Manager": "Bootstrap",
-            "Python Version": "Bootstrap",
-            "System packages (base)": "Essential",
-            "System packages (pipx)": "Essential",
-            "System packages (tauri)": "GUI",
-            "Tesseract languages": "Linguistics",
-            "VS Build Tools": "Prerequisite",
-            "Rust (cargo)": "Build Tool",
-            "Tauri CLI": "Build Tool",
-            "Node.js LTS": "Build Tool",
-            "pipx": "Build Tool",
-            "Poetry": "Build Tool",
-            "Frontend Dependencies": "Project",
-            "Project Dependencies": "Project",
-        }
-        self.project_root = self._detect_project_root()
-        self.pkg_manager = self._detect_package_manager()
+        
+        # Show deprecation warning
+        self.console.print(
+            "[yellow]WARNING: This installer is deprecated.[/yellow]\n"
+            "[yellow]Please use the simplified installer instead:[/yellow]\n"
+            "[cyan]python -m cartaos.install_dev_env.cli setup[/cyan]"
+        )
+        
+        # Delegate to simplified installer
+        from .simplified_installer import SimplifiedInstaller
+        simplified = SimplifiedInstaller(dry_run=dry_run, check_only=False)
+        success = simplified.run()
+        
+        if not success:
+            self.console.print("[red]Setup failed. Please check the output above.[/red]")
+            sys.exit(1)
+        
+        # Legacy compatibility - set up results for any code that expects them
+        self.results = [StepResult("Simplified Setup", "Complete", True, "Delegated to SimplifiedInstaller")]
 
     # --- Utility Methods ---
     def _add_result(self, name: str, category: str, success: bool, details: str = ""):

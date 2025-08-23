@@ -25,7 +25,7 @@ class TestI18nConsistency:
         r'\bverá\b',
         r'\bprecisam\b',
         r'\bcorreção\b',
-        r'\bmanual\b(?!\s+correction)',  # Exclude "manual correction" which is English
+        r'\bmanual\b(?!\s+(correction|page|steps|routing))',  # Exclude English contexts
         r'\bcria\b',
         r'\bdepois\b',
         r'\bverifica\b',
@@ -60,7 +60,13 @@ class TestI18nConsistency:
     def test_no_portuguese_in_python_files(self):
         """Test that Python files contain no Portuguese content."""
         backend_dir = Path(__file__).parent.parent
-        python_files = list(backend_dir.rglob("*.py"))
+        python_files = []
+        
+        for py_file in backend_dir.rglob("*.py"):
+            # Skip virtual environment, node_modules, and .git directories
+            if any(part in str(py_file) for part in ['.venv', 'node_modules', '.git', '__pycache__']):
+                continue
+            python_files.append(py_file)
         
         all_violations = {}
         for py_file in python_files:
@@ -84,13 +90,15 @@ class TestI18nConsistency:
         if not frontend_dir.exists():
             pytest.skip("Frontend directory not found")
         
-        # Check TypeScript, JavaScript, and Svelte files, excluding node_modules
+        # Check TypeScript, JavaScript, and Svelte files, excluding node_modules and build artifacts
         frontend_files = []
         for pattern in ["*.ts", "*.js", "*.svelte"]:
             for file_path in frontend_dir.rglob(pattern):
-                # Skip node_modules and other dependency directories
-                if "node_modules" not in str(file_path) and ".git" not in str(file_path):
-                    frontend_files.append(file_path)
+                # Skip node_modules, build artifacts, and other dependency directories
+                path_str = str(file_path)
+                if any(part in path_str for part in ["node_modules", ".git", ".svelte-kit", "build", "dist"]):
+                    continue
+                frontend_files.append(file_path)
         
         all_violations = {}
         for file_path in frontend_files:
