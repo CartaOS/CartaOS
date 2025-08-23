@@ -21,13 +21,13 @@ test.describe('Visual regression tests', () => {
 		// Fill form to enable button
 		const apiKeyInput = page.locator('#apiKey');
 		await apiKeyInput.fill('test-api-key-for-visual');
-		
+
 		// Screenshot enabled button state
 		await expect(saveButton).toHaveScreenshot('action-button-enabled.png');
 
 		// Click to trigger loading state and capture if possible
 		await saveButton.click();
-		
+
 		// Wait a moment to potentially capture loading state
 		await page.waitForTimeout(100);
 		await expect(saveButton).toHaveScreenshot('action-button-loading.png');
@@ -81,10 +81,10 @@ test.describe('Visual regression tests', () => {
 		// Fill form and screenshot filled state
 		const apiKeyInput = page.locator('#apiKey');
 		const baseDirInput = page.locator('#baseDir');
-		
+
 		await apiKeyInput.fill('sample-api-key-12345');
 		await baseDirInput.fill('/home/user/ObsidianVault');
-		
+
 		await expect(settingsForm).toHaveScreenshot('settings-form-filled.png');
 
 		// Clear one field to show validation state
@@ -94,17 +94,19 @@ test.describe('Visual regression tests', () => {
 
 	test('Responsive layout visual checks', async ({ page }) => {
 		// Test different viewport sizes for responsive design
-		
+
 		// Desktop view (default)
-		await expect(page.locator('body')).toHaveScreenshot('layout-desktop.png');
+		const main = page.locator('main');
+		await expect(main).toBeVisible();
+		await expect(main).toHaveScreenshot('layout-desktop.png');
 
 		// Tablet view
 		await page.setViewportSize({ width: 768, height: 1024 });
-		await expect(page.locator('body')).toHaveScreenshot('layout-tablet.png');
+		await expect(main).toHaveScreenshot('layout-tablet.png');
 
 		// Mobile view
 		await page.setViewportSize({ width: 375, height: 667 });
-		await expect(page.locator('body')).toHaveScreenshot('layout-mobile.png');
+		await expect(main).toHaveScreenshot('layout-mobile.png');
 
 		// Reset to desktop
 		await page.setViewportSize({ width: 1280, height: 720 });
@@ -112,7 +114,9 @@ test.describe('Visual regression tests', () => {
 
 	test('Color theme consistency', async ({ page }) => {
 		// Test color consistency across different components
-		await expect(page.getByRole('heading', { name: 'CartaOS' })).toHaveScreenshot('heading-colors.png');
+		await expect(page.getByRole('heading', { name: 'CartaOS' })).toHaveScreenshot(
+			'heading-colors.png'
+		);
 
 		// Test individual navigation buttons
 		const pipelineButton = page.getByRole('button', { name: 'Pipeline' });
