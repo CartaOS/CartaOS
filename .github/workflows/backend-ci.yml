@@ -6,9 +6,9 @@ concurrency:
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   lint:
@@ -69,7 +69,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          .venv/bin/python -m pytest -W error --cov --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=pytest-junit.xml
+          poetry run python -m pytest -W error --cov --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=pytest-junit.xml
           echo "Generated coverage.xml and pytest-junit.xml"
 
       - name: Upload coverage artifact
