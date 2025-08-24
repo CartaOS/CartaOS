@@ -47,6 +47,7 @@ def test_triage_moves_ebook_and_pdf(monkeypatch, setup_dirs):
     assert (summary / "good.pdf").exists()
     assert (lab / "bad.pdf").exists()
 
-    assert report["moved_to_summary"] == ["book.epub", "good.pdf"]
+    # Check that both files were moved, regardless of order
+    assert sorted(report["moved_to_summary"]) == sorted(["book.epub", "good.pdf"])
     assert report["moved_to_lab"] == ["bad.pdf"]
     assert report["ignored"] == []
