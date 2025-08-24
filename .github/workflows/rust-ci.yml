@@ -52,6 +52,12 @@ jobs:
         env:
           VITE_APP_VERSION: ${{ github.sha }}@v3
 
+      - name: Build release binary
+        run: cargo build --release
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+          VIRTUAL_ENV: ${{ github.workspace }}/.venv
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
