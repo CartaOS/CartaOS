@@ -4,7 +4,7 @@
 import logging
 from types import SimpleNamespace
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Callable, List, Optional, Sequence, cast
 
 """
 NOTE: Heavy C-extension modules (e.g., PyMuPDF/fitz, pdfplumber, pdf2image, img2pdf)
@@ -15,12 +15,19 @@ combining coverage instrumentation with these extensions during pytest collectio
 # Test hooks: placeholders so tests can monkeypatch module-level symbols without
 # importing C-extensions at import time. Functions below will use these if set.
 # The placeholders expose the attributes that tests patch (e.g., .open).
-pdfplumber = SimpleNamespace(open=None)  # type: ignore[attr-defined]
-fitz = SimpleNamespace(open=None)  # type: ignore[attr-defined]
-pdf2image = SimpleNamespace(convert_from_path=None)  # type: ignore[attr-defined]
+pdfplumber = SimpleNamespace(open=None)
+fitz = SimpleNamespace(open=None)
+pdf2image = SimpleNamespace(convert_from_path=None)
 
-def convert(*_args, **_kwargs):  # placeholder function, tests patch this
+# Typed placeholder for img2pdf.convert so mypy understands usage where patched or lazily imported
+ConvertFunc = Callable[[Sequence[str]], bytes]
+
+def convert(_images: Sequence[str]) -> bytes:  # placeholder function, tests may patch this
+    """Placeholder for img2pdf.convert; should be patched in tests or lazily imported at runtime."""
     raise NotImplementedError("img2pdf.convert placeholder; should be patched or lazily imported")
+
+# Sentinel to detect the original placeholder versus a patched/mock implementation
+_PLACEHOLDER_CONVERT = convert
 
 
 def extract_text(pdf_path: Path) -> Optional[str]:
@@ -45,11 +52,13 @@ def extract_text(pdf_path: Path) -> Optional[str]:
 
     try:
         # Attempt text extraction using pdfplumber
-        _pdfplumber = globals().get("pdfplumber")
-        if not hasattr(_pdfplumber, "open") or getattr(_pdfplumber, "open") is None:
-            import pdfplumber as _pdfplumber  # type: ignore  # lazy import
+        _plumb_any = globals().get("pdfplumber")
+        if not (hasattr(_plumb_any, "open") and getattr(_plumb_any, "open") is not None):
+            import pdfplumber as _plumb_mod
+        else:
+            _plumb_mod = cast(Any, _plumb_any)
 
-        with _pdfplumber.open(str(pdf_path)) as pdf:  # type: ignore[attr-defined]
+        with _plumb_mod.open(str(pdf_path)) as pdf:
             text = "".join(page.extract_text() or "" for page in pdf.pages)
             if text and len(text) >= 100:
                 logging.info(f"Text extracted successfully: {text[:100]}...")
@@ -60,11 +69,13 @@ def extract_text(pdf_path: Path) -> Optional[str]:
     logging.info("Attempting extraction with PyMuPDF (fitz)...")
     try:
         # Fallback to PyMuPDF if pdfplumber fails
-        _fitz = globals().get("fitz")
-        if not hasattr(_fitz, "open") or getattr(_fitz, "open") is None:
-            import fitz as _fitz  # type: ignore  # lazy import
+        _fitz_any = globals().get("fitz")
+        if not (hasattr(_fitz_any, "open") and getattr(_fitz_any, "open") is not None):
+            import fitz as _fitz_mod
+        else:
+            _fitz_mod = cast(Any, _fitz_any)
 
-        with _fitz.open(str(pdf_path)) as doc:  # type: ignore[attr-defined]
+        with _fitz_mod.open(str(pdf_path)) as doc:
             text = "".join(page.get_text() for page in doc)
             if text:
                 logging.info(f"Text extracted successfully: {text[:100]}...")
@@ -85,15 +96,17 @@ def extract_pages(input_path: Path, output_dir: Path) -> List[Path]:
     Returns:
         List[Path]: A list of paths to the extracted TIFF images.
     """
-    _pdf2image = globals().get("pdf2image")
-    if not hasattr(_pdf2image, "convert_from_path") or getattr(
-        _pdf2image, "convert_from_path"
-    ) is None:
-        import pdf2image as _pdf2image  # type: ignore  # lazy import
+    _pdf2_any = globals().get("pdf2image")
+    if not (
+        hasattr(_pdf2_any, "convert_from_path") and getattr(_pdf2_any, "convert_from_path") is not None
+    ):
+        import pdf2image as _pdf2_mod
+    else:
+        _pdf2_mod = cast(Any, _pdf2_any)
 
     images: List[Path] = []
     for i, image in enumerate(
-        _pdf2image.convert_from_path(input_path, dpi=300, grayscale=True)  # type: ignore[attr-defined]
+        _pdf2_mod.convert_from_path(input_path, dpi=300, grayscale=True)
     ):
         image_path: Path = output_dir / f"page_{i+1}.tiff"
         image.save(image_path)
@@ -112,13 +125,17 @@ def recompose_pdf(images: List[Path], output_path: Path) -> Path:
     Returns:
         Path: The path to the saved PDF file.
     """
-    _convert = globals().get("convert")
-    # If still the placeholder (raises NotImplementedError) or missing, lazy import real one
-    needs_import = _convert is None or getattr(_convert, "__name__", "") == "convert" and _convert.__doc__ is None
-    if needs_import:
-        # Lazy import to avoid importing C-extensions at module import time
-        from img2pdf import convert as _convert  # type: ignore
+    _convert_any = globals().get("convert")
+    # If still the placeholder (which raises NotImplementedError) or missing, lazy import real one
+    if _convert_any is None or _convert_any is _PLACEHOLDER_CONVERT:
+        from img2pdf import convert as _real_convert
+        convert_fn: ConvertFunc = cast(ConvertFunc, _real_convert)
+    else:
+        convert_fn = cast(ConvertFunc, _convert_any)
+
+    # Convert image paths to strings for a well-typed call
+    image_paths: List[str] = [str(p) for p in images]
 
     with open(output_path, "wb") as f:
-        f.write(_convert(images))  # type: ignore[misc]
+        f.write(convert_fn(image_paths))
     return output_path
