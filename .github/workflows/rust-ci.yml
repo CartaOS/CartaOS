@@ -47,7 +47,11 @@ jobs:
           poetry-version: 1.8.3
 
       - name: Install backend dependencies
-        run: poetry install --no-interaction --no-root --with dev
+        run: |
+          # Install the package in development mode first
+          pip install -e .
+          # Then install development dependencies
+          poetry install --no-interaction --with dev
         working-directory: backend
 
       - name: Setup Rust
