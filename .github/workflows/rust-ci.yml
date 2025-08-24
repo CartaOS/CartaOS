@@ -46,18 +46,32 @@ jobs:
         with:
           poetry-version: 1.8.3
 
-      - name: Install backend dependencies
+      - name: Set up Python environment
         run: |
-          # Install Poetry first
+          # Install Poetry
           pip install poetry
-          # Install the package in development mode with all dependencies
-          poetry install --no-interaction --with dev
-          # Explicitly install the package in development mode
+          
+          # Install dependencies and the package in development mode
+          cd backend
+          poetry config virtualenvs.in-project true
+          poetry install --with dev
+          
+          # Activate the virtual environment
+          source .venv/bin/activate
+          
+          # Install the package in development mode
           pip install -e .
+          
           # Verify the package is installed and can be imported
-          python -c "import sys; print('Python path:', sys.path)"
+          echo "Python path: $PYTHONPATH"
+          python -c "import sys; print('Python sys.path:', sys.path)"
           python -c "import importlib.util; print('cartaos spec:', importlib.util.find_spec('cartaos')); import cartaos; print(f'cartaos path: {cartaos.__file__}')"
-        working-directory: backend
+          
+          # Set PYTHONPATH for subsequent steps
+          echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
+          echo "VIRTUAL_ENV=$PWD/.venv" >> $GITHUB_ENV
+          echo "$PWD/.venv/bin" >> $GITHUB_PATH
+        working-directory: .
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
