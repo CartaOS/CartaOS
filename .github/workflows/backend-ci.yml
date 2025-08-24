@@ -65,7 +65,7 @@ jobs:
         run: poetry run pip install pytest mypy
 
       - name: Force pure Python coverage.py
-        run: poetry run pip install --no-binary :all: coverage
+        run: poetry run pip install --no-binary :all:coverage
 
       - name: Run tests with coverage
         run: |
