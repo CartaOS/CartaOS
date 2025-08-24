@@ -48,10 +48,14 @@ jobs:
 
       - name: Install backend dependencies
         run: |
-          # Install the package in development mode first
-          pip install -e .
-          # Then install development dependencies
+          # Install Poetry first
+          pip install poetry
+          # Install the package in development mode with all dependencies
           poetry install --no-interaction --with dev
+          # Explicitly install the package in development mode
+          pip install -e .
+          # Verify the package is installed
+          python -c "import cartaos; print(f'cartaos path: {cartaos.__file__}')"
         working-directory: backend
 
       - name: Setup Rust
