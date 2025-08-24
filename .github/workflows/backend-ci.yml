@@ -34,8 +34,11 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction --no-root --with dev
 
+      - name: Run ruff (lint)
+        run: poetry run ruff check . --output-format=github
+
       - name: Run mypy (type checking)
-        run: .venv/bin/python -m mypy cartaos
+        run: poetry run mypy cartaos
 
   test:
     name: PyTest + Coverage
@@ -65,7 +68,7 @@ jobs:
         run: poetry run pip install pytest mypy
 
       - name: Force pure Python coverage.py
-        run: poetry run pip install --no-binary :all: coverage
+        run: "poetry run pip install --no-binary :all: coverage"
 
       - name: Run tests with coverage
         run: |
