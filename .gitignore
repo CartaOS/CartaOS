@@ -44,10 +44,10 @@
 /backend/htmlcov/
 /backend/coverage.xml
 /backend/pytest-junit.xml
- /backend/.ruff_cache/
- /backend/.mutmut-cache
- /backend/.coverage.*
- /backend/coverage/
+/backend/.ruff_cache/
+/backend/.mutmut-cache
+/backend/.coverage.*
+/backend/coverage/
 __pycache__/
 *.py[cod]
 *.so
