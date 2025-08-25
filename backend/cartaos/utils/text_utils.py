@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 # backend/cartaos/utils/text_utils.py
 
-import unicodedata
 import re
+import unicodedata
 from typing import Literal
+
 
 def sanitize(text: str) -> str:
     """
@@ -18,7 +19,8 @@ def sanitize(text: str) -> str:
     Returns:
         str: The sanitized text.
     """
-    sanitized_text: str = unicodedata.normalize('NFC', text)
-    sanitized_text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', sanitized_text)
+    sanitized_text: str = unicodedata.normalize("NFC", text)
+    sanitized_text = re.sub(
+        r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]", "", sanitized_text
+    )
     return sanitized_text
-

@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 # backend/tests/test_lab_more.py
 
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
 import pytest
 
 from cartaos.lab import LabProcessor
 
 
-def test_lab_no_corrected_images_returns_false(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_lab_no_corrected_images_returns_false(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     # Ensure deterministic workspace path so we can control its contents
     monkeypatch.setattr(tempfile, "mkdtemp", lambda dir: str(tmp_path / "workspace"))
 
@@ -18,13 +21,22 @@ def test_lab_no_corrected_images_returns_false(monkeypatch: pytest.MonkeyPatch, 
     # Mock extract_pages to simulate initial extraction
     monkeypatch.setattr(
         "cartaos.lab.extract_pages",
-        lambda input_path, output_dir: [tmp_path / "page_1.tiff"]
+        lambda input_path, output_dir: [tmp_path / "page_1.tiff"],
     )
 
     # Avoid side effects: do nothing in these steps
-    monkeypatch.setattr("cartaos.lab.LabProcessor._run_unpaper_cleanup", lambda self, workspace, images: None)
-    monkeypatch.setattr("cartaos.lab.LabProcessor._create_scantailor_project", lambda self, project_dir: Path(project_dir) / "project.scantailor")
-    monkeypatch.setattr("cartaos.lab.LabProcessor._run_manual_correction", lambda self, workspace, project_file_path: None)
+    monkeypatch.setattr(
+        "cartaos.lab.LabProcessor._run_unpaper_cleanup",
+        lambda self, workspace, images: None,
+    )
+    monkeypatch.setattr(
+        "cartaos.lab.LabProcessor._create_scantailor_project",
+        lambda self, project_dir: Path(project_dir) / "project.scantailor",
+    )
+    monkeypatch.setattr(
+        "cartaos.lab.LabProcessor._run_manual_correction",
+        lambda self, workspace, project_file_path: None,
+    )
 
     # Prepare input and output
     inp = tmp_path / "input.pdf"

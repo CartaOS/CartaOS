@@ -6,9 +6,9 @@ concurrency:
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   lint:
@@ -32,9 +32,9 @@ jobs:
           poetry-version: 1.8.3
 
       - name: Install dependencies
-        run: poetry install --no-interaction --no-root
+        run: poetry install --no-interaction --no-root --with dev
 
-      - name: Run ruff
+      - name: Run ruff (lint)
         run: poetry run ruff check . --output-format=github
 
       - name: Run mypy (type checking)
@@ -62,11 +62,17 @@ jobs:
           poetry-version: 1.8.3
 
       - name: Install dependencies
-        run: poetry install --no-interaction --no-root
+        run: poetry install --no-interaction --no-root --with dev
+
+      - name: Install dev tools explicitly
+        run: poetry run pip install pytest mypy
+
+      - name: Force pure Python coverage.py
+        run: "poetry run pip install --no-binary :all: coverage"
 
       - name: Run tests with coverage
         run: |
-          poetry run pytest -W error --cov --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=pytest-junit.xml
+          poetry run python -m pytest -W error --cov --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=pytest-junit.xml
           echo "Generated coverage.xml and pytest-junit.xml"
 
       - name: Upload coverage artifact

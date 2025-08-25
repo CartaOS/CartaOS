@@ -2,14 +2,16 @@
 """
 CLI entry point for the simplified installer.
 """
-import typer
 from pathlib import Path
+
+import typer
+
 from .simplified_installer import SimplifiedInstaller
 
 app = typer.Typer(
     name="cartaos-setup",
     help="CartaOS Development Environment Setup Tool",
-    add_completion=False
+    add_completion=False,
 )
 
 
@@ -19,29 +21,29 @@ def setup(
         False,
         "--check-only",
         "-c",
-        help="Only check dependencies without installing anything"
+        help="Only check dependencies without installing anything",
     ),
     dry_run: bool = typer.Option(
         False,
         "--dry-run",
         "-n",
-        help="Show what would be done without actually doing it"
-    )
+        help="Show what would be done without actually doing it",
+    ),
 ):
     """
     Set up the CartaOS development environment.
-    
+
     This tool checks for required system dependencies and sets up the project environment.
     It does NOT install system packages - instead it provides clear instructions for
     missing dependencies.
     """
     installer = SimplifiedInstaller(dry_run=dry_run, check_only=check_only)
-    
+
     success = installer.run()
-    
+
     if not success:
         raise typer.Exit(1)
-    
+
     typer.echo("Setup completed successfully!")
 
 
@@ -49,16 +51,16 @@ def setup(
 def check():
     """
     Check system dependencies without installing anything.
-    
+
     This is equivalent to running 'setup --check-only'.
     """
     installer = SimplifiedInstaller(check_only=True)
-    
+
     success = installer.run()
-    
+
     if not success:
         raise typer.Exit(1)
-    
+
     typer.echo("All dependencies are available!")
 
 

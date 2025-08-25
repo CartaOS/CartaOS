@@ -27,14 +27,15 @@ bottom of the file.
 
 from __future__ import annotations
 
-import sys
 import json
-from typing import Any, Dict, Optional
+import sys
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 import typer
 
 from cartaos import config
+
 # Monkeypatch-friendly placeholders for heavy processors. Tests may set these.
 OcrProcessor: Optional[Any] = None
 LabProcessor: Optional[Any] = None
@@ -50,6 +51,7 @@ app = typer.Typer(
     help="CartaOS - [C]uration, [A]nalysis, and [R]efinement of [T]exts for [A]cademia ([O]pen [S]ource).",
     rich_markup_mode="markdown",
 )
+
 
 def _version_callback(value: bool) -> None:
     """Callback to show the version and exit."""
@@ -83,7 +85,6 @@ def main(
     return
 
 
-
 @app.command()
 def setup(
     non_interactive: bool = typer.Option(
@@ -107,7 +108,9 @@ def setup(
     non_interactive = non_interactive or not sys.stdin.isatty()
 
     if env_path.exists():
-        typer.secho(f".env file already exists at: {env_path.as_posix()}", fg=typer.colors.GREEN)
+        typer.secho(
+            f".env file already exists at: {env_path.as_posix()}", fg=typer.colors.GREEN
+        )
         return
 
     if non_interactive:
@@ -116,26 +119,33 @@ def setup(
             'GEMINI_API_KEY=""\n# Optional: OBSIDIAN_VAULT_PATH=""\n',
             encoding="utf-8",
         )
-        typer.secho(f"Minimal .env created at: {env_path.as_posix()}", fg=typer.colors.GREEN)
+        typer.secho(
+            f"Minimal .env created at: {env_path.as_posix()}", fg=typer.colors.GREEN
+        )
         return
 
     # Interactive mode
     typer.echo("Let's configure your API key for Google Gemini.")
     api_key: str = typer.prompt("Please paste your Google API Key here")
     obsidian_path: str = typer.prompt(
-        "(Optional) Enter the absolute path to your Obsidian vault. Leave blank to skip", default=""
+        "(Optional) Enter the absolute path to your Obsidian vault. Leave blank to skip",
+        default="",
     )
     with open(env_path, "w", encoding="utf-8") as f:
         f.write(f'GEMINI_API_KEY="{api_key}"\n')
         if obsidian_path:
             f.write(f'OBSIDIAN_VAULT_PATH="{obsidian_path}"\n')
 
-    typer.secho(f"Success! Configuration saved to {env_path.as_posix()}", fg=typer.colors.GREEN)
+    typer.secho(
+        f"Success! Configuration saved to {env_path.as_posix()}", fg=typer.colors.GREEN
+    )
 
 
 @app.command()
 def triage(
-    json_output: bool = typer.Option(False, "--json", help="Emit structured JSON output for IPC/automation."),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit structured JSON output for IPC/automation."
+    ),
 ) -> None:
     """
     Scans the Triage (02) directory, classifies files, and reports the actions.
@@ -164,7 +174,9 @@ def triage(
 
         # Normal mode: perform real triage work (may import heavy modules)
         if TriageProcessor is None:
-            from cartaos.triage import TriageProcessor as _TriageProcessor  # lazy import
+            from cartaos.triage import \
+                TriageProcessor as _TriageProcessor  # lazy import
+
             TriageProcessor = _TriageProcessor
 
         processor = TriageProcessor(
@@ -221,9 +233,14 @@ def lab(
             typer.secho(f"Enqueued for OCR: {target}", fg=typer.colors.GREEN)
             return
 
-        typer.secho(f"Sending '{pdf_path.name}' to the correction lab...", fg=typer.colors.MAGENTA)
+        typer.secho(
+            f"Sending '{pdf_path.name}' to the correction lab...",
+            fg=typer.colors.MAGENTA,
+        )
         if LabProcessor is None:
-            from cartaos.lab import LabProcessor as _LabProcessor  # lazy import
+            from cartaos.lab import \
+                LabProcessor as _LabProcessor  # lazy import
+
             LabProcessor = _LabProcessor
         processor = LabProcessor(input_path=pdf_path, output_dir=DIR_READY_FOR_OCR)
         ok = processor.process()
@@ -234,7 +251,9 @@ def lab(
         else:
             typer.secho("Lab processing completed.", fg=typer.colors.GREEN)
     except Exception as e:
-        typer.secho(f"An error occurred during lab processing: {e}", fg=typer.colors.RED)
+        typer.secho(
+            f"An error occurred during lab processing: {e}", fg=typer.colors.RED
+        )
         if sys.stdin.isatty():
             raise typer.Exit(code=1)
 
@@ -246,7 +265,9 @@ def ocr(
         dir_okay=False,
         help="Optional single PDF to OCR; if omitted, runs batch on 04_ReadyForOCR.",
     ),
-    json_output: bool = typer.Option(False, "--json", help="Emit structured JSON output for IPC/automation."),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit structured JSON output for IPC/automation."
+    ),
 ) -> None:
     """
     Runs OCR on a single PDF (if provided) or batch on 04_ReadyForOCR.
@@ -280,7 +301,9 @@ def ocr(
 
             out_pdf = DIR_READY_FOR_SUMMARY / pdf_path.name
             if OcrProcessor is None:
-                from cartaos.ocr import OcrProcessor as _OcrProcessor  # lazy import
+                from cartaos.ocr import \
+                    OcrProcessor as _OcrProcessor  # lazy import
+
                 OcrProcessor = _OcrProcessor
             processor = OcrProcessor(input_path=pdf_path, output_path=out_pdf)
             ok = processor.process()
@@ -300,14 +323,19 @@ def ocr(
         # Batch mode
         pdfs = sorted(DIR_READY_FOR_OCR.rglob("*.pdf"))
         if not pdfs:
-            typer.secho("No PDF files found to process in the OCR queue.", fg=typer.colors.YELLOW)
+            typer.secho(
+                "No PDF files found to process in the OCR queue.",
+                fg=typer.colors.YELLOW,
+            )
             return
 
         with typer.progressbar(pdfs, label="Processing files") as progress:
             for pdf in progress:
                 out_pdf = DIR_READY_FOR_SUMMARY / pdf.relative_to(DIR_READY_FOR_OCR)
                 if OcrProcessor is None:
-                    from cartaos.ocr import OcrProcessor as _OcrProcessor  # lazy import
+                    from cartaos.ocr import \
+                        OcrProcessor as _OcrProcessor  # lazy import
+
                     OcrProcessor = _OcrProcessor
                 processor = OcrProcessor(input_path=pdf, output_path=out_pdf)
                 if processor.process():
@@ -327,11 +355,21 @@ def ocr(
 
 @app.command()
 def summarize(
-    pdf_path: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True, help="Path to the PDF file."),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Run without saving or moving files."),
-    debug: bool = typer.Option(False, "--debug", help="Save extracted text and stop before AI call."),
-    force_ocr: bool = typer.Option(False, "--force-ocr", help="Force OCR processing before summarization."),
-    json_output: bool = typer.Option(False, "--json", help="Emit structured JSON output for IPC/automation."),
+    pdf_path: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, readable=True, help="Path to the PDF file."
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Run without saving or moving files."
+    ),
+    debug: bool = typer.Option(
+        False, "--debug", help="Save extracted text and stop before AI call."
+    ),
+    force_ocr: bool = typer.Option(
+        False, "--force-ocr", help="Force OCR processing before summarization."
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit structured JSON output for IPC/automation."
+    ),
 ) -> None:
     """
     Generates an analytical summary for a given PDF file.
@@ -345,33 +383,48 @@ def summarize(
         if json_output:
             # JSON mode: validate and report intent/errors without heavy imports
             if not pdf_path.exists():
-                payload: Dict[str, Any] = {"status": "error", "error": f"File not found: {pdf_path.name}"}
+                payload: Dict[str, Any] = {
+                    "status": "error",
+                    "error": f"File not found: {pdf_path.name}",
+                }
                 typer.echo(json.dumps(payload))
                 raise typer.Exit(code=1)
             payload = {
                 "status": "success",
                 "data": {
                     "target_file": pdf_path.name,
-                    "options": {"dry_run": dry_run, "debug": debug, "force_ocr": force_ocr},
+                    "options": {
+                        "dry_run": dry_run,
+                        "debug": debug,
+                        "force_ocr": force_ocr,
+                    },
                 },
             }
             typer.echo(json.dumps(payload))
             return
         if CartaOSProcessor is None:
-            from cartaos.processor import CartaOSProcessor as _CartaOSProcessor  # lazy import
+            from cartaos.processor import \
+                CartaOSProcessor as _CartaOSProcessor  # lazy import
+
             CartaOSProcessor = _CartaOSProcessor
-        processor = CartaOSProcessor(pdf_path=pdf_path, dry_run=dry_run, debug=debug, force_ocr=force_ocr)
+        processor = CartaOSProcessor(
+            pdf_path=pdf_path, dry_run=dry_run, debug=debug, force_ocr=force_ocr
+        )
         ok = processor.process()
 
         if not ok:
-            typer.secho("Summary failed. Check logs for details.", fg=typer.colors.YELLOW)
+            typer.secho(
+                "Summary failed. Check logs for details.", fg=typer.colors.YELLOW
+            )
             if sys.stdin.isatty():
                 raise typer.Exit(code=1)
             return
 
         if getattr(processor, "captured_warnings", None):
             typer.secho("\n" + "=" * 50, fg=typer.colors.YELLOW)
-            typer.secho("        DOCUMENT QUALITY WARNING", fg=typer.colors.YELLOW, bold=True)
+            typer.secho(
+                "        DOCUMENT QUALITY WARNING", fg=typer.colors.YELLOW, bold=True
+            )
             typer.secho(
                 "   Internal issues were detected in the original PDF file.\n"
                 "   This may have affected the quality of the text extraction and,\n"
@@ -380,7 +433,10 @@ def summarize(
             )
             typer.secho("=" * 50 + "\n", fg=typer.colors.YELLOW)
 
-        typer.secho(f"Summary for '{pdf_path.name}' completed successfully.", fg=typer.colors.GREEN)
+        typer.secho(
+            f"Summary for '{pdf_path.name}' completed successfully.",
+            fg=typer.colors.GREEN,
+        )
     except Exception as e:
         typer.secho(f"Fatal error during processing: {e}", fg=typer.colors.RED)
         if sys.stdin.isatty():

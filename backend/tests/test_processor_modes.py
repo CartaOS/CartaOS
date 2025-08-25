@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 # backend/tests/test_processor_modes.py
 
-from pathlib import Path
 import os
+from pathlib import Path
+
 import pytest
 
 from cartaos.processor import CartaOSProcessor
@@ -14,19 +15,25 @@ def _make_pdf(tmp_path: Path, name: str = "doc.pdf") -> Path:
     return p
 
 
-def test_debug_mode_writes_extracted_text_and_returns_true(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_debug_mode_writes_extracted_text_and_returns_true(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     pdf = _make_pdf(tmp_path)
     # ensure extract returns content; generate_summary must not be called in debug path
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "raw content")
 
     # force dirs under tmp so no side effects
     import cartaos.processor as proc_mod
+
     def fake_load_config(self):
         self.api_key = None
         self.obsidian_vault_path = None
         self.processed_pdf_dir = tmp_path / "07_Processed"
         self.summary_dir = self.processed_pdf_dir / "Summaries"
-    monkeypatch.setattr(proc_mod.CartaOSProcessor, "load_config", fake_load_config, raising=True)
+
+    monkeypatch.setattr(
+        proc_mod.CartaOSProcessor, "load_config", fake_load_config, raising=True
+    )
 
     proc = CartaOSProcessor(pdf_path=pdf, debug=True)
     ok = proc.process()
@@ -41,7 +48,9 @@ def test_debug_mode_writes_extracted_text_and_returns_true(monkeypatch: pytest.M
     assert pdf.exists()
 
 
-def test_dry_run_prints_summary_and_does_not_write_files(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
+def test_dry_run_prints_summary_and_does_not_write_files(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture, tmp_path: Path
+) -> None:
     pdf = _make_pdf(tmp_path)
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "some text")
     monkeypatch.setattr("cartaos.processor.sanitize", lambda t: t)
@@ -49,15 +58,21 @@ def test_dry_run_prints_summary_and_does_not_write_files(monkeypatch: pytest.Mon
 
     # force dirs under tmp
     import cartaos.processor as proc_mod
+
     def fake_load_config(self):
         self.api_key = None
         self.obsidian_vault_path = None
         self.processed_pdf_dir = tmp_path / "07_Processed"
         self.summary_dir = self.processed_pdf_dir / "Summaries"
-    monkeypatch.setattr(proc_mod.CartaOSProcessor, "load_config", fake_load_config, raising=True)
+
+    monkeypatch.setattr(
+        proc_mod.CartaOSProcessor, "load_config", fake_load_config, raising=True
+    )
 
     # avoid moving
-    monkeypatch.setattr(proc_mod.CartaOSProcessor, "_move_pdf", lambda self: None, raising=True)
+    monkeypatch.setattr(
+        proc_mod.CartaOSProcessor, "_move_pdf", lambda self: None, raising=True
+    )
 
     proc = CartaOSProcessor(pdf_path=pdf, dry_run=True)
     ok = proc.process()

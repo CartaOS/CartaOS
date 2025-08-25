@@ -10,11 +10,12 @@ and moves it to the appropriate next stage in the processing pipeline.
 import logging
 import os
 from pathlib import Path
-from typing import Optional, Dict, List, Literal
+from typing import Dict, List, Literal, Optional
 
 from .utils.pdf_utils import extract_text
 
 logger = logging.getLogger(__name__)
+
 
 class TriageProcessor:
     """
@@ -52,13 +53,15 @@ class TriageProcessor:
         report: Dict[str, List[str]] = {
             "moved_to_summary": [],
             "moved_to_lab": [],
-            "ignored": []
+            "ignored": [],
         }
 
         for root, dirs, files in os.walk(self.input_dir):
             for file in files:
                 file_path = Path(root) / file
-                file_type: Optional[Literal["ebook", "pdf"]] = self._get_file_type(file_path)
+                file_type: Optional[Literal["ebook", "pdf"]] = self._get_file_type(
+                    file_path
+                )
 
                 if file_type == "ebook":
                     self._move_to_summary_dir(file_path)
@@ -118,4 +121,3 @@ class TriageProcessor:
         destination_path: Path = self.lab_dir / relative_path
         os.makedirs(destination_path.parent, exist_ok=True)
         os.rename(file_path, destination_path)
-

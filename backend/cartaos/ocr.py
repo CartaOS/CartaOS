@@ -13,12 +13,14 @@ Example:
     True
 """
 
-import subprocess
 import logging
 import os
+import subprocess
 from pathlib import Path
-from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
 from typing import Union
+
+from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
+
 
 class OcrProcessor:
     """
@@ -55,13 +57,15 @@ class OcrProcessor:
         # Construct command line for ocrmypdf
         command: list[Union[str, Path]] = [
             "ocrmypdf",
-            "--language", "por+eng",
+            "--language",
+            "por+eng",
             "--force-ocr",
             "--deskew",
             "--clean",
-            "--jobs", str(os.cpu_count()),
+            "--jobs",
+            str(os.cpu_count()),
             str(self.input_path),
-            str(self.output_path)
+            str(self.output_path),
         ]
 
         # Initialize progress bar for OCR processing
@@ -69,27 +73,36 @@ class OcrProcessor:
             TextColumn("[bold blue]{task.description}", justify="right"),
             BarColumn(bar_width=None),
             TimeRemainingColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.1f}%", justify="right"),
-            refresh_per_second=1
+            TextColumn(
+                "[progress.percentage]{task.percentage:>3.1f}%", justify="right"
+            ),
+            refresh_per_second=1,
         ) as progress:
             task_id = progress.add_task(f"[red]{self.input_path.name}[/red]", total=100)
             try:
                 # Execute the ocrmypdf command
-                result = subprocess.run(command, check=True, capture_output=True, text=True)
+                result = subprocess.run(
+                    command, check=True, capture_output=True, text=True
+                )
                 # Mark task as completed on success
                 progress.update(task_id, completed=100)
-                logging.info(f"OCR completed successfully for '{self.input_path.name}'.")
+                logging.info(
+                    f"OCR completed successfully for '{self.input_path.name}'."
+                )
                 logging.debug(result.stdout)
                 return True
             except subprocess.CalledProcessError as e:
                 # Handle errors from ocrmypdf execution
-                logging.error(f"ocrmypdf failed for '{self.input_path.name}'. Return Code: {e.returncode}")
+                logging.error(
+                    f"ocrmypdf failed for '{self.input_path.name}'. Return Code: {e.returncode}"
+                )
                 logging.error(f"Stderr: {e.stderr}")
                 progress.update(task_id, completed=100)
                 return False
             except FileNotFoundError:
                 # Handle command not found error
-                logging.error("`ocrmypdf` command not found. Is it installed and in your PATH?")
+                logging.error(
+                    "`ocrmypdf` command not found. Is it installed and in your PATH?"
+                )
                 progress.update(task_id, completed=100)
                 return False
-

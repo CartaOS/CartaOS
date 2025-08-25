@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
 # tests/test_installer_ensure_tool.py
-import pytest
 import shutil
-from cartaos.install_dev_env.installer import Installer, StepResult
-from typing import Optional, List, Tuple, Callable
 from pathlib import Path
+from typing import Callable, List, Optional, Tuple
+
+import pytest
+
+from cartaos.install_dev_env.installer import Installer, StepResult
+
 
 def test_ensure_tool_installed(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that ensure_tool sets the correct result when a tool is already installed"""
+
     def fake_shutil_which(
         executable: str, path: Optional[str] = None, pathext: Optional[str] = None
     ) -> Optional[str]:
@@ -33,6 +37,7 @@ def test_ensure_tool_installed(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_ensure_tool_not_installed_and_run(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that ensure_tool sets the correct result when a tool is not installed and dry_run=False"""
+
     def fake_shutil_which(
         executable: str, path: Optional[str] = None, pathext: Optional[str] = None
     ) -> Optional[str]:
@@ -44,15 +49,15 @@ def test_ensure_tool_not_installed_and_run(monkeypatch: pytest.MonkeyPatch) -> N
     inst.results.clear()
 
     def fake_run(
-        cmd: List[str], 
-        env: Optional[dict[str, str]] = None, 
-        cwd: Optional[Path] = None, 
-        read_only: bool = False, 
-        login_shell: bool = False
+        cmd: List[str],
+        env: Optional[dict[str, str]] = None,
+        cwd: Optional[Path] = None,
+        read_only: bool = False,
+        login_shell: bool = False,
     ) -> Tuple[bool, str]:
         """Fake implementation of Installer._run_cmd for testing"""
         return True, "Installed successfully"
-    
+
     monkeypatch.setattr(inst, "_run_cmd", fake_run)
 
     inst.ensure_tool(
