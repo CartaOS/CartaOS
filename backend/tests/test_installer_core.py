@@ -1,10 +1,12 @@
-import sys
 import platform
+import sys
 from pathlib import Path
+
 import pytest
 
-from cartaos.install_dev_env.installer import Installer
 from cartaos.install_dev_env import shell_utils
+from cartaos.install_dev_env.installer import Installer
+
 
 # Avoid polluting output with Rich
 class DummyConsole:
@@ -17,10 +19,12 @@ class DummyConsole:
     def log(self, *args, **kwargs):
         pass
 
+
 @pytest.fixture(autouse=True)
 def patch_console(monkeypatch):
     # Substitui o Console do installer pelo DummyConsole
     monkeypatch.setattr("cartaos.install_dev_env.installer.Console", DummyConsole)
+
 
 def test_detect_project_root_uses_git(monkeypatch):
     inst = Installer(no_confirm=True, minimal=True, dry_run=True, ci_mode=True)
@@ -31,18 +35,21 @@ def test_detect_project_root_uses_git(monkeypatch):
     assert root == Path("/fake/root")
     assert any(r.name == "Project Root" and r.success for r in inst.results)
 
+
 def test_detect_project_root_fallback(monkeypatch, tmp_path):
     inst = Installer(no_confirm=True, minimal=True, dry_run=True, ci_mode=True)
     # Git falha
     monkeypatch.setattr(inst, "_run_cmd", lambda *a, **k: (False, ""))
     # Create a marker in tmp_path
     (tmp_path / "pyproject.toml").write_text("")
-    sub = tmp_path / "subdir"; sub.mkdir()
+    sub = tmp_path / "subdir"
+    sub.mkdir()
     monkeypatch.chdir(sub)
 
     root = inst._detect_project_root()
     assert root == tmp_path
     assert any(r.name == "Project Root" for r in inst.results)
+
 
 def test_detect_package_manager(monkeypatch):
     inst = Installer(no_confirm=True, minimal=True, dry_run=True, ci_mode=True)
@@ -54,14 +61,20 @@ def test_detect_package_manager(monkeypatch):
     assert pm == "apt"
     assert any(r.name == "Package Manager" and r.success for r in inst.results)
 
+
 def test_check_python_version(monkeypatch):
     inst = Installer(no_confirm=True, minimal=True, dry_run=True, ci_mode=True)
-    class V: major = 3; minor = 12
+
+    class V:
+        major = 3
+        minor = 12
+
     monkeypatch.setattr(sys, "version_info", V)
 
     ok = inst._check_python_version()
     assert ok
     assert any(r.name == "Python Version" and r.success for r in inst.results)
+
 
 def test_install_system_packages_dry_run(monkeypatch):
     inst = Installer(no_confirm=True, minimal=True, dry_run=True, ci_mode=True)

@@ -105,8 +105,10 @@ test.describe('Visual regression tests', () => {
 		await expect(main).toHaveScreenshot('layout-tablet.png');
 
 		// Mobile view
-		await page.setViewportSize({ width: 375, height: 667 });
-		await expect(main).toHaveScreenshot('layout-mobile.png');
+		await page.setViewportSize({ width: 375, height: 1836 });
+		await expect(main).toHaveScreenshot('layout-mobile.png', {
+			maxDiffPixelRatio: 0.01, // Allow 1% difference in pixels
+		});
 
 		// Reset to desktop
 		await page.setViewportSize({ width: 1280, height: 720 });

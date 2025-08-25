@@ -1,6 +1,0 @@
-#!/home/luis/CartaOS/backend/.venv/bin/python
-import sys
-from cartaos.cli import app
-
-if __name__ == '__main__':
-    sys.exit(app())

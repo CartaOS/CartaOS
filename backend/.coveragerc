@@ -1,0 +1,14 @@
+[run]
+# Use Python's built-in trace mechanism to avoid C-extension segfaults (e.g., PyMuPDF)
+timid = True
+branch = True
+
+# Exclude third-party/C-extension modules from coverage measurement
+omit =
+    */site-packages/*
+    */pymupdf/*
+    */fitz/*
+    */PIL/*
+
+[report]
+show_missing = True

@@ -37,6 +37,17 @@
 /.venv/
 /venv/
 /env/
+/backend/.venv/
+/backend/.mypy_cache/
+/backend/.pytest_cache/
+/backend/.coverage
+/backend/htmlcov/
+/backend/coverage.xml
+/backend/pytest-junit.xml
+ /backend/.ruff_cache/
+ /backend/.mutmut-cache
+ /backend/.coverage.*
+ /backend/coverage/
 __pycache__/
 *.py[cod]
 *.so
@@ -51,11 +62,15 @@ __pycache__/
 # Frontend (Node.js / Svelte / Vite) artifacts
 # Dependencies, build output, and logs.
 # ===================================================================
+/node_modules/
 /frontend/node_modules/
 /frontend/.svelte-kit/
+/frontend/.vite/
 /frontend/build/
 /frontend/dist/
 /frontend/e2e-artifacts/
+/frontend/coverage/
+/frontend/coverage/lcov*.info
 /frontend/npm-debug.log*
 /frontend/yarn-error.log*
 /frontend/pnpm-debug.log*
@@ -65,6 +80,7 @@ __pycache__/
 # Compiled code and build output from the Rust backend.
 # ===================================================================
 /src-tauri/target/
+/src-tauri/gen/
 
 # ===================================================================
 # Project-specific Tools & Logs
@@ -75,6 +91,7 @@ __pycache__/
 *.log
 /cartaos-install.log
 /coverage.xml
+/GEMINI.md
 
 # ===================================================================
 # Operating System specific files

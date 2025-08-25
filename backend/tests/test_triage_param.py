@@ -3,6 +3,7 @@
 
 import os
 from pathlib import Path
+
 import pytest
 
 from cartaos.triage import TriageProcessor
@@ -11,20 +12,25 @@ from cartaos.triage import TriageProcessor
 @pytest.mark.parametrize(
     "filename, extracted_len, expected_bucket",
     [
-        ("book.epub", None, "summary"),           # ebook -> summary directly
-        ("novel.mobi", None, "summary"),          # other supported ebook ext
-        ("good.pdf", 600, "summary"),            # long text pdf -> summary
-        ("edge.pdf", 500, "lab"),               # exact threshold -> should go to lab
-        ("bad.pdf", 100, "lab"),                 # short text pdf -> lab
-        ("none.pdf", None, "lab"),               # extract_text returns None -> lab
-        ("empty.pdf", 0, "lab"),                 # extract_text returns empty string -> lab
-        ("report.docx", None, "ignored"),        # unsupported -> ignored
+        ("book.epub", None, "summary"),  # ebook -> summary directly
+        ("novel.mobi", None, "summary"),  # other supported ebook ext
+        ("good.pdf", 600, "summary"),  # long text pdf -> summary
+        ("edge.pdf", 500, "lab"),  # exact threshold -> should go to lab
+        ("bad.pdf", 100, "lab"),  # short text pdf -> lab
+        ("none.pdf", None, "lab"),  # extract_text returns None -> lab
+        ("empty.pdf", 0, "lab"),  # extract_text returns empty string -> lab
+        ("report.docx", None, "ignored"),  # unsupported -> ignored
     ],
 )
-def test_triage_parametrized(filename, extracted_len, expected_bucket, tmp_path, monkeypatch):
-    input_dir = tmp_path / "02_Triage"; input_dir.mkdir()
-    summary_dir = tmp_path / "05_ReadyForSummary"; summary_dir.mkdir()
-    lab_dir = tmp_path / "03_Lab"; lab_dir.mkdir()
+def test_triage_parametrized(
+    filename, extracted_len, expected_bucket, tmp_path, monkeypatch
+):
+    input_dir = tmp_path / "02_Triage"
+    input_dir.mkdir()
+    summary_dir = tmp_path / "05_ReadyForSummary"
+    summary_dir.mkdir()
+    lab_dir = tmp_path / "03_Lab"
+    lab_dir.mkdir()
 
     # create file
     fpath = input_dir / filename

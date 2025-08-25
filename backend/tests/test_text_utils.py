@@ -2,6 +2,7 @@
 # backend/tests/test_text_utils.py
 
 import pytest
+
 from cartaos.utils.text_utils import sanitize
 
 

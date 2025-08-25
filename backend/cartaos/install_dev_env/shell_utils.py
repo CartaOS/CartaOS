@@ -5,11 +5,11 @@ Utility functions for shell interactions, such as running commands and checking 
 """
 
 import os
+import platform
 import shutil
 import subprocess
-import platform
 from pathlib import Path
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 
 def is_installed(cmd: str) -> bool:
@@ -21,7 +21,7 @@ def run_command(
     cmd: List[str],
     env: Optional[dict] = None,
     cwd: Optional[Path] = None,
-    use_login_shell: bool = False
+    use_login_shell: bool = False,
 ) -> Tuple[bool, str]:
     """
     Runs a command, captures its output, and handles errors gracefully.
@@ -45,17 +45,15 @@ def run_command(
 
     try:
         p = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            encoding='utf-8',
-            env=env,
-            cwd=cwd
+            cmd, capture_output=True, text=True, encoding="utf-8", env=env, cwd=cwd
         )
         if p.returncode == 0:
             return True, (p.stdout or "").strip()
         else:
-            return False, ((p.stdout or "").strip() + "\n" + (p.stderr or "").strip()).strip()
+            return (
+                False,
+                ((p.stdout or "").strip() + "\n" + (p.stderr or "").strip()).strip(),
+            )
     except FileNotFoundError:
         return False, f"Command not found: {cmd[0]}"
     except Exception as e:
@@ -68,7 +66,9 @@ def get_shell_recommendation() -> str:
     if "zsh" in shell_path:
         return "run 'source ~/.zshrc' or restart your terminal."
     if "bash" in shell_path:
-        return "run 'source ~/.bashrc' or 'source ~/.profile', or restart your terminal."
+        return (
+            "run 'source ~/.bashrc' or 'source ~/.profile', or restart your terminal."
+        )
     if "fish" in shell_path:
         return "restart your terminal."
     return "restart your terminal for all PATH changes to take effect."
@@ -82,7 +82,10 @@ def check_vs_build_tools() -> bool:
         return True  # Not applicable
 
     # A simple but effective check is for vswhere, installed with VS
-    vswhere_path = Path(os.environ.get("ProgramFiles(x86)", "")) / "Microsoft Visual Studio/Installer/vswhere.exe"
+    vswhere_path = (
+        Path(os.environ.get("ProgramFiles(x86)", ""))
+        / "Microsoft Visual Studio/Installer/vswhere.exe"
+    )
     if vswhere_path.exists():
         ok, _ = run_command([str(vswhere_path), "-property", "instanceId"])
         return ok

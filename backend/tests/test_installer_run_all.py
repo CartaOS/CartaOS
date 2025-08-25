@@ -1,6 +1,9 @@
 import sys
+
 import pytest
+
 from cartaos.install_dev_env.installer import Installer
+
 
 # DummyConsole que aceita parâmetros
 class DummyConsole:
@@ -13,9 +16,11 @@ class DummyConsole:
     def log(self, *args, **kwargs):
         pass
 
+
 @pytest.fixture(autouse=True)
 def patch_console(monkeypatch):
     monkeypatch.setattr("cartaos.install_dev_env.installer.Console", DummyConsole)
+
 
 def test_run_all_dry_run_no_exits(monkeypatch):
     inst = Installer(no_confirm=True, minimal=False, dry_run=True, ci_mode=True)
@@ -26,9 +31,14 @@ def test_run_all_dry_run_no_exits(monkeypatch):
 
     # Stubs para todos os passos pesados
     for m in [
-        "install_system_packages", "ensure_node", "ensure_tool",
-        "ensure_tesseract_langs", "ensure_frontend_deps", "ensure_backend_deps",
-        "_final_summary", "_export_log_file"
+        "install_system_packages",
+        "ensure_node",
+        "ensure_tool",
+        "ensure_tesseract_langs",
+        "ensure_frontend_deps",
+        "ensure_backend_deps",
+        "_final_summary",
+        "_export_log_file",
     ]:
         monkeypatch.setattr(inst, m, lambda *a, **k: None)
 

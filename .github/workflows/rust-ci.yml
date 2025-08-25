@@ -21,6 +21,80 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install system dependencies (GTK/WebKit for Tauri)
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          # Try WebKitGTK 4.1 first; fall back to 4.0 if 4.1 is unavailable on the runner image
+          if ! sudo apt-get install -y libwebkit2gtk-4.1-dev; then
+            echo "libwebkit2gtk-4.1-dev unavailable; falling back to libwebkit2gtk-4.0-dev"
+            sudo apt-get install -y libwebkit2gtk-4.0-dev
+          fi
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            pkg-config
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+        env:
+          VITE_APP_VERSION: ${{ github.sha }}@v3
+
+      - name: Build release binary
+        run: cargo build --release
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+          VIRTUAL_ENV: ${{ github.workspace }}/.venv
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v3
+        with:
+          poetry-version: 1.8.3
+
+      - name: Set up Python environment
+        run: |
+          # Install Poetry
+          pip install poetry
+          
+          # Install dependencies and the package in development mode
+          cd backend
+          poetry config virtualenvs.in-project true
+          poetry install --with dev
+          
+          # Activate the virtual environment
+          source .venv/bin/activate
+          
+          # Install the package in development mode
+          pip install -e .
+          
+          # Verify the package is installed and can be imported
+          echo "Python path: $PYTHONPATH"
+          python -c "import sys; print('Python sys.path:', sys.path)"
+          python -c "import importlib.util; print('cartaos spec:', importlib.util.find_spec('cartaos')); import cartaos; print(f'cartaos path: {cartaos.__file__}')"
+          
+          # Set PYTHONPATH for subsequent steps
+          echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
+          echo "VIRTUAL_ENV=$PWD/.venv" >> $GITHUB_ENV
+          echo "$PWD/.venv/bin" >> $GITHUB_PATH
+        working-directory: .
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -32,7 +106,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
+            src-tauri/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
@@ -44,4 +118,6 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Run tests
+        env:
+          PYTHONPATH: ../backend
         run: cargo test --all --verbose

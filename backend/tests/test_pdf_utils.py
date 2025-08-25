@@ -13,7 +13,9 @@ from cartaos.utils import pdf_utils
 # ---------------------- extract_text ----------------------
 @patch("cartaos.utils.pdf_utils.pdfplumber.open")
 @patch("cartaos.utils.pdf_utils.fitz.open")
-def test_extract_text_pdfplumber_success(mock_fitz_open, mock_pdfplumber_open, tmp_path):
+def test_extract_text_pdfplumber_success(
+    mock_fitz_open, mock_pdfplumber_open, tmp_path
+):
     pdf_path = tmp_path / "doc.pdf"
     pdf_path.write_bytes(b"%PDF-1.4\n")
 
@@ -36,7 +38,9 @@ def test_extract_text_pdfplumber_success(mock_fitz_open, mock_pdfplumber_open, t
 
 @patch("cartaos.utils.pdf_utils.pdfplumber.open")
 @patch("cartaos.utils.pdf_utils.fitz.open")
-def test_extract_text_fallback_to_fitz_success(mock_fitz_open, mock_pdfplumber_open, tmp_path):
+def test_extract_text_fallback_to_fitz_success(
+    mock_fitz_open, mock_pdfplumber_open, tmp_path
+):
     pdf_path = tmp_path / "doc.pdf"
     pdf_path.write_bytes(b"%PDF-1.4\n")
 
@@ -63,18 +67,24 @@ def test_extract_text_fallback_to_fitz_success(mock_fitz_open, mock_pdfplumber_o
 
 @patch("cartaos.utils.pdf_utils.pdfplumber.open")
 @patch("cartaos.utils.pdf_utils.fitz.open")
-def test_extract_text_both_produce_empty_string(mock_fitz_open, mock_pdfplumber_open, tmp_path):
+def test_extract_text_both_produce_empty_string(
+    mock_fitz_open, mock_pdfplumber_open, tmp_path
+):
     pdf_path = tmp_path / "doc.pdf"
     pdf_path.write_bytes(b"%PDF-1.4\n")
 
     # pdfplumber returns empty strings
-    p1 = MagicMock(); p1.extract_text.return_value = None
-    mock_pdf = MagicMock(); mock_pdf.__enter__.return_value.pages = [p1]
+    p1 = MagicMock()
+    p1.extract_text.return_value = None
+    mock_pdf = MagicMock()
+    mock_pdf.__enter__.return_value.pages = [p1]
     mock_pdfplumber_open.return_value = mock_pdf
 
     # fitz returns empty string as well
-    fpage = MagicMock(); fpage.get_text.return_value = ""
-    mock_doc = MagicMock(); mock_doc.__enter__.return_value = [fpage]
+    fpage = MagicMock()
+    fpage.get_text.return_value = ""
+    mock_doc = MagicMock()
+    mock_doc.__enter__.return_value = [fpage]
     mock_fitz_open.return_value = mock_doc
 
     text = pdf_utils.extract_text(pdf_path)
@@ -91,7 +101,8 @@ def test_extract_pages_success(mock_convert_from_path, tmp_path):
     out_dir.mkdir()
 
     # simulate two PIL images with .save()
-    img1 = MagicMock(); img2 = MagicMock()
+    img1 = MagicMock()
+    img2 = MagicMock()
     mock_convert_from_path.return_value = [img1, img2]
 
     images: List[Path] = pdf_utils.extract_pages(input_pdf, out_dir)
@@ -120,8 +131,10 @@ def test_extract_pages_no_images(mock_convert_from_path, tmp_path):
 @patch("cartaos.utils.pdf_utils.convert")
 def test_recompose_pdf_success(mock_convert, tmp_path):
     out = tmp_path / "out.pdf"
-    img1 = tmp_path / "page_1.tiff"; img1.write_bytes(b"TIFFDATA")
-    img2 = tmp_path / "page_2.tiff"; img2.write_bytes(b"TIFFDATA")
+    img1 = tmp_path / "page_1.tiff"
+    img1.write_bytes(b"TIFFDATA")
+    img2 = tmp_path / "page_2.tiff"
+    img2.write_bytes(b"TIFFDATA")
 
     mock_convert.return_value = b"%PDF-1.4%\n"
 
