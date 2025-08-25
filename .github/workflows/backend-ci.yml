@@ -25,7 +25,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'poetry'
 
       - name: Install Poetry
         uses: abatilo/actions-poetry@v3
@@ -35,14 +34,11 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction --no-root
 
-      - name: Install ruff
-        run: pipx runpip ruff install ruff || pip install ruff
-
       - name: Run ruff
-        run: ruff check . --output-format=github
+        run: poetry run ruff check . --output-format=github
 
       - name: Run mypy (type checking)
-        run: poetry run mypy .
+        run: poetry run mypy cartaos
 
   test:
     name: PyTest + Coverage
@@ -59,7 +55,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'poetry'
 
       - name: Install Poetry
         uses: abatilo/actions-poetry@v3

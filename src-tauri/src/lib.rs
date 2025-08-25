@@ -12,19 +12,42 @@ async fn import_to_triage(paths: Vec<String>) -> Result<(), Error> {
     for p in paths {
         let src = PathBuf::from(&p);
         if !src.exists() {
-            return Err(Error::CommandFailed(format!("Source not found: {}", p)));
+            return Err(CartaError::not_found(
+                format!("Source not found: {}", p),
+                "file",
+                p,
+            ));
         }
         let file_name = src
             .file_name()
             .and_then(|s| s.to_str())
-            .ok_or_else(|| Error::CommandFailed("Invalid source file name".to_string()))?
+            .ok_or_else(|| {
+                CartaError::validation(
+                    "Invalid source file name",
+                    Some("file_name"),
+                    None::<String>,
+                    None::<String>,
+                )
+            })?
             .to_string();
         let dest = triage_dir.join(file_name);
         // Copy file; overwrite if exists by removing then copying
         if dest.exists() {
-            fs::remove_file(&dest).map_err(|e| Error::FileWrite(e.to_string()))?;
+            fs::remove_file(&dest).map_err(|e| {
+                CartaError::file_system(
+                    e.to_string(),
+                    Some(dest.to_string_lossy()),
+                    FileOperation::Delete,
+                )
+            })?;
         }
-        fs::copy(&src, &dest).map_err(|e| Error::FileWrite(e.to_string()))?;
+        fs::copy(&src, &dest).map_err(|e| {
+            CartaError::file_system(
+                e.to_string(),
+                Some(dest.to_string_lossy()),
+                FileOperation::Copy,
+            )
+        })?;
     }
     Ok(())
 }
@@ -36,11 +59,20 @@ async fn run_ocr_single(file_name: String) -> Result<String, Error> {
     let script_path = project_root.join("backend/cartaos/cli.py");
     // Basic validation: avoid separators or traversal
     if file_name.contains('/') || file_name.contains('\\') || file_name.contains("..") {
-        return Err(Error::CommandFailed("Invalid file name".to_string()));
+        return Err(CartaError::validation(
+            "Invalid file name",
+            Some("file_name"),
+            Some(file_name),
+            Some("no path separators or traversal '..' allowed"),
+        ));
     }
     let target_path = project_root.join("04_ReadyForOCR").join(&file_name);
     if !target_path.exists() {
-        return Err(Error::CommandFailed(format!("File not found: {}", file_name)));
+        return Err(CartaError::not_found(
+            format!("File not found: {}", file_name),
+            "file",
+            file_name,
+        ));
     }
     let poetry_python_path = get_poetry_python_path()?;
 
@@ -50,13 +82,33 @@ async fn run_ocr_single(file_name: String) -> Result<String, Error> {
         .arg(&target_path)
         .current_dir(&project_root)
         .output()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+        .map_err(|e| {
+            CartaError::command(
+                e.to_string(),
+                format!(
+                    "{} {} ocr {}",
+                    poetry_python_path.display(),
+                    script_path.display(),
+                    target_path.display()
+                ),
+                None,
+                None::<String>,
+            )
+        })?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        Err(Error::CommandFailed(
-            String::from_utf8_lossy(&output.stderr).to_string(),
+        Err(CartaError::command(
+            "Command returned non-zero exit code",
+            format!(
+                "{} {} ocr {}",
+                poetry_python_path.display(),
+                script_path.display(),
+                target_path.display()
+            ),
+            output.status.code(),
+            Some(String::from_utf8_lossy(&output.stderr).to_string()),
         ))
     }
 }
@@ -65,16 +117,14 @@ async fn run_ocr_single(file_name: String) -> Result<String, Error> {
 #[tauri::command]
 async fn run_triage_json_typed() -> Result<IpcEnvelope<TriageData>, Error> {
     let raw = run_triage_json().await?;
-    let parsed: IpcEnvelope<TriageData> =
-        serde_json::from_str(&raw).map_err(|e| Error::CommandFailed(e.to_string()))?;
+    let parsed: IpcEnvelope<TriageData> = serde_json::from_str(&raw).map_err(CartaError::from)?;
     Ok(parsed)
 }
 
 #[tauri::command]
 async fn run_ocr_json_typed() -> Result<IpcEnvelope<OcrData>, Error> {
     let raw = run_ocr_json().await?;
-    let parsed: IpcEnvelope<OcrData> =
-        serde_json::from_str(&raw).map_err(|e| Error::CommandFailed(e.to_string()))?;
+    let parsed: IpcEnvelope<OcrData> = serde_json::from_str(&raw).map_err(CartaError::from)?;
     Ok(parsed)
 }
 
@@ -87,7 +137,7 @@ async fn run_summarize_json_typed(
 ) -> Result<IpcEnvelope<SummarizeData>, Error> {
     let raw = run_summarize_json(file_name, dry_run, debug, force_ocr).await?;
     let parsed: IpcEnvelope<SummarizeData> =
-        serde_json::from_str(&raw).map_err(|e| Error::CommandFailed(e.to_string()))?;
+        serde_json::from_str(&raw).map_err(CartaError::from)?;
     Ok(parsed)
 }
 
@@ -137,13 +187,31 @@ async fn run_ocr_json() -> Result<String, Error> {
         .arg("--json")
         .current_dir(&project_root)
         .output()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+        .map_err(|e| {
+            CartaError::command(
+                e.to_string(),
+                format!(
+                    "{} {} ocr --json",
+                    poetry_python_path.display(),
+                    script_path.display()
+                ),
+                None,
+                None::<String>,
+            )
+        })?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        Err(Error::CommandFailed(
-            String::from_utf8_lossy(&output.stderr).to_string(),
+        Err(CartaError::command(
+            "Command returned non-zero exit code",
+            format!(
+                "{} {} ocr --json",
+                poetry_python_path.display(),
+                script_path.display()
+            ),
+            output.status.code(),
+            Some(String::from_utf8_lossy(&output.stderr).to_string()),
         ))
     }
 }
@@ -160,14 +228,20 @@ async fn run_summarize_json(
     let script_path = project_root.join("backend/cartaos/cli.py");
     // basic path validation: disallow separators and traversal
     if file_name.contains('/') || file_name.contains('\\') || file_name.contains("..") {
-        return Err(Error::CommandFailed("Invalid file name".to_string()));
+        return Err(CartaError::validation(
+            "Invalid file name",
+            Some("file_name"),
+            Some(file_name.clone()),
+            Some("no path separators or traversal '..' allowed"),
+        ));
     }
     let target_path = project_root.join("05_ReadyForSummary").join(&file_name);
     if !target_path.exists() {
-        return Err(Error::CommandFailed(format!(
-            "File not found: {}",
-            file_name
-        )));
+        return Err(CartaError::not_found(
+            format!("File not found: {}", file_name),
+            "file",
+            file_name,
+        ));
     }
     let poetry_python_path = get_poetry_python_path()?;
 
@@ -186,16 +260,33 @@ async fn run_summarize_json(
         cmd.arg("--force-ocr");
     }
 
-    let output = cmd
-        .current_dir(&project_root)
-        .output()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+    let output = cmd.current_dir(&project_root).output().map_err(|e| {
+        CartaError::command(
+            e.to_string(),
+            format!(
+                "{} {} summarize {} [opts]",
+                poetry_python_path.display(),
+                script_path.display(),
+                target_path.display()
+            ),
+            None,
+            None::<String>,
+        )
+    })?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        Err(Error::CommandFailed(
-            String::from_utf8_lossy(&output.stderr).to_string(),
+        Err(CartaError::command(
+            "Command returned non-zero exit code",
+            format!(
+                "{} {} summarize {} [opts]",
+                poetry_python_path.display(),
+                script_path.display(),
+                target_path.display()
+            ),
+            output.status.code(),
+            Some(String::from_utf8_lossy(&output.stderr).to_string()),
         ))
     }
 }
@@ -210,18 +301,36 @@ async fn run_triage_json() -> Result<String, Error> {
     let poetry_python_path = get_poetry_python_path()?;
 
     let output = Command::new(&poetry_python_path)
-        .arg(script_path)
+        .arg(&script_path)
         .arg("triage")
         .arg("--json")
         .current_dir(&project_root)
         .output()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+        .map_err(|e| {
+            CartaError::command(
+                e.to_string(),
+                format!(
+                    "{} {} triage --json",
+                    poetry_python_path.display(),
+                    script_path.display()
+                ),
+                None,
+                None::<String>,
+            )
+        })?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        Err(Error::CommandFailed(
-            String::from_utf8_lossy(&output.stderr).to_string(),
+        Err(CartaError::command(
+            "Command returned non-zero exit code",
+            format!(
+                "{} {} triage --json",
+                poetry_python_path.display(),
+                script_path.display()
+            ),
+            output.status.code(),
+            Some(String::from_utf8_lossy(&output.stderr).to_string()),
         ))
     }
 }
@@ -285,35 +394,34 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use thiserror::Error;
 
+mod error;
 mod logging;
+
+pub use error::{CartaError, CartaResult, ErrorContext, ErrorSeverity, FileOperation};
 use logging::setup_logging;
 
-#[derive(Debug, Error, Serialize)]
-pub enum Error {
-    #[error("Command execution failed: {0}")]
-    CommandExecution(String),
-    #[error("Command returned non-zero exit code: {0}")]
-    CommandFailed(String),
-    #[error("Directory read failed: {0}")]
-    DirectoryRead(String),
-    #[error("File rename failed: {0}")]
-    FileRename(String),
-    #[error("Could not determine project root")]
-    ProjectRoot,
-    #[error("File write failed: {0}")]
-    FileWrite(String),
-}
+// Legacy Error type alias for backward compatibility
+pub type Error = CartaError;
 
 // Helper function to get the project root
-fn get_project_root() -> Result<PathBuf, Error> {
-    let current_exe = env::current_exe().map_err(|e| Error::CommandExecution(e.to_string()))?;
+fn get_project_root() -> CartaResult<PathBuf> {
+    let current_exe = env::current_exe().map_err(|e| {
+        CartaError::internal(
+            format!("Failed to get current executable path: {}", e),
+            Some("project_root_detection"),
+        )
+    })?;
+
     // We assume the executable is in `src-tauri/target/{debug|release}`
     if let Some(path) = current_exe.ancestors().nth(4) {
         Ok(path.to_path_buf())
     } else {
-        Err(Error::ProjectRoot)
+        Err(CartaError::project_structure(
+            "Could not determine project root from executable location",
+            Some("src-tauri/target/{debug|release}/executable"),
+            Some(current_exe.to_string_lossy().to_string()),
+        ))
     }
 }
 
@@ -328,15 +436,25 @@ fn get_poetry_python_path() -> Result<PathBuf, Error> {
         .arg("--path")
         .current_dir(&backend_dir)
         .output()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+        .map_err(|e| {
+            CartaError::command(
+                e.to_string(),
+                "poetry env info --path",
+                None,
+                None::<String>,
+            )
+        })?;
 
     if output.status.success() {
         let venv_path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
         let python_path = PathBuf::from(venv_path_str).join("bin").join("python");
         Ok(python_path)
     } else {
-        Err(Error::CommandFailed(
-            String::from_utf8_lossy(&output.stderr).to_string(),
+        Err(CartaError::command(
+            "Command returned non-zero exit code",
+            "poetry env info --path",
+            output.status.code(),
+            Some(String::from_utf8_lossy(&output.stderr).to_string()),
         ))
     }
 }
@@ -374,7 +492,13 @@ async fn save_settings(api_key: String, base_dir: String) -> Result<(), Error> {
         api_key, base_dir
     );
 
-    fs::write(env_path, content).map_err(|e| Error::FileWrite(e.to_string()))?;
+    fs::write(&env_path, content).map_err(|e| {
+        CartaError::file_system(
+            e.to_string(),
+            Some(env_path.to_string_lossy()),
+            FileOperation::Write,
+        )
+    })?;
     Ok(())
 }
 
@@ -390,17 +514,35 @@ async fn run_triage() -> Result<String, Error> {
     let poetry_python_path = get_poetry_python_path()?;
 
     let output = Command::new(&poetry_python_path)
-        .arg(script_path)
+        .arg(&script_path)
         .arg("triage")
         .current_dir(&project_root)
         .output()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+        .map_err(|e| {
+            CartaError::command(
+                e.to_string(),
+                format!(
+                    "{} {} triage",
+                    poetry_python_path.display(),
+                    script_path.display()
+                ),
+                None,
+                None::<String>,
+            )
+        })?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        Err(Error::CommandFailed(
-            String::from_utf8_lossy(&output.stderr).to_string(),
+        Err(CartaError::command(
+            "Command returned non-zero exit code",
+            format!(
+                "{} {} triage",
+                poetry_python_path.display(),
+                script_path.display()
+            ),
+            output.status.code(),
+            Some(String::from_utf8_lossy(&output.stderr).to_string()),
         ))
     }
 }
@@ -417,17 +559,35 @@ async fn run_ocr_batch() -> Result<String, Error> {
     let poetry_python_path = get_poetry_python_path()?;
 
     let output = Command::new(&poetry_python_path)
-        .arg(script_path)
+        .arg(&script_path)
         .arg("ocr")
         .current_dir(&project_root)
         .output()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+        .map_err(|e| {
+            CartaError::command(
+                e.to_string(),
+                format!(
+                    "{} {} ocr",
+                    poetry_python_path.display(),
+                    script_path.display()
+                ),
+                None,
+                None::<String>,
+            )
+        })?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        Err(Error::CommandFailed(
-            String::from_utf8_lossy(&output.stderr).to_string(),
+        Err(CartaError::command(
+            "Command returned non-zero exit code",
+            format!(
+                "{} {} ocr",
+                poetry_python_path.display(),
+                script_path.display()
+            ),
+            output.status.code(),
+            Some(String::from_utf8_lossy(&output.stderr).to_string()),
         ))
     }
 }
@@ -442,10 +602,13 @@ async fn get_files_in_stage(stage: String) -> Result<Vec<String>, Error> {
     let dir_path = project_root.join(stage);
     let mut files = Vec::new();
 
-    let entries = fs::read_dir(dir_path).map_err(|e| Error::DirectoryRead(e.to_string()))?;
+    let entries = fs::read_dir(dir_path)
+        .map_err(|e| CartaError::file_system(e.to_string(), None::<String>, FileOperation::List))?;
 
     for entry in entries {
-        let entry = entry.map_err(|e| Error::DirectoryRead(e.to_string()))?;
+        let entry = entry.map_err(|e| {
+            CartaError::file_system(e.to_string(), None::<String>, FileOperation::List)
+        })?;
 
         // Only consider regular files; skip directories and others
         if let Ok(ft) = entry.file_type() {
@@ -488,12 +651,23 @@ async fn open_scantailor(file_name: String) -> Result<(), Error> {
     let poetry_python_path = get_poetry_python_path()?;
 
     Command::new(&poetry_python_path)
-        .arg(script_path)
+        .arg(&script_path)
         .arg("lab")
         .arg(project_path_arg)
         .current_dir(&project_root)
         .spawn()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+        .map_err(|e| {
+            CartaError::command(
+                e.to_string(),
+                format!(
+                    "{} {} lab [project]",
+                    poetry_python_path.display(),
+                    script_path.display()
+                ),
+                None,
+                None::<String>,
+            )
+        })?;
 
     Ok(())
 }
@@ -506,7 +680,13 @@ async fn finalize_lab_file(file_name: String) -> Result<(), Error> {
     let project_root = get_project_root()?;
     let source_path = project_root.join("03_Lab").join(&file_name);
     let destination_path = project_root.join("04_ReadyForOCR").join(&file_name);
-    fs::rename(&source_path, &destination_path).map_err(|e| Error::FileRename(e.to_string()))?;
+    fs::rename(&source_path, &destination_path).map_err(|e| {
+        CartaError::file_system(
+            e.to_string(),
+            Some(destination_path.to_string_lossy()),
+            FileOperation::Move,
+        )
+    })?;
 
     Ok(())
 }
@@ -536,16 +716,33 @@ async fn run_summarize_single(
         cmd.arg("--force-ocr");
     }
 
-    let output = cmd
-        .current_dir(&project_root)
-        .output()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
+    let output = cmd.current_dir(&project_root).output().map_err(|e| {
+        CartaError::command(
+            e.to_string(),
+            format!(
+                "{} {} summarize {} [opts]",
+                poetry_python_path.display(),
+                script_path.display(),
+                target_path.display()
+            ),
+            None,
+            None::<String>,
+        )
+    })?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        Err(Error::CommandFailed(
-            String::from_utf8_lossy(&output.stderr).to_string(),
+        Err(CartaError::command(
+            "Command returned non-zero exit code",
+            format!(
+                "{} {} summarize {} [opts]",
+                poetry_python_path.display(),
+                script_path.display(),
+                target_path.display()
+            ),
+            output.status.code(),
+            Some(String::from_utf8_lossy(&output.stderr).to_string()),
         ))
     }
 }
@@ -557,9 +754,21 @@ async fn run_summarize_batch() -> Result<String, Error> {
     let dir_path = project_root.join("05_ReadyForSummary");
     let mut combined = String::new();
 
-    let entries = fs::read_dir(&dir_path).map_err(|e| Error::DirectoryRead(e.to_string()))?;
+    let entries = fs::read_dir(&dir_path).map_err(|e| {
+        CartaError::file_system(
+            e.to_string(),
+            Some(dir_path.to_string_lossy()),
+            FileOperation::List,
+        )
+    })?;
     for entry in entries {
-        let entry = entry.map_err(|e| Error::DirectoryRead(e.to_string()))?;
+        let entry = entry.map_err(|e| {
+            CartaError::file_system(
+                e.to_string(),
+                Some(dir_path.to_string_lossy()),
+                FileOperation::List,
+            )
+        })?;
         let file_name = entry.file_name();
         let file_name = file_name.to_string_lossy().to_string();
         match run_summarize_single(file_name, false, false, false).await {
@@ -586,7 +795,7 @@ pub struct Summary {
 #[tauri::command]
 async fn list_summaries() -> Result<Vec<Summary>, Error> {
     let project_root = get_project_root()?;
-    
+
     // Try vault path first, fall back to processed summaries
     let vault_path = env::var("OBSIDIAN_VAULT_PATH").ok();
     let summaries_dir = if let Some(vault) = vault_path {
@@ -596,26 +805,57 @@ async fn list_summaries() -> Result<Vec<Summary>, Error> {
     };
 
     let mut summaries = Vec::new();
-    
+
     if !summaries_dir.exists() {
         return Ok(summaries);
     }
 
-    let entries = fs::read_dir(&summaries_dir).map_err(|e| Error::DirectoryRead(e.to_string()))?;
-    
+    let entries = fs::read_dir(&summaries_dir).map_err(|e| {
+        CartaError::file_system(
+            e.to_string(),
+            Some(summaries_dir.to_string_lossy()),
+            FileOperation::List,
+        )
+    })?;
+
     for entry in entries {
-        let entry = entry.map_err(|e| Error::DirectoryRead(e.to_string()))?;
+        let entry = entry.map_err(|e| {
+            CartaError::file_system(
+                e.to_string(),
+                Some(summaries_dir.to_string_lossy()),
+                FileOperation::List,
+            )
+        })?;
         let path = entry.path();
-        
+
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
             if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
-                let metadata = fs::metadata(&path).map_err(|e| Error::DirectoryRead(e.to_string()))?;
-                let modified = metadata.modified()
-                    .map_err(|e| Error::DirectoryRead(e.to_string()))?
+                let metadata = fs::metadata(&path).map_err(|e| {
+                    CartaError::file_system(
+                        e.to_string(),
+                        Some(path.to_string_lossy()),
+                        FileOperation::Metadata,
+                    )
+                })?;
+                let modified = metadata
+                    .modified()
+                    .map_err(|e| {
+                        CartaError::file_system(
+                            e.to_string(),
+                            Some(path.to_string_lossy()),
+                            FileOperation::Metadata,
+                        )
+                    })?
                     .duration_since(std::time::UNIX_EPOCH)
-                    .map_err(|e| Error::DirectoryRead(e.to_string()))?
+                    .map_err(|e| {
+                        CartaError::file_system(
+                            e.to_string(),
+                            Some(path.to_string_lossy()),
+                            FileOperation::Metadata,
+                        )
+                    })?
                     .as_secs();
-                
+
                 summaries.push(Summary {
                     name: name.to_string(),
                     path: path.to_string_lossy().to_string(),
@@ -624,10 +864,10 @@ async fn list_summaries() -> Result<Vec<Summary>, Error> {
             }
         }
     }
-    
+
     // Sort by modified date (newest first)
     summaries.sort_by(|a, b| b.modified.cmp(&a.modified));
-    
+
     Ok(summaries)
 }
 
@@ -635,13 +875,24 @@ async fn list_summaries() -> Result<Vec<Summary>, Error> {
 #[tauri::command]
 async fn read_summary(path: String) -> Result<String, Error> {
     let path_buf = PathBuf::from(&path);
-    
+
     // Basic security check - ensure it's a markdown file
     if path_buf.extension().and_then(|s| s.to_str()) != Some("md") {
-        return Err(Error::CommandFailed("Invalid file type".to_string()));
+        return Err(CartaError::validation(
+            "Invalid file type",
+            Some("path"),
+            Some(path),
+            Some("only '.md' files are allowed"),
+        ));
     }
-    
-    fs::read_to_string(&path_buf).map_err(|e| Error::DirectoryRead(e.to_string()))
+
+    fs::read_to_string(&path_buf).map_err(|e| {
+        CartaError::file_system(
+            e.to_string(),
+            Some(path_buf.to_string_lossy()),
+            FileOperation::Read,
+        )
+    })
 }
 
 /// Get the configured vault path.
@@ -653,33 +904,63 @@ async fn get_vault_path() -> Result<Option<String>, Error> {
 /// Open a file in the Obsidian vault.
 #[tauri::command]
 async fn open_in_vault(path: String) -> Result<(), Error> {
-    let vault_path = env::var("OBSIDIAN_VAULT_PATH")
-        .map_err(|_| Error::CommandFailed("Vault path not configured".to_string()))?;
-    
+    let vault_path = env::var("OBSIDIAN_VAULT_PATH").map_err(|_| {
+        CartaError::configuration(
+            "Vault path not configured",
+            Some("OBSIDIAN_VAULT_PATH"),
+            Some("string"),
+        )
+    })?;
+
     let path_buf = PathBuf::from(&path);
-    let relative_path = path_buf.strip_prefix(&vault_path)
-        .map_err(|_| Error::CommandFailed("File not in vault".to_string()))?;
-    
-    let obsidian_url = format!("obsidian://open?vault={}&file={}", 
-        PathBuf::from(&vault_path).file_name()
+    let relative_path = path_buf.strip_prefix(&vault_path).map_err(|_| {
+        CartaError::validation(
+            "File not in vault",
+            Some("path"),
+            Some(path.clone()),
+            Some("must be under OBSIDIAN_VAULT_PATH"),
+        )
+    })?;
+
+    let obsidian_url = format!(
+        "obsidian://open?vault={}&file={}",
+        PathBuf::from(&vault_path)
+            .file_name()
             .and_then(|s| s.to_str())
             .unwrap_or("vault"),
         relative_path.to_string_lossy()
     );
-    
+
     // Open URL using system default handler
     #[cfg(target_os = "windows")]
-    Command::new("cmd").args(["/C", "start", &obsidian_url]).spawn()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
-    
+    Command::new("cmd")
+        .args(["/C", "start", &obsidian_url])
+        .spawn()
+        .map_err(|e| {
+            CartaError::command(
+                e.to_string(),
+                "cmd /C start obsidian_url",
+                None,
+                None::<String>,
+            )
+        })?;
+
     #[cfg(target_os = "macos")]
-    Command::new("open").arg(&obsidian_url).spawn()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
-    
+    Command::new("open")
+        .arg(&obsidian_url)
+        .spawn()
+        .map_err(|e| {
+            CartaError::command(e.to_string(), "open obsidian_url", None, None::<String>)
+        })?;
+
     #[cfg(target_os = "linux")]
-    Command::new("xdg-open").arg(&obsidian_url).spawn()
-        .map_err(|e| Error::CommandExecution(e.to_string()))?;
-    
+    Command::new("xdg-open")
+        .arg(&obsidian_url)
+        .spawn()
+        .map_err(|e| {
+            CartaError::command(e.to_string(), "xdg-open obsidian_url", None, None::<String>)
+        })?;
+
     Ok(())
 }
 
