@@ -76,7 +76,7 @@ The system follows a **multi-stage pipeline**, where documents move through stru
  ┃    ┣ 📜 triage.py                        # 📄 File triage module
  ┃    ┣ 📜 lab.py                           # 📄 Correction lab helper
  ┃    ┣ 📜 processor.py                     # 📄 AI summary processor
- ┃    ┗ 📂 install_dev_env                  # ⚙ Cross-platform installer
+ ┃    ┗ 📜 install_dev_env                  # ⚙ Cross-platform installer
  ┣ 📂 frontend                              # 🎨 GUI frontend
  ┃ ┗ 📂 src
  ┃    ┗ 📂 components                       # 🧩 UI Components
