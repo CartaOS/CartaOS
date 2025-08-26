@@ -48,8 +48,8 @@ def test_debug_mode_writes_extracted_text_and_returns_true(
     assert pdf.exists()
 
 
-def test_dry_run_prints_summary_and_does_not_write_files(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture, tmp_path: Path
+def test_dry_run_logs_summary_and_does_not_write_files(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, tmp_path: Path
 ) -> None:
     pdf = _make_pdf(tmp_path)
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "some text")
@@ -74,12 +74,15 @@ def test_dry_run_prints_summary_and_does_not_write_files(
         proc_mod.CartaOSProcessor, "_move_pdf", lambda self: None, raising=True
     )
 
-    proc = CartaOSProcessor(pdf_path=pdf, dry_run=True)
-    ok = proc.process()
-    assert ok is True
-
-    out = capsys.readouterr().out
-    assert "DRY SUMMARY" in out
+    with caplog.at_level('INFO'):
+        proc = CartaOSProcessor(pdf_path=pdf, dry_run=True)
+        ok = proc.process()
+        assert ok is True
+        
+        # Check log messages
+        log_messages = [rec.message for rec in caplog.records]
+        assert any("[DRY RUN] Process would be successful." in msg for msg in log_messages)
+        assert any("Summary: DRY SUMMARY" in msg for msg in log_messages)
 
     # No summary file created and PDF not moved
     assert not (tmp_path / "07_Processed" / "Summaries" / f"{pdf.stem}.md").exists()

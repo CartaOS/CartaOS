@@ -50,8 +50,8 @@ def test_process_debug_path_creates_debug_file_and_returns_true(
     assert debug_file.read_text(encoding="utf-8") == "hello text"
 
 
-def test_process_dry_run_prints_and_returns_true(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+def test_process_dry_run_logs_summary_and_returns_true(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     pdf = make_pdf(tmp_path)
 
@@ -72,18 +72,16 @@ def test_process_dry_run_prints_and_returns_true(
     monkeypatch.setattr(CartaOSProcessor, "_save_summary", fake_save)
     monkeypatch.setattr(CartaOSProcessor, "_move_pdf", fake_move)
 
-    # Capture print output
-    printed = {"text": None}
-
-    def fake_print(x):
-        printed["text"] = x
-
-    monkeypatch.setattr(builtins, "print", fake_print)
-
-    proc = CartaOSProcessor(pdf_path=pdf, dry_run=True)
-    ok = proc.process()
-    assert ok is True
-    assert printed["text"] == "the summary"
+    with caplog.at_level('INFO'):
+        proc = CartaOSProcessor(pdf_path=pdf, dry_run=True)
+        ok = proc.process()
+        assert ok is True
+        
+        # Check log messages
+        log_messages = [rec.message for rec in caplog.records]
+        assert any("[DRY RUN] Process would be successful." in msg for msg in log_messages)
+        assert any("Summary: the summary" in msg for msg in log_messages)
+        
     # Ensure no file ops in dry run
     assert save_called["save"] is False
     assert save_called["move"] is False
