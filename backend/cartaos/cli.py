@@ -377,6 +377,7 @@ def summarize(
     """
     try:
         global CartaOSProcessor
+        from cartaos.config import AppConfig
         if not json_output:
             typer.secho(f"Starting summary for: {pdf_path.name}", fg=typer.colors.CYAN)
 
@@ -407,8 +408,11 @@ def summarize(
                 CartaOSProcessor as _CartaOSProcessor  # lazy import
 
             CartaOSProcessor = _CartaOSProcessor
+
+        # Create configuration instance once
+        config = AppConfig()
         processor = CartaOSProcessor(
-            pdf_path=pdf_path, dry_run=dry_run, debug=debug, force_ocr=force_ocr
+            pdf_path=pdf_path, config=config, dry_run=dry_run, debug=debug, force_ocr=force_ocr
         )
         ok = processor.process()
 

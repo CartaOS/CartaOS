@@ -5,6 +5,7 @@ import pytest
 
 import cartaos.config as _conf
 from cartaos.processor import CartaOSProcessor
+from cartaos.config import AppConfig
 
 
 class DummyGen:
@@ -23,7 +24,16 @@ def mock_ai(monkeypatch, tmp_path):
     return p
 
 
-def test_process_full_flow(tmp_path, monkeypatch):
+@pytest.fixture
+def mock_config(tmp_path, monkeypatch):
+    """Create a mock AppConfig for testing."""
+    # Mock the environment variables
+    monkeypatch.setenv("GEMINI_API_KEY", "test_key")
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", "")
+    return AppConfig()
+
+
+def test_process_full_flow(tmp_path, monkeypatch, mock_config):
     pdf = tmp_path / "doc.pdf"
     pdf.write_bytes(b"%PDF-1.4")
     # mock extract_text para retornar texto suficiente
@@ -32,10 +42,10 @@ def test_process_full_flow(tmp_path, monkeypatch):
     saved = tmp_path / "07_Processed" / "doc.pdf"
     summary = tmp_path / "07_Processed" / "Summaries" / "doc.md"
     monkeypatch.setenv("OBSIDIAN_VAULT_PATH", "")
-    proc = CartaOSProcessor(pdf, dry_run=False, debug=False)
+    proc = CartaOSProcessor(pdf, config=mock_config, dry_run=False, debug=False)
     # redireciona pastas para tmp_path
-    proc.processed_pdf_dir = tmp_path / "07_Processed"
-    proc.summary_dir = tmp_path / "07_Processed" / "Summaries"
+    proc.config.processed_pdf_dir = tmp_path / "07_Processed"
+    proc.config.summary_dir = tmp_path / "07_Processed" / "Summaries"
     assert proc.process() is True
     assert saved.exists()
     assert summary.exists()
