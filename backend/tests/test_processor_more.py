@@ -68,7 +68,7 @@ def test_process_dry_run_prints_and_returns_true(
     # Regular path: extract -> sanitize -> generate_summary -> dry_run True
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "raw")
     monkeypatch.setattr("cartaos.processor.sanitize", lambda t: "sanitized")
-    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t: "the summary")
+    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t, k: "the summary")
 
     # Avoid file operations in dry run; process should not call _save/_move
     save_called = {"save": False, "move": False}
@@ -106,7 +106,7 @@ def test_process_generate_summary_failure(
 
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "raw")
     monkeypatch.setattr("cartaos.processor.sanitize", lambda t: "sanitized")
-    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t: None)
+    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t, k: None)
 
     proc = CartaOSProcessor(pdf_path=pdf, config=mock_config)
     assert proc.process() is False
@@ -120,7 +120,7 @@ def test_process_defaults_full_success_saves_and_moves(
     # Ensure normal pipeline succeeds
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "raw")
     monkeypatch.setattr("cartaos.processor.sanitize", lambda t: "sanitized")
-    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t: "the summary")
+    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t, k: "the summary")
 
     calls = {"save": 0, "move": 0}
 

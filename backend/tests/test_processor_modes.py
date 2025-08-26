@@ -53,7 +53,7 @@ def test_dry_run_prints_summary_and_does_not_write_files(
     pdf = _make_pdf(tmp_path)
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "some text")
     monkeypatch.setattr("cartaos.processor.sanitize", lambda t: t)
-    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t: "DRY SUMMARY")
+    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t, k: "DRY SUMMARY")
 
     proc = CartaOSProcessor(pdf_path=pdf, config=mock_config, dry_run=True)
     ok = proc.process()
