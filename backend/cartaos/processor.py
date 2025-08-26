@@ -12,7 +12,6 @@ import shutil
 from pathlib import Path
 from typing import List, Optional
 
-from dotenv import load_dotenv
 from rich.progress import (BarColumn, Progress, SpinnerColumn, TaskID,
                            TextColumn, TimeRemainingColumn)
 from slugify import slugify
@@ -21,6 +20,7 @@ from .utils.ai_utils import generate_summary
 from .utils.pdf_utils import extract_text
 from .utils.text_utils import sanitize
 from .utils.utils import WarningCaptureHandler
+from .config import AppConfig
 
 
 class CartaOSProcessor:
@@ -29,6 +29,7 @@ class CartaOSProcessor:
     def __init__(
         self,
         pdf_path: Path,
+        config: AppConfig,
         dry_run: bool = False,
         debug: bool = False,
         force_ocr: bool = False,
@@ -38,11 +39,13 @@ class CartaOSProcessor:
 
         Args:
             pdf_path (Path): Path to the PDF file to be processed.
+            config (AppConfig): Application configuration instance.
             dry_run (bool): If True, processes without saving or moving files.
             debug (bool): If True, saves extracted text and stops before AI call.
             force_ocr (bool): If True, forces OCR processing before summarization.
         """
         self.pdf_path: Path = pdf_path
+        self.config: AppConfig = config
         self.dry_run: bool = dry_run
         self.debug: bool = debug
         self.force_ocr: bool = force_ocr
@@ -50,7 +53,6 @@ class CartaOSProcessor:
         self.captured_warnings: List[str] = []
         self._setup_warning_capture()
 
-        self.load_config()
 
     def _setup_warning_capture(self) -> None:
         """Configures a handler to capture pdfminer warnings in memory."""
@@ -59,23 +61,6 @@ class CartaOSProcessor:
         handler: WarningCaptureHandler = WarningCaptureHandler(self.captured_warnings)
         pdfminer_logger.addHandler(handler)
         pdfminer_logger.propagate = False
-
-    def load_config(self) -> None:
-        """Loads environment configurations from the .env file."""
-        dotenv_path: Path = Path(__file__).parent.parent / ".env"
-        load_dotenv(dotenv_path=dotenv_path)
-
-        self.api_key: Optional[str] = os.getenv("GEMINI_API_KEY")
-        self.obsidian_vault_path: Optional[str] = os.getenv("OBSIDIAN_VAULT_PATH")
-
-        self.processed_pdf_dir: Path = (
-            Path(__file__).parent.parent.parent / "07_Processed"
-        )
-
-        # Initialize with default; override if OBSIDIAN_VAULT_PATH is set
-        self.summary_dir: Path = self.processed_pdf_dir / "Summaries"
-        if self.obsidian_vault_path and Path(self.obsidian_vault_path).is_dir():
-            self.summary_dir = Path(self.obsidian_vault_path) / "Summaries"
 
     def _save_summary(self, summary_content: str) -> None:
         """
@@ -87,14 +72,14 @@ class CartaOSProcessor:
         base_name: str = self.pdf_path.stem
         safe_name: str = slugify(base_name)
 
-        md_output_path: Path = self.summary_dir / f"{safe_name}.md"
-        os.makedirs(self.summary_dir, exist_ok=True)
+        md_output_path: Path = self.config.summary_dir / f"{safe_name}.md"
+        os.makedirs(self.config.summary_dir, exist_ok=True)
         with open(md_output_path, "w", encoding="utf-8") as f:
             f.write(summary_content)
 
     def _move_pdf(self) -> None:
         """Moves the original PDF to the processed directory."""
-        pdf_output_path: Path = self.processed_pdf_dir / self.pdf_path.name
+        pdf_output_path: Path = self.config.processed_pdf_dir / self.pdf_path.name
         shutil.move(self.pdf_path, pdf_output_path)
 
     def process(self) -> bool:

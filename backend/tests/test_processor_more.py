@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from cartaos.processor import CartaOSProcessor
+from cartaos.config import AppConfig
 
 
 def make_pdf(tmp_path: Path) -> Path:
@@ -15,20 +16,28 @@ def make_pdf(tmp_path: Path) -> Path:
     return p
 
 
+@pytest.fixture
+def mock_config(tmp_path, monkeypatch):
+    """Create a mock AppConfig for testing."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test_key")
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", "")
+    return AppConfig()
+
+
 def test_process_extract_text_failure(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mock_config: AppConfig
 ) -> None:
     pdf = make_pdf(tmp_path)
 
     # Patch the imported name inside cartaos.processor
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: None)
 
-    proc = CartaOSProcessor(pdf_path=pdf)
+    proc = CartaOSProcessor(pdf_path=pdf, config=mock_config)
     assert proc.process() is False
 
 
 def test_process_debug_path_creates_debug_file_and_returns_true(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mock_config: AppConfig
 ) -> None:
     pdf = make_pdf(tmp_path)
     # Simulate extracted text
@@ -41,7 +50,8 @@ def test_process_debug_path_creates_debug_file_and_returns_true(
     monkeypatch.setattr("cartaos.processor.sanitize", boom)
     monkeypatch.setattr("cartaos.processor.generate_summary", boom)
 
-    proc = CartaOSProcessor(pdf_path=pdf, debug=True)
+    proc = CartaOSProcessor(pdf_path=pdf, config=mock_config, debug=True)
+
 
     ok = proc.process()
     assert ok is True
@@ -51,7 +61,7 @@ def test_process_debug_path_creates_debug_file_and_returns_true(
 
 
 def test_process_dry_run_prints_and_returns_true(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mock_config: AppConfig
 ) -> None:
     pdf = make_pdf(tmp_path)
 
@@ -80,7 +90,7 @@ def test_process_dry_run_prints_and_returns_true(
 
     monkeypatch.setattr(builtins, "print", fake_print)
 
-    proc = CartaOSProcessor(pdf_path=pdf, dry_run=True)
+    proc = CartaOSProcessor(pdf_path=pdf, config=mock_config, dry_run=True)
     ok = proc.process()
     assert ok is True
     assert printed["text"] == "the summary"
@@ -90,7 +100,7 @@ def test_process_dry_run_prints_and_returns_true(
 
 
 def test_process_generate_summary_failure(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mock_config: AppConfig
 ) -> None:
     pdf = make_pdf(tmp_path)
 
@@ -98,12 +108,12 @@ def test_process_generate_summary_failure(
     monkeypatch.setattr("cartaos.processor.sanitize", lambda t: "sanitized")
     monkeypatch.setattr("cartaos.processor.generate_summary", lambda t: None)
 
-    proc = CartaOSProcessor(pdf_path=pdf)
+    proc = CartaOSProcessor(pdf_path=pdf, config=mock_config)
     assert proc.process() is False
 
 
 def test_process_defaults_full_success_saves_and_moves(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mock_config: AppConfig
 ) -> None:
     pdf = make_pdf(tmp_path)
 
@@ -124,7 +134,7 @@ def test_process_defaults_full_success_saves_and_moves(
     monkeypatch.setattr(CartaOSProcessor, "_move_pdf", fake_move)
 
     # Default args: dry_run must be False so save/move happen
-    proc = CartaOSProcessor(pdf_path=pdf)
+    proc = CartaOSProcessor(pdf_path=pdf, config=mock_config)
     ok = proc.process()
     assert ok is True
     assert calls["save"] == 1
