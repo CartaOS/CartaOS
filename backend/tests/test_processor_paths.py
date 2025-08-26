@@ -14,7 +14,7 @@ from cartaos.config import AppConfig
 def base_config(monkeypatch):
     """Create a base AppConfig for testing."""
     monkeypatch.setenv("GEMINI_API_KEY", "test_key")
-    return AppConfig
+    return AppConfig()
 
 
 def make_pdf(tmp_path: Path) -> Path:
