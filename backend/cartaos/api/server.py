@@ -6,7 +6,7 @@ Replaces CLI-based IPC with HTTP API.
 import os
 from contextlib import asynccontextmanager
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timezone as timezone_utc
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from cartaos import __version__
 from cartaos.api.middleware.enhanced_logging_middleware import EnhancedLoggingMiddleware
 from cartaos.processing.decorators import log_processing_stage
+from cartaos.processors.ocr_processor import OcrProcessor
 from cartaos.security.audit_logger import AuditLogger
 from cartaos.tasks.base import TaskMonitor
 from cartaos.api.models import (
@@ -87,7 +88,7 @@ async def health_check() -> HealthResponse:
         logger.debug("Processing health check request")
         return HealthResponse(
             status="ok",
-            timestamp=datetime.now(UTC).isoformat(),
+            timestamp=datetime.now(timezone_utc).isoformat(),
             version="0.1.0"
         )
 
@@ -484,13 +485,23 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         exc_info=exc
     )
     
+    # Format error message based on the detail type
+    if isinstance(exc.detail, dict):
+        error_msg = exc.detail.get('message', str(exc.detail))
+    else:
+        error_msg = str(exc.detail)
+    
     return JSONResponse(
         status_code=exc.status_code,
         content=ErrorResponse(
-            error=exc.detail,
-            status_code=exc.status_code,
-            error_id=error_id
-        ).dict()
+            error=error_msg,
+            error_code=str(exc.status_code),
+            details={
+                "error_id": error_id,
+                "path": request.url.path,
+                "method": request.method
+            }
+        ).model_dump()
     )
 
 
@@ -502,22 +513,25 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
         f"Unhandled exception: {str(exc)}",
         extra={
             "error_id": error_id,
-            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
             "path": request.url.path,
             "method": request.method,
             "error_type": exc.__class__.__name__,
-            "error_detail": str(exc)
+            "stack_trace": traceback.format_exc(),
         },
-        exc_info=True
+        exc_info=exc,
     )
     
     return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        status_code=500,
         content=ErrorResponse(
             error="Internal server error",
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            error_id=error_id
-        ).dict()
+            error_code="internal_server_error",
+            details={
+                "error_id": error_id,
+                "message": str(exc),
+                "type": exc.__class__.__name__
+            }
+        ).model_dump()
     )
 
 
