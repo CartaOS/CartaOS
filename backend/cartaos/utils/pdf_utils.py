@@ -2,6 +2,7 @@
 # backend/cartaos/utils/pdf_utils.py
 
 import logging
+import sys
 from types import SimpleNamespace
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Sequence, cast
@@ -45,7 +46,8 @@ def extract_text(pdf_path: Path) -> Optional[str]:
     Raises:
         ValueError: If the pdf_path is not a valid path to a PDF file.
     """
-    logging.info(f"Extracting text from '{pdf_path.name}'...")
+    logger = logging.getLogger(__name__)
+    logger.info(f"Extracting text from '{pdf_path.name}'...")
 
     # Ensure variable is defined for all paths
     text: Optional[str] = None
@@ -61,10 +63,10 @@ def extract_text(pdf_path: Path) -> Optional[str]:
         with _plumb_mod.open(str(pdf_path)) as pdf:
             text = "".join(page.extract_text() or "" for page in pdf.pages)
             if text and len(text) >= 100:
-                logging.info(f"Text extracted successfully: {text[:100]}...")
+                logger.debug(f"Text sample: {text[:100]}...")  # Reduzindo para debug
                 return text.strip()
     except Exception as e:
-        logging.warning(f"pdfplumber extraction failed: {e}")
+        logger.error(f"pdfplumber extraction failed: {str(e)}", exc_info=logger.level <= logging.DEBUG)
 
     logging.info("Attempting extraction with PyMuPDF (fitz)...")
     try:

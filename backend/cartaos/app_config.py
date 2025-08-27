@@ -14,7 +14,12 @@ class AppConfig:
     """
     
     def __init__(self):
-        """Initialize the application configuration."""
+        """Initialize the application configuration.
+        
+        Raises:
+            PermissionError: If directory creation fails
+            OSError: For other filesystem errors
+        """
         # API Keys
         self.gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
         
@@ -36,8 +41,15 @@ class AppConfig:
         }
         
         # Create directories if they don't exist
-        for dir_path in self.pipeline_dirs.values():
-            dir_path.mkdir(parents=True, exist_ok=True)
+        for stage, dir_path in self.pipeline_dirs.items():
+            try:
+                dir_path.mkdir(parents=True, exist_ok=True)
+                if not os.access(dir_path, os.W_OK):
+                    raise PermissionError(f"No write permissions for directory: {dir_path}")
+            except PermissionError as pe:
+                raise
+            except Exception as e:
+                raise OSError(f"Failed to create directory {stage}: {str(e)}") from e
     
     def get_pipeline_dir(self, stage: str) -> Path:
         """Get the path for a pipeline stage.

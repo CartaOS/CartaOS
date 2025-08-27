@@ -414,7 +414,9 @@ fn get_project_root() -> CartaResult<PathBuf> {
     })?;
 
     // We assume the executable is in `src-tauri/target/{debug|release}`
-    if let Some(path) = current_exe.ancestors().nth(4) {
+    // Segurança: Navegação fixa de diretórios para evitar travessia acidental
+    const PROJECT_ROOT_DEPTH: usize = 4;
+    if let Some(path) = current_exe.ancestors().nth(PROJECT_ROOT_DEPTH) {
         Ok(path.to_path_buf())
     } else {
         Err(CartaError::project_structure(
@@ -472,7 +474,10 @@ async fn load_settings() -> Result<AppSettings, String> {
     let project_root = get_project_root().map_err(|e| e.to_string())?;
     let env_path = project_root.join(".env");
 
-    dotenvy::from_path(env_path).ok();
+    // Verifica se o arquivo .env existe antes de carregar
+    if env_path.exists() {
+        dotenvy::from_path(env_path).map_err(|e| format!("Failed to load .env: {}", e))?;
+    }
 
     // Use GEMINI_API_KEY consistently with backend
     let api_key = env::var("GEMINI_API_KEY").unwrap_or_else(|_| "".to_string());

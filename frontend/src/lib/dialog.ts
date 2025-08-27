@@ -16,8 +16,8 @@ export async function openFilesDialog(
 	const tauriOpen = tauri.__TAURI__?.dialog?.open;
 	if (typeof tauriOpen === 'function') {
 		const selection = await tauriOpen({ multiple: opts.multiple ?? true, title: opts.title });
-		if (Array.isArray(selection)) return selection as string[];
-		if (typeof selection === 'string') return [selection];
+		if (Array.isArray(selection)) return selection.filter((s): s is string => typeof s === 'string');
+		if (typeof selection === 'string') return [selection.trim()];
 		return null;
 	}
 	// Not running under Tauri or dialog plugin not available.
