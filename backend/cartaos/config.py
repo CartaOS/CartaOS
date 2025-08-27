@@ -110,3 +110,12 @@ settings = Settings()
 
 # Backward compatibility
 PIPELINE_DIRS = PipelineDirs()
+
+# Load environment variables from .env file if it exists
+from dotenv import load_dotenv
+load_dotenv()
+
+# Ensure required directories exist
+os.makedirs(settings.obsidian_vault_path, exist_ok=True)
+for stage_dir in PIPELINE_DIRS.values():
+    os.makedirs(stage_dir, exist_ok=True)
