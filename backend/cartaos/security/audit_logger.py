@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from ..logging_config import logger
 
 class AuditLogger:
@@ -16,13 +16,17 @@ class AuditLogger:
             else v for k, v in kwargs.items()
         }
         
-        logger.info(
-            "Security Event",
-            extra={
-                "event_type": event_type,
-                "user": user,
-                "success": success,
-                "timestamp": datetime.utcnow().isoformat(),
-                **redacted_kwargs
-            }
-        )
+        # Create log record with extra fields
+        log_record = {
+            "event_type": event_type,
+            "user": user,
+            "success": success,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            **redacted_kwargs
+        }
+        
+        # Log the security event
+        logger.info("Security Event: %s - %s", 
+                   event_type, 
+                   "Succeeded" if success else "Failed",
+                   extra={"security_event": log_record})

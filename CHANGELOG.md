@@ -5,6 +5,17 @@ All notable changes to CartaOS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Test Suite**: Fixed failing tests in `test_secure_keychain.py` by updating mocks to match current implementation
+- **OCR Endpoint**: Corrected test expectations in `test_ocr_endpoint` to properly mock `OcrProcessor`
+- **Test Coverage**: Improved test coverage for keychain and OCR functionality
+- **Error Handling**: Enhanced error messages and validation in API endpoints
+- **Integration Tests**: Fixed `test_full_pipeline_with_mocks` to properly test file movement during summarization
+- **File Processing**: Ensured proper file movement in `CartaOSProcessor._move_pdf()` by updating the instance's `pdf_path`
+- **Test Reliability**: Enhanced debug logging in test mocks to help diagnose file system issues
+
 ## [0.1.0] - 2024-08-21
 
 ### Added

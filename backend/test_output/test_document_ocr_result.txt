@@ -1,0 +1,12 @@
+Test Document for OCR Verification
+
+This is a test document for OCR verification.
+
+It contains multiple lines of text to ensure the OCR processor
+
+can handle different formatting and line breaks.
+
+Here are some special characters: !|@#$%"&*()_+{}|:"<>? ~-=[]\;',./
+And some numbers: 1234567890
+
+End of test document.

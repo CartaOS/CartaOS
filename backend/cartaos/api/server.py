@@ -6,7 +6,8 @@ Replaces CLI-based IPC with HTTP API.
 import os
 from contextlib import asynccontextmanager
 import traceback
-from datetime import datetime, timezone, timezone as timezone_utc
+from datetime import datetime, timezone
+timezone_utc = timezone.utc
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -142,14 +143,13 @@ async def list_files(folder: str):
             )
 
 
-@app.post("/api/process", response_model=ProcessFileResponse)
+# Internal implementation with the decorator
 @log_processing_stage("file_processing")
-async def process_file(
+async def _process_file_internal(
     request: ProcessFileRequest, 
-    file_path: str = None,  # Will be set by the decorator
-    **kwargs  # To capture any additional arguments from the decorator
+    file_path: str = None  # Will be set by the decorator
 ):
-    """Process a file with the specified operation."""
+    """Internal implementation of process_file with the decorator."""
     # Log the processing start
     AuditLogger.log_security_event(
         event_type="file_processing_started",
@@ -167,45 +167,57 @@ async def process_file(
                 success=False,
                 error=error_msg
             )
+            raise HTTPException(status_code=404, detail=error_msg)
+
+        # Process based on operation type
+        if request.operation == OperationType.TRIAGE:
+            result = await _process_with_processor(file_path, OperationType.TRIAGE)
+        elif request.operation == OperationType.OCR:
+            result = await _process_with_processor(file_path, OperationType.OCR)
+        elif request.operation == OperationType.SUMMARIZE:
+            result = await _process_summarization(file_path, request)
+        else:
+            error_msg = f"Unsupported operation: {request.operation}"
+            AuditLogger.log_security_event(
+                event_type="processing_failed",
+                file_path=str(file_path),
+                operation=request.operation,
+                success=False,
+                error=error_msg
+            )
             raise HTTPException(status_code=400, detail=error_msg)
 
-        # Handle special operations first
-        if request.operation.value == "summarize":
-            # Perform summarization with task monitoring
-            return await _process_summarization(file_path, request)
-        
-        # Process with task monitoring for other operations
-        return await _process_with_processor(file_path, request.operation)
-        
-    except HTTPException:
-        raise
-        
-    except Exception as e:
-        error_id = f"proc_{os.urandom(4).hex()}"
-        AuditLogger.log_security_event(
-            event_type="file_processing_failed",
-            file_path=str(request.file_path),
-            operation=request.operation.value,
-            success=False,
-            error=str(e),
-            error_id=error_id
-        )
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": f"Processing failed: {str(e)}",
-                "error_id": error_id,
-                "error": str(e)
-            }
-        )
-    finally:
         # Log successful completion
         AuditLogger.log_security_event(
-            event_type="file_processing_completed",
-            file_path=str(request.file_path),
-            operation=request.operation.value,
-            success=True
+            event_type="processing_completed",
+            file_path=str(file_path),
+            operation=request.operation,
+            success=True,
+            result=str(result.get("output_path", ""))
         )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_msg = f"Error processing file: {str(e)}"
+        AuditLogger.log_security_event(
+            event_type="processing_error",
+            file_path=str(file_path) if 'file_path' in locals() else 'unknown',
+            operation=request.operation if 'request' in locals() else 'unknown',
+            success=False,
+            error=error_msg,
+            stack_trace=traceback.format_exc()
+        )
+        raise HTTPException(status_code=500, detail=error_msg)
+
+# Create the route with a wrapper that handles the request properly
+@app.post("/api/process", response_model=ProcessFileResponse)
+async def process_file(request: ProcessFileRequest):
+    """Process a file with the specified operation."""
+    # Call the internal function with just the request
+    return await _process_file_internal(request)
 
 
 @TaskMonitor.monitor_task("summarize_document")
@@ -342,10 +354,14 @@ async def ocr_file(request: OCRRequest):
     
     with LogContext(logger, "Performing OCR on file", **context) as log_ctx:
         try:
+            log_ctx.logger.info("Starting OCR processing", request=request.dict())
             input_path = Path(request.file_path)
+            log_ctx.logger.info("Resolved input path", path=str(input_path.absolute()))
+            
             if not input_path.exists():
-                log_ctx.logger.error("File not found", path=str(input_path.absolute()))
-                raise HTTPException(status_code=400, detail="File not found")
+                error_msg = f"File not found: {input_path.absolute()}"
+                log_ctx.logger.error(error_msg, path=str(input_path.absolute()))
+                raise HTTPException(status_code=400, detail=error_msg)
 
             output_path = input_path.parent / f"ocr_{input_path.name}"
             log_ctx.logger.debug(

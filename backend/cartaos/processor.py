@@ -96,6 +96,8 @@ class CartaOSProcessor:
         """Moves the original PDF to the processed directory."""
         pdf_output_path: Path = self.processed_pdf_dir / self.pdf_path.name
         shutil.move(self.pdf_path, pdf_output_path)
+        # Update the pdf_path to point to the new location
+        self.pdf_path = pdf_output_path
 
     def process(self) -> bool:
         """

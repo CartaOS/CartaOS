@@ -12,13 +12,14 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from dotenv import load_dotenv
 from google.genai import Client, models
 
-from cartaos import config
-
+from cartaos import get_config
+from cartaos.config import settings
 from .external_calls import ExternalCallManager
-from .keychain import get_secure_api_key
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 _CLIENT: Optional[Client] = None
 _EXTERNAL_CALL_MANAGER: Optional[ExternalCallManager] = None
@@ -34,15 +35,21 @@ def get_client() -> Client:
     if _CLIENT is not None:
         return _CLIENT
 
-    # Try secure keychain first, then fallback to .env
-    api_key = get_secure_api_key("GEMINI_API_KEY")
+    # Get API key from AppConfig
+    config = get_config()
+    api_key = config.gemini_api_key
+    
     if not api_key:
-        logging.error("GEMINI_API_KEY not found in keychain or environment")
-        raise ValueError("API key is not configured.")
+        logger.error("GEMINI_API_KEY is not configured in AppConfig")
+        raise ValueError("API key is not configured in application settings.")
 
-    _CLIENT = Client(api_key=api_key)
-    logging.info("Gemini AI client initialized successfully.")
-    return _CLIENT
+    try:
+        _CLIENT = Client(api_key=api_key)
+        logger.info("Gemini AI client initialized successfully.")
+        return _CLIENT
+    except Exception as e:
+        logger.error(f"Failed to initialize Gemini AI client: {str(e)}")
+        raise
 
 
 def get_client_with_retries() -> Client:
@@ -115,7 +122,9 @@ def generate_summary(text: str) -> Optional[str]:
         return None
 
     logging.info("Generating summary with AI model...")
-    prompt_path = config.PROMPTS_DIR / "summary_prompt.md"
+    # Get the prompts directory from settings or use a default location
+    prompts_dir = getattr(settings, "PROMPTS_DIR", Path(__file__).parent.parent / "prompts")
+    prompt_path = Path(prompts_dir) / "summary_prompt.md"
 
     try:
         if not prompt_path.exists():
