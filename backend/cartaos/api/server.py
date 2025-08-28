@@ -229,7 +229,17 @@ async def _process_summarization(file_path: Path, request: ProcessFileRequest) -
             detail="Could not extract text from file"
         )
 
-    summary = await ai_utils.generate_summary_with_retries(text)
+    # Get API key from secure storage
+    from ..utils.keychain import get_secure_api_key
+    api_key = get_secure_api_key("GEMINI_API_KEY")
+    
+    if not api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="GEMINI_API_KEY not found in keychain"
+        )
+
+    summary = await ai_utils.generate_summary_with_retries(text, api_key=api_key)
     if not summary:
         raise HTTPException(
             status_code=500, 
@@ -247,10 +257,21 @@ async def _process_summarization(file_path: Path, request: ProcessFileRequest) -
 @TaskMonitor.monitor_task("process_file")
 async def _process_with_processor(file_path: Path, operation: OperationType) -> ProcessFileResponse:
     """Process file using the main processor with task monitoring."""
+    from ..utils.keychain import get_secure_api_key
+    
+    # Get API key from secure storage
+    api_key = get_secure_api_key("GEMINI_API_KEY")
+    if not api_key and operation == OperationType.SUMMARIZE:
+        raise HTTPException(
+            status_code=400,
+            detail="GEMINI_API_KEY not found in keychain"
+        )
+    
     processor = get_processor()
     result = await processor.process(
         file_path=str(file_path.absolute()),
-        operation=operation
+        operation=operation,
+        api_key=api_key if operation == OperationType.SUMMARIZE else None
     )
     
     destination_path = Path(result.get("output_path", ""))
@@ -261,6 +282,82 @@ async def _process_with_processor(file_path: Path, operation: OperationType) -> 
         metadata={"operation": operation.value}
     )
 
+
+# OCR specific processing
+async def _process_ocr(file_path: Path) -> ProcessFileResponse:
+    """Handle OCR processing with task monitoring."""
+    output_path = file_path.parent / f"ocr_{file_path.name}"
+    ocr_processor = OcrProcessor(file_path, output_path)
+    success = ocr_processor.process()
+
+    if success:
+        return ProcessFileResponse(
+            status="success",
+            message="OCR completed successfully",
+            output_path=str(output_path),
+            metadata=None,
+        )
+    else:
+        raise HTTPException(status_code=500, detail="OCR processing failed")
+
+
+@app.post("/api/process_file", response_model=ProcessFileResponse)
+async def process_file_endpoint(request: ProcessFileRequest):
+    """Process a file with the specified operation."""
+    try:
+        file_path = Path(request.file_path)
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="File not found")
+
+        if request.operation == OperationType.OCR:
+            return await _process_ocr(file_path)
+        elif request.operation == OperationType.SUMMARIZE:
+            return await _process_summarization(file_path, request)
+        else:
+            return await _process_with_processor(file_path, request.operation)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing file: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Add error handlers
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTP exceptions with structured logging."""
+    logger.error(
+        f"HTTP {exc.status_code} error: {exc.detail}",
+        extra={"status_code": exc.status_code, "detail": exc.detail},
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Handle general exceptions with structured logging."""
+    error_id = str(uuid.uuid4())
+    logger.error(
+        f"Unhandled exception (ID: {error_id}): {str(exc)}",
+        exc_info=True,
+        extra={"error_id": error_id},
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "An unexpected error occurred",
+            "error_id": error_id,
+        },
+    )
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("cartaos.api.server:app", host="0.0.0.0", port=8000, reload=True)
 
 @app.post("/api/triage", response_model=TriageResponse)
 async def triage_file(request: TriageRequest):
@@ -441,6 +538,7 @@ async def summarize_file(request: SummarizeRequest):
                 f"Summary generated successfully: {word_count} words, compression ratio: {len(text) / len(summary) if summary else 0:.2f}"
             )
 
+<<<<<<< HEAD
             return SummarizeResponse(
                 summary=summary,
                 word_count=word_count,
@@ -463,6 +561,28 @@ async def summarize_file(request: SummarizeRequest):
                     "error": str(e)
                 }
             )
+=======
+        from ..utils import ai_utils
+        from ..utils.keychain import get_secure_api_key
+
+        api_key = get_secure_api_key("GEMINI_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
+            
+        summary = ai_utils.generate_summary(text, api_key=api_key)
+
+        if not summary:
+            raise HTTPException(status_code=500, detail="Failed to generate summary")
+
+        return SummarizeResponse(
+            summary=summary,
+            word_count=len(summary.split()) if summary else 0,
+            source_pages=None,
+        )
+    except Exception as e:
+        logger.error(f"Error summarizing file {request.file_path}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+>>>>>>> 34e063e (fix: implement dependency injection for API key in CartaOSProcessor)
 
 
 @app.exception_handler(HTTPException)

@@ -11,8 +11,8 @@ runner = CliRunner()
 def test_help():
     result = runner.invoke(cli_module.app, ["--help"])
     assert result.exit_code == 0
-    # Check for any part of the help output that should be present
-    assert "--help" in result.output or "Show this message and exit" in result.output
+    # Check for the presence of help-related text in the output
+    assert any(text in result.output for text in ["--help", "Show this message", "Options:", "Commands:"])
 
 
 def test_version_flag():

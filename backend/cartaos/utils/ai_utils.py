@@ -105,18 +105,22 @@ async def generate_content_with_retries(
         return None
 
 
-def generate_summary(text: str) -> Optional[str]:
+def generate_summary(text: str, api_key: Optional[str] = None) -> Optional[str]:
     """
     Generates the analytical summary using the Gemini AI API.
 
     Args:
         text (str): The text to be summarized.
+        api_key (str, optional): The API key for Gemini AI. If not provided, will use the key from keychain or environment.
 
     Returns:
         Optional[str]: Generated summary or None if generation fails.
     """
     try:
-        client = get_client()
+        if api_key:
+            client = Client(api_key=api_key)
+        else:
+            client = get_client()
     except ValueError as e:
         logging.error("Failed to generate summary due to configuration error: %s", e)
         return None
