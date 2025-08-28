@@ -17,8 +17,6 @@ updates:
     labels:
       - "dependencies"
       - "python"
-    reviewers:
-      - "CartaOS/developers"
     assignees:
       - "CartaOS/backend-team"
 
@@ -30,8 +28,6 @@ updates:
     labels:
       - "dependencies"
       - "javascript"
-    reviewers:
-      - "CartaOS/developers"
     assignees:
       - "CartaOS/frontend-team"
 
@@ -43,8 +39,6 @@ updates:
     labels:
       - "dependencies"
       - "rust"
-    reviewers:
-      - "CartaOS/developers"
     assignees:
       - "CartaOS/desktop-team"
 
@@ -57,7 +51,5 @@ updates:
       - "dependencies"
       - "python"
       - "development"
-    reviewers:
-      - "CartaOS/developers"
     assignees:
       - "CartaOS/backend-team"
