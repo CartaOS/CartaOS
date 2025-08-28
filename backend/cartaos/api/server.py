@@ -538,7 +538,6 @@ async def summarize_file(request: SummarizeRequest):
                 f"Summary generated successfully: {word_count} words, compression ratio: {len(text) / len(summary) if summary else 0:.2f}"
             )
 
-<<<<<<< HEAD
             return SummarizeResponse(
                 summary=summary,
                 word_count=word_count,
@@ -561,28 +560,6 @@ async def summarize_file(request: SummarizeRequest):
                     "error": str(e)
                 }
             )
-=======
-        from ..utils import ai_utils
-        from ..utils.keychain import get_secure_api_key
-
-        api_key = get_secure_api_key("GEMINI_API_KEY")
-        if not api_key:
-            raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
-            
-        summary = ai_utils.generate_summary(text, api_key=api_key)
-
-        if not summary:
-            raise HTTPException(status_code=500, detail="Failed to generate summary")
-
-        return SummarizeResponse(
-            summary=summary,
-            word_count=len(summary.split()) if summary else 0,
-            source_pages=None,
-        )
-    except Exception as e:
-        logger.error(f"Error summarizing file {request.file_path}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
->>>>>>> 34e063e (fix: implement dependency injection for API key in CartaOSProcessor)
 
 
 @app.exception_handler(HTTPException)
