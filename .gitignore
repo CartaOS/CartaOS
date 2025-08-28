@@ -32,7 +32,7 @@
 
 # ===================================================================
 # Python / Backend artifacts
-# Virtual environments, caches, build artifacts, and test reports.
+# Virtual environments, caches, build reports, and test reports.
 # ===================================================================
 /.venv/
 /venv/
@@ -44,10 +44,10 @@
 /backend/htmlcov/
 /backend/coverage.xml
 /backend/pytest-junit.xml
- /backend/.ruff_cache/
- /backend/.mutmut-cache
- /backend/.coverage.*
- /backend/coverage/
+/backend/.ruff_cache/
+/backend/.mutmut-cache
+/backend/.coverage.*
+/backend/coverage/
 __pycache__/
 *.py[cod]
 *.so
@@ -92,7 +92,11 @@ __pycache__/
 /cartaos-install.log
 /coverage.xml
 /GEMINI.md
+<<<<<<< HEAD
 .gemini_logs/
+=======
+/.windsurf/
+>>>>>>> cb227a5 (chore: update .gitignore)
 
 # ===================================================================
 # Operating System specific files
