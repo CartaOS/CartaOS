@@ -13,6 +13,7 @@ from typing import Any, Dict
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from .. import config
 from ..ocr import OcrProcessor
 from ..processor import CartaOSProcessor
 from ..triage import TriageProcessor
@@ -57,6 +58,14 @@ def get_processor():
     return CartaOSProcessor
 
 
+def get_config():
+    """Dependency to get CartaOS configuration."""
+    try:
+        return config.CartaOSConfig()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Configuration error: {e}")
+
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
@@ -86,7 +95,7 @@ async def list_files(folder: str):
 
 @app.post("/api/process", response_model=ProcessFileResponse)
 async def process_file(request: ProcessFileRequest):
-    """Process a file with the specified operation."""
+    """Process a file with the specified operation.""" 
     try:
         if not Path(request.file_path).exists():
             raise HTTPException(status_code=400, detail="File not found")
@@ -255,9 +264,17 @@ async def summarize_file(request: SummarizeRequest):
                 status_code=400, detail="Could not extract text from file"
             )
 
+        # Get configuration for API key
+        cartaos_config = get_config()
+        if not cartaos_config.api_key:
+            raise HTTPException(
+                status_code=500, detail="API key not configured. Cannot generate summary."
+            )
+
         from ..utils import ai_utils
 
-        summary = ai_utils.generate_summary(text)
+
+        summary = ai_utils.generate_summary(text, cartaos_config.api_key)
 
         if not summary:
             raise HTTPException(status_code=500, detail="Failed to generate summary")
