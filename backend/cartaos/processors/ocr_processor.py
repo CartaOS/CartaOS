@@ -71,7 +71,7 @@ class OcrProcessor:
                     image_path = Path(f.name)
                     
                 # Save the image
-                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
                 img.save(image_path, 'PNG')
                 images.append(image_path)
                 

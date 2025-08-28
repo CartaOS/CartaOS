@@ -49,8 +49,10 @@ def test_generate_summary_empty_string_is_failure(
     pdf = make_pdf(tmp_path)
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "raw")
     monkeypatch.setattr("cartaos.processor.sanitize", lambda t: "sanitized")
-    # Empty string is falsy
-    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t: "")
+    # Mock the async function with a coroutine that returns an empty string (falsy)
+    async def mock_generate_summary(*args, **kwargs):
+        return ""
+    monkeypatch.setattr("cartaos.processor.generate_summary_with_retries", mock_generate_summary)
 
     proc = CartaOSProcessor(pdf_path=pdf)
     assert proc.process() is False

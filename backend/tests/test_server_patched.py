@@ -11,20 +11,26 @@ from cartaos.api.server import app as original_app, ProcessFileRequest, ProcessF
 from cartaos.security.audit_logger import AuditLogger
 from cartaos.api.models import OperationType
 
-# Mock CartaOSProcessor class
-class MockCartaOSProcessor:
+# Create a mock processor class that will be returned by our patched get_processor
+class MockProcessor:
     def __init__(self, *args, **kwargs):
-        self.process = MagicMock(return_value=True)
+        pass
+        
+    async def process(self, file_path, operation=None, **kwargs):
+        return {
+            "status": "success",
+            "message": "File processed",
+            "output_path": f"{file_path}.processed",
+            "metadata": {}
+        }
 
-# Patch the CartaOSProcessor in the server module
-import sys
-import importlib
-sys.modules['cartaos.processor'] = MagicMock()
-sys.modules['cartaos.processor'].CartaOSProcessor = MockCartaOSProcessor
+# Patch the get_processor function in the server module
+def mock_get_processor():
+    return MockProcessor()
 
-# Reload the server module to apply the patch
+# Apply the patch
 import cartaos.api.server as server_module
-importlib.reload(server_module)
+server_module.get_processor = mock_get_processor
 
 # Create a new FastAPI instance for testing
 app = FastAPI()
@@ -86,7 +92,7 @@ async def process_file(
             file_path=str(file_path),
             operation=request.operation,
             success=True,
-            result=str(result.get("output_path", ""))
+            result=str(result.output_path or "")
         )
 
         return result

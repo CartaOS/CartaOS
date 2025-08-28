@@ -53,6 +53,6 @@ def test_process_file_endpoint(tmp_path):
         
         data = response.json()
         assert data["status"] == "success"
-        assert data["message"] == "File processed"
-        assert data["output_path"] == str(test_file.with_suffix('.processed'))
+        assert data["message"] == f"Successfully processed {test_file}"
+        assert data["output_path"] == f"{test_file}.processed"
         assert data["metadata"] == {}

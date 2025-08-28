@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from cartaos import __version__
 from cartaos.api.middleware.enhanced_logging_middleware import EnhancedLoggingMiddleware
 from cartaos.processing.decorators import log_processing_stage
+from cartaos.processor import CartaOSProcessor
 from cartaos.processors.ocr_processor import OcrProcessor
 from cartaos.security.audit_logger import AuditLogger
 from cartaos.tasks.base import TaskMonitor
@@ -108,17 +109,15 @@ async def list_files(folder: str):
             folder_path = Path(folder)
             if not folder_path.exists():
                 folder_path = Path.cwd() / folder
-                log_ctx.logger.debug("Resolved relative path", resolved_path=str(folder_path))
+                log_ctx.logger.debug(f"Resolved relative path: {folder_path}")
 
             if not folder_path.exists():
-                log_ctx.logger.error("Folder not found", path=str(folder_path))
+                log_ctx.logger.error(f"Folder not found: {folder_path}")
                 raise HTTPException(status_code=404, detail=f"Folder not found: {folder}")
 
             files = [f.name for f in folder_path.iterdir() if f.is_file()]
             log_ctx.logger.info(
-                "Successfully listed files",
-                file_count=len(files),
-                folder=str(folder_path.absolute())
+                f"Successfully listed {len(files)} files in folder {folder_path}"
             )
             return ListFilesResponse(files=files, total_count=len(files))
             
@@ -128,10 +127,7 @@ async def list_files(folder: str):
         except Exception as e:
             error_id = f"list_{os.urandom(4).hex()}"
             log_ctx.logger.error(
-                "Error listing files",
-                error=str(e),
-                error_id=error_id,
-                error_type=e.__class__.__name__
+                f"Error listing files: {str(e)} (error_id: {error_id}, type: {type(e).__name__})"
             )
             raise HTTPException(
                 status_code=500,
@@ -147,7 +143,7 @@ async def list_files(folder: str):
 @log_processing_stage("file_processing")
 async def _process_file_internal(
     request: ProcessFileRequest, 
-    file_path: str = None  # Will be set by the decorator
+    file_path: Path | None = None  # Will be set by the decorator
 ):
     """Internal implementation of process_file with the decorator."""
     # Log the processing start
@@ -233,7 +229,7 @@ async def _process_summarization(file_path: Path, request: ProcessFileRequest) -
             detail="Could not extract text from file"
         )
 
-    summary = ai_utils.generate_summary(text)
+    summary = await ai_utils.generate_summary_with_retries(text)
     if not summary:
         raise HTTPException(
             status_code=500, 
@@ -241,7 +237,7 @@ async def _process_summarization(file_path: Path, request: ProcessFileRequest) -
         )
 
     return ProcessFileResponse(
-        success=True,
+        status="success",
         message="Summary generated successfully",
         output_path=None,
         metadata={"summary": summary, "word_count": len(summary.split())},
@@ -257,11 +253,12 @@ async def _process_with_processor(file_path: Path, operation: OperationType) -> 
         operation=operation
     )
     
+    destination_path = Path(result.get("output_path", ""))
     return ProcessFileResponse(
-        success=True,
-        message=f"Successfully processed {file_path}",
-        output_path=str(result.get("output_path", "")),
-        metadata=result.get("metadata", {})
+        status="success",
+        message=f"File processed successfully: {file_path}",
+        output_path=str(destination_path) if destination_path else None,
+        metadata={"operation": operation.value}
     )
 
 
@@ -278,7 +275,7 @@ async def triage_file(request: TriageRequest):
         try:
             file_path = Path(request.file_path)
             if not file_path.exists():
-                log_ctx.logger.error("File not found", path=str(file_path.absolute()))
+                log_ctx.logger.error(f"File not found: {file_path.absolute()}")
                 raise HTTPException(status_code=400, detail="File not found")
 
             log_ctx.logger.debug("Starting file triage")
@@ -287,7 +284,7 @@ async def triage_file(request: TriageRequest):
             from ..utils.pdf_utils import extract_text
 
             file_extension = file_path.suffix.lower()
-            log_ctx.logger.debug("File extension detected", extension=file_extension)
+            log_ctx.logger.debug(f"File extension detected: {file_extension}")
 
             if file_extension in [".epub", ".mobi"]:
                 destination = "05_ReadyForSummary"
@@ -301,7 +298,7 @@ async def triage_file(request: TriageRequest):
                 else:
                     text = extract_text(file_path)
                     text_length = len(text) if text else 0
-                    log_ctx.logger.debug("Extracted text from PDF", text_length=text_length)
+                    log_ctx.logger.debug(f"Extracted {text_length} characters from PDF")
                     
                     if text_length > 500:
                         destination = "05_ReadyForSummary"
@@ -314,10 +311,7 @@ async def triage_file(request: TriageRequest):
                 reason = f"Unsupported file type: {file_extension}"
 
             log_ctx.logger.info(
-                "File triage completed",
-                destination=destination,
-                reason=reason,
-                confidence=0.8
+                f"File triaged successfully to {destination} (reason: {reason}, confidence: 0.8)"
             )
             
             return TriageResponse(destination=destination, reason=reason, confidence=0.8)
@@ -328,11 +322,7 @@ async def triage_file(request: TriageRequest):
         except Exception as e:
             error_id = f"triage_{os.urandom(4).hex()}"
             log_ctx.logger.error(
-                "Error during file triage",
-                error=str(e),
-                error_id=error_id,
-                error_type=e.__class__.__name__,
-                stack_trace=traceback.format_exc()
+                f"Error during file triage: {str(e)} (error_id: {error_id}, type: {type(e).__name__})\n{traceback.format_exc()}"
             )
             raise HTTPException(
                 status_code=500,
@@ -354,31 +344,31 @@ async def ocr_file(request: OCRRequest):
     
     with LogContext(logger, "Performing OCR on file", **context) as log_ctx:
         try:
-            log_ctx.logger.info("Starting OCR processing", request=request.dict())
+            log_ctx.logger.info(f"Starting OCR processing for {request.file_path}")
             input_path = Path(request.file_path)
-            log_ctx.logger.info("Resolved input path", path=str(input_path.absolute()))
+            log_ctx.logger.info(f"Resolved input path: {input_path}")
             
             if not input_path.exists():
                 error_msg = f"File not found: {input_path.absolute()}"
-                log_ctx.logger.error(error_msg, path=str(input_path.absolute()))
+                log_ctx.logger.error(f"{error_msg}: {input_path}")
                 raise HTTPException(status_code=400, detail=error_msg)
 
             output_path = input_path.parent / f"ocr_{input_path.name}"
             log_ctx.logger.debug(
-                "Initializing OCR processor",
-                input_path=str(input_path.absolute()),
-                output_path=str(output_path.absolute())
+                f"Processing OCR from {input_path} to {output_path}"
             )
             
-            ocr_processor = OcrProcessor(input_path, output_path)
+            from ..utils.ocr_processor import OcrProcessor
+            ocr_processor = OcrProcessor()
+            ocr_processor.input_path = str(input_path)
+            ocr_processor.output_path = str(output_path)
             log_ctx.logger.info("Starting OCR processing")
             
             success = ocr_processor.process()
 
             if success:
                 log_ctx.logger.info(
-                    "OCR processing completed successfully",
-                    output_path=str(output_path.absolute())
+                    f"OCR processing completed successfully to {output_path}"
                 )
                 return OCRResponse(
                     status="completed", 
@@ -396,11 +386,7 @@ async def ocr_file(request: OCRRequest):
         except Exception as e:
             error_id = f"ocr_{os.urandom(4).hex()}"
             log_ctx.logger.error(
-                "Error during OCR processing",
-                error=str(e),
-                error_id=error_id,
-                error_type=e.__class__.__name__,
-                stack_trace=traceback.format_exc()
+                f"Error during OCR processing: {str(e)} (error_id: {error_id}, type: {type(e).__name__})\n{traceback.format_exc()}"
             )
             raise HTTPException(
                 status_code=500,
@@ -425,7 +411,7 @@ async def summarize_file(request: SummarizeRequest):
         try:
             file_path = Path(request.file_path)
             if not file_path.exists():
-                log_ctx.logger.error("File not found", path=str(file_path.absolute()))
+                log_ctx.logger.error(f"File not found: {file_path.absolute()}")
                 raise HTTPException(status_code=400, detail="File not found")
 
             log_ctx.logger.debug("Extracting text from file")
@@ -433,7 +419,7 @@ async def summarize_file(request: SummarizeRequest):
 
             text = extract_text(file_path)
             text_length = len(text) if text else 0
-            log_ctx.logger.debug("Text extraction completed", text_length=text_length)
+            log_ctx.logger.debug(f"Text extraction completed, {text_length} characters")
 
             if not text:
                 error_msg = "Could not extract text from file"
@@ -443,7 +429,7 @@ async def summarize_file(request: SummarizeRequest):
             log_ctx.logger.info("Generating summary using AI")
             from ..utils import ai_utils
 
-            summary = ai_utils.generate_summary(text)
+            summary = await ai_utils.generate_summary_with_retries(text)
             
             if not summary:
                 error_msg = "AI model failed to generate a summary"
@@ -452,9 +438,7 @@ async def summarize_file(request: SummarizeRequest):
 
             word_count = len(summary.split())
             log_ctx.logger.info(
-                "Summary generated successfully",
-                summary_word_count=word_count,
-                compression_ratio=round(word_count / text_length * 100, 2) if text_length > 0 else 0
+                f"Summary generated successfully: {word_count} words, compression ratio: {len(text) / len(summary) if summary else 0:.2f}"
             )
 
             return SummarizeResponse(
@@ -469,11 +453,7 @@ async def summarize_file(request: SummarizeRequest):
         except Exception as e:
             error_id = f"summ_{os.urandom(4).hex()}"
             log_ctx.logger.error(
-                "Error during summarization",
-                error=str(e),
-                error_id=error_id,
-                error_type=e.__class__.__name__,
-                stack_trace=traceback.format_exc()
+                f"Error during summarization: {str(e)} (error_id: {error_id}, type: {type(e).__name__})\n{traceback.format_exc()}"
             )
             raise HTTPException(
                 status_code=500,

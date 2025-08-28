@@ -102,3 +102,4 @@ __pycache__/
 ._*
 Thumbs.db
 desktop.ini
+.aider*

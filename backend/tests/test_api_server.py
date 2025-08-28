@@ -336,7 +336,7 @@ async def test_summarize_endpoint(test_client, tmp_path, mock_config):
     test_file.write_text("Test content for summarization")
     
     # Mock all dependencies
-    with patch('cartaos.utils.ai_utils.generate_summary') as mock_generate_summary, \
+    with patch('cartaos.utils.ai_utils.generate_summary_with_retries') as mock_generate_summary, \
          patch('cartaos.api.server.logger') as mock_logger, \
          patch('pathlib.Path.exists') as mock_exists, \
          patch('pathlib.Path.read_text') as mock_read_text, \

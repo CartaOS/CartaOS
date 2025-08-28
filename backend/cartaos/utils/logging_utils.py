@@ -21,7 +21,16 @@ from datetime import datetime, timezone, UTC
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from pythonjsonlogger.json import JsonFormatter  # type: ignore
+# Import JsonFormatter with type checking
+try:
+    from pythonjsonlogger.json import JsonFormatter as _JsonFormatter
+    JsonFormatter = _JsonFormatter  # noqa: F811
+    del _JsonFormatter
+except ImportError:
+    # Fallback to a basic formatter if python-json-logger is not available
+    class JsonFormatter(logging.Formatter):  # type: ignore
+        def format(self, record):
+            return super().format(record)
 
 
 class CustomJsonFormatter(JsonFormatter):
@@ -105,6 +114,7 @@ def setup_logging(
         root_logger.removeHandler(handler)
 
     # Create formatters
+    formatter: logging.Formatter
     if json_format:
         formatter = CustomJsonFormatter(
             "%(timestamp)s %(level)s %(name)s %(module)s.%(function)s:%(lineno)d %(message)s"

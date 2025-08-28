@@ -82,12 +82,16 @@ def test_full_pipeline_with_mocks(
     assert not (ready_ocr_dir / "short.pdf").exists()
 
     # Summarize: patch processor internals to avoid external AI
-    # - extract_text -> raw; sanitize -> sanitized; generate_summary -> the summary text
+    # - extract_text -> raw; sanitize -> sanitized; generate_summary_with_retries -> the summary text
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "raw text")
     monkeypatch.setattr("cartaos.processor.sanitize", lambda t: "sanitized text")
-    monkeypatch.setattr(
-        "cartaos.processor.generate_summary", lambda t: "Integration summary"
-    )
+    # Mock the async function with a coroutine
+    async def mock_generate_summary(*args, **kwargs):
+        return "Integration summary"
+    monkeypatch.setattr("cartaos.processor.generate_summary_with_retries", mock_generate_summary)
+    # Mock the extract_text function to return test content
+    monkeypatch.setattr("cartaos.processor.extract_text", lambda x: "Test content")
+    monkeypatch.setattr("cartaos.processor.sanitize", lambda x: x)
 
     # - force summaries to be written into a vault/Summaries under tmp
     vault = tmp_path / "vault"
@@ -178,9 +182,10 @@ def test_full_pipeline_with_mocks(
     # Patch the CartaOSProcessor class and related functions
     monkeypatch.setattr(proc_mod, "CartaOSProcessor", MockCartaOSProcessor)
     
-    # Mock the generate_summary function to return our test summary
-    monkeypatch.setattr("cartaos.processor.generate_summary", lambda x: "Integration summary")
-    
+    # Mock the async function with a coroutine
+    async def mock_generate_summary(*args, **kwargs):
+        return "This is a test summary"
+    monkeypatch.setattr("cartaos.processor.generate_summary_with_retries", mock_generate_summary)
     # Mock the extract_text function to return test content
     monkeypatch.setattr("cartaos.processor.extract_text", lambda x: "Test content")
     monkeypatch.setattr("cartaos.processor.sanitize", lambda x: x)

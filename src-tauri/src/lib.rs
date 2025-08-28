@@ -474,7 +474,7 @@ async fn load_settings() -> Result<AppSettings, String> {
     let project_root = get_project_root().map_err(|e| e.to_string())?;
     let env_path = project_root.join(".env");
 
-    // Verifica se o arquivo .env existe antes de carregar
+    // Check if .env file exists before loading
     if env_path.exists() {
         dotenvy::from_path(env_path).map_err(|e| format!("Failed to load .env: {}", e))?;
     }

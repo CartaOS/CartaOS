@@ -68,17 +68,21 @@ class AppConfig:
         return self.pipeline_dirs[stage]
 
 
+# Singleton instance
+_config_instance: Optional[AppConfig] = None
+
 def get_config() -> AppConfig:
     '''
     Get the application configuration.
     
-    This function is used to provide a singleton instance of the AppConfig class.
+    This function provides a singleton instance of the AppConfig class.
     It ensures that the configuration is loaded only once and the same instance
     is reused throughout the application.
     
     Returns:
         AppConfig: The application configuration instance
     '''
-    if not hasattr(get_config, "_instance"):
-        get_config._instance = AppConfig()
-    return get_config._instance
+    global _config_instance
+    if _config_instance is None:
+        _config_instance = AppConfig()
+    return _config_instance

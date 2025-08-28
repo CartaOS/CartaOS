@@ -14,7 +14,7 @@ from typing import Optional
 
 from google.genai import Client, models
 
-from cartaos import get_config
+from cartaos import get_config, config
 from cartaos.config import settings
 from .external_calls import ExternalCallManager
 

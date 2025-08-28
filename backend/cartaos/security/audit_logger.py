@@ -1,14 +1,16 @@
 from datetime import datetime, timezone
+from typing import Optional, Any
+
 from ..logging_config import logger
 
 class AuditLogger:
     @staticmethod
     def log_security_event(
         event_type: str,
-        user: str = None,
+        user: Optional[str] = None,
         success: bool = True,
-        **kwargs
-    ):
+        **kwargs: Any
+    ) -> None:
         """Log security-related events with redaction of sensitive data."""
         # Redact sensitive information
         redacted_kwargs = {
