@@ -139,7 +139,7 @@ def test_summarize_success_and_failure(tmp_path, monkeypatch):
     pdf.write_bytes(b"%PDF-1.4\n")
 
     class FakeProc:
-        def __init__(self, pdf_path, dry_run=False, debug=False, force_ocr=False):
+        def __init__(self, pdf_path, config, dry_run=False, debug=False, force_ocr=False):
             self.pdf_path = pdf_path
             self._ok = True
             self.captured_warnings = []
@@ -154,8 +154,8 @@ def test_summarize_success_and_failure(tmp_path, monkeypatch):
     assert "completed successfully" in result_ok.output
 
     # Second run: simulate failure
-    def failing_ctor(pdf_path, dry_run=False, debug=False, force_ocr=False):
-        inst = FakeProc(pdf_path, dry_run, debug, force_ocr)
+    def failing_ctor(pdf_path, config, dry_run=False, debug=False, force_ocr=False):
+        inst = FakeProc(pdf_path, config, dry_run, debug, force_ocr)
         inst._ok = False
         return inst
 
@@ -312,7 +312,7 @@ def test_summarize_interactive_failure_and_warning_banner(tmp_path, monkeypatch)
     pdf.write_bytes(b"%PDF-1.4\n")
 
     class WarnProc:
-        def __init__(self, pdf_path, dry_run=False, debug=False, force_ocr=False):
+        def __init__(self, pdf_path, config, dry_run=False, debug=False, force_ocr=False):
             self.pdf_path = pdf_path
             self.captured_warnings = ["low quality"]
 
@@ -326,7 +326,7 @@ def test_summarize_interactive_failure_and_warning_banner(tmp_path, monkeypatch)
 
     # Now failing path should exit non-zero when interactive
     class FailProc:
-        def __init__(self, pdf_path, dry_run=False, debug=False, force_ocr=False):
+        def __init__(self, pdf_path, config, dry_run=False, debug=False, force_ocr=False):
             self.pdf_path = pdf_path
 
         def process(self):
@@ -343,7 +343,7 @@ def test_summarize_non_interactive_exception_does_not_exit(tmp_path, monkeypatch
     pdf.write_bytes(b"%PDF-1.4\n")
 
     class BoomProc:
-        def __init__(self, pdf_path, dry_run=False, debug=False, force_ocr=False):
+        def __init__(self, pdf_path, config, dry_run=False, debug=False, force_ocr=False):
             pass
 
         def process(self):

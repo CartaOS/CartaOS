@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from cartaos.processor import CartaOSProcessor
+from cartaos.config import AppConfig
 
 
 def make_pdf(tmp_path: Path, name: str = "doc.pdf") -> Path:
@@ -14,23 +15,31 @@ def make_pdf(tmp_path: Path, name: str = "doc.pdf") -> Path:
     return p
 
 
+@pytest.fixture
+def mock_config(tmp_path, monkeypatch):
+    """Create a mock AppConfig for testing."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test_key")
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", "")
+    return AppConfig()
+
+
 def test_process_fails_when_text_extraction_none(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mock_config: AppConfig
 ) -> None:
     pdf = make_pdf(tmp_path)
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: None)
-    proc = CartaOSProcessor(pdf)
+    proc = CartaOSProcessor(pdf, config=mock_config)
     assert proc.process() is False
 
 
 def test_process_fails_when_generate_summary_none(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mock_config: AppConfig
 ) -> None:
     pdf = make_pdf(tmp_path)
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "hello")
     monkeypatch.setattr("cartaos.processor.sanitize", lambda t: t)
-    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t: None)
-    proc = CartaOSProcessor(pdf)
+    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t, k: None)
+    proc = CartaOSProcessor(pdf, config=mock_config)
     assert proc.process() is False
 
 
@@ -40,27 +49,19 @@ def test_save_summary_slugifies_filename(
     pdf = make_pdf(tmp_path, name="My Report (v1).pdf")
     monkeypatch.setattr("cartaos.processor.extract_text", lambda p: "content")
     monkeypatch.setattr("cartaos.processor.sanitize", lambda t: t)
-    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t: "Summary Text")
+    monkeypatch.setattr("cartaos.processor.generate_summary", lambda t, k: "Summary Text")
 
-    # Force summary_dir and processed dir under tmp
-    import cartaos.processor as proc_mod
+    # Create config with custom directories
+    monkeypatch.setenv("GEMINI_API_KEY", "test_key")
+    monkeypatch.setenv("OBSIDIAN_VAULT_PATH", "")
+    config = AppConfig()
+    config.processed_pdf_dir = tmp_path / "07_Processed"
+    config.summary_dir = config.processed_pdf_dir / "Summaries"
 
-    def fake_load_config(self):
-        self.api_key = None
-        self.obsidian_vault_path = None
-        self.processed_pdf_dir = tmp_path / "07_Processed"
-        self.summary_dir = self.processed_pdf_dir / "Summaries"
+    # Avoid moving the PDF so we can assert summary file easily  
+    monkeypatch.setattr("cartaos.processor.CartaOSProcessor._move_pdf", lambda self: None)
 
-    monkeypatch.setattr(
-        proc_mod.CartaOSProcessor, "load_config", fake_load_config, raising=True
-    )
-
-    # Avoid moving the PDF so we can assert summary file easily
-    monkeypatch.setattr(
-        proc_mod.CartaOSProcessor, "_move_pdf", lambda self: None, raising=True
-    )
-
-    proc = CartaOSProcessor(pdf)
+    proc = CartaOSProcessor(pdf, config=config)
     assert proc.process() is True
 
     md = tmp_path / "07_Processed" / "Summaries" / "my-report-v1.md"
