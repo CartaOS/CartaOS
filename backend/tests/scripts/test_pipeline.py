@@ -71,8 +71,8 @@ def create_mock_response(text: str = "Mocked summary"):
     )
 
 @pytest.mark.asyncio
-async def test_process_pdf(tmp_path, monkeypatch):
-    """Test processing a valid PDF file."""
+async def test_process_pdf_basic(tmp_path, monkeypatch):
+    """Test basic processing of a valid PDF file."""
     # Create a test PDF file
     pdf = tmp_path / "test.pdf"
     pdf.write_bytes(b"%PDF-1.4\n1 0 obj\n<</Type/Catalog/Pages 2 0 R>>\nendobj\n2 0 obj\n<</Type/Pages/Kids[3 0 R]/Count 1>>\nendobj\n3 0 obj\n<</Type/Page/MediaBox[0 0 612 792]/Resources<<>>/Contents 4 0 R/Parent 2 0 R>>\nendobj\n4 0 obj\n<</Length 44>>\nstream\nBT\n/F1 24 Tf\n100 700 Td\n(Simple PDF) Tj\nET\nendstream\nendobj\n%%EOF")
