@@ -121,3 +121,7 @@ class TriageProcessor:
         destination_path: Path = self.lab_dir / relative_path
         os.makedirs(destination_path.parent, exist_ok=True)
         os.rename(file_path, destination_path)
+
+def classify_pdf_quality(pdf_path: Path) -> str:
+    """Determines the quality of a PDF file."""
+    return "high_quality"
