@@ -12,9 +12,13 @@ import os
 from pathlib import Path
 from typing import Dict, List, Literal, Optional
 
+import fitz # PyMuPDF
+
 from .utils.pdf_utils import extract_text
 
 logger = logging.getLogger(__name__)
+
+MIN_TEXT_LENGTH_FOR_HIGH_QUALITY = 100
 
 
 class TriageProcessor:
@@ -122,6 +126,34 @@ class TriageProcessor:
         os.makedirs(destination_path.parent, exist_ok=True)
         os.rename(file_path, destination_path)
 
+class ProblematicPDFError(Exception):
+    """Custom exception for problematic PDF files."""
+    pass
+
 def classify_pdf_quality(pdf_path: Path) -> str:
-    """Determines the quality of a PDF file."""
-    return "high_quality"
+    """Determines the quality of a PDF file based on text content."""
+    try:
+        text = extract_text(pdf_path)
+    except ProblematicPDFError:
+        return "problematic"
+
+    if not text or len(text) < MIN_TEXT_LENGTH_FOR_HIGH_QUALITY:
+        return "low_quality"
+    else:
+        return "high_quality"
+
+def extract_text(pdf_path: Path) -> str:
+    """Extracts text from a PDF file using PyMuPDF."""
+    try:
+        doc = fitz.open(pdf_path)
+        text = ""
+        for page in doc:
+            text += page.get_text()
+        doc.close()
+        return text
+    except fitz.FileDataError:
+        logger.warning(f"PDF file is corrupted or invalid: {pdf_path}")
+        raise ProblematicPDFError(f"Corrupted or invalid PDF: {pdf_path}")
+    except Exception as e:
+        logger.error(f"Error extracting text from {pdf_path}: {e}")
+        return ""
