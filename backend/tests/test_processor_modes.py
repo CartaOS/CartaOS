@@ -65,11 +65,23 @@ def test_dry_run_logs_summary_and_does_not_write_files(
         assert any("[DRY RUN] Process would be successful." in msg for msg in log_messages)
         assert any("[DRY RUN] Process would be successful." in msg for msg in log_messages)
         
+    # Import the module under test
+    from cartaos.processing import processor as proc_mod
+    
+    # Save the original methods
+    original_load_config = proc_mod.CartaOSProcessor.load_config
+    original_move_pdf = proc_mod.CartaOSProcessor._move_pdf
+    
+    # Create a mock for load_config
+    def mock_load_config(self):
+        return mock_config
+        
+    # Apply the mocks
     monkeypatch.setattr(
-        proc_mod.CartaOSProcessor, "load_config", fake_load_config, raising=True
+        proc_mod.CartaOSProcessor, "load_config", mock_load_config, raising=True
     )
-
-    # avoid moving
+    
+    # Avoid moving files in tests
     monkeypatch.setattr(
         proc_mod.CartaOSProcessor, "_move_pdf", lambda self: None, raising=True
     )

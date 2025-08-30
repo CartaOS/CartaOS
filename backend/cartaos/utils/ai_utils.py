@@ -8,6 +8,7 @@ This module provides functions for generating analytical summaries using the Gem
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -19,22 +20,52 @@ _CLIENT: Optional[Client] = None
 _EXTERNAL_CALL_MANAGER: Optional[ExternalCallManager] = None
 
 
-def get_client(api_key: str) -> Client:
+def get_secure_api_key() -> Optional[str]:
+    """
+    Retrieve the API key from a secure source.
+    
+    Returns:
+        Optional[str]: The API key if found, None otherwise.
+    """
+    # First try to get from environment variable
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if api_key:
+        return api_key
+        
+    # Try to get from a secure configuration file
+    config_path = Path.home() / ".config" / "cartaos" / "api_keys.ini"
+    if config_path.exists():
+        import configparser
+        config = configparser.ConfigParser()
+        config.read(config_path)
+        return config.get("DEFAULT", "GEMINI_API_KEY", fallback=None)
+        
+    return None
+
+
+def get_client(api_key: Optional[str] = None) -> Client:
     """
     Creates and returns a singleton instance of the Gemini AI client.
 
     The client is created only once, and subsequent calls return the same instance.
 
     Args:
-        api_key (str): The API key for the Gemini AI service.
+        api_key (Optional[str]): The API key for the Gemini AI service. 
+            If not provided, will try to get it using get_secure_api_key().
 
     Returns:
         Client: The Gemini AI client instance.
     """
     global _CLIENT
+    
     if _CLIENT is not None:
         return _CLIENT
-
+        
+    if api_key is None:
+        api_key = get_secure_api_key()
+        if not api_key:
+            raise ValueError("No API key provided and could not find one in environment or config")
+    
     _CLIENT = Client(api_key=api_key.strip())
     logging.info("Gemini AI client initialized successfully.")
     return _CLIENT
@@ -87,19 +118,25 @@ async def generate_content_with_retries(
         return None
 
 
-def generate_summary(text: str, api_key: str) -> Optional[str]:
+def generate_summary(text: str, api_key: Optional[str] = None) -> Optional[str]:
     """
     Generates the analytical summary using the Gemini AI API.
 
     Args:
         text (str): The text to be summarized.
-        api_key (str): The API key for the Gemini AI service.
+        api_key (Optional[str]): The API key for the Gemini AI service. 
+            If not provided, will try to get it using get_secure_api_key().
 
     Returns:
         Optional[str]: Generated summary or None if generation fails.
     """
-    if not api_key or not api_key.strip():
-        logging.error("API key is required for summary generation")
+    if api_key is None:
+        api_key = get_secure_api_key()
+        if not api_key:
+            logging.error("No API key provided and could not find one in environment or config")
+            return None
+    elif not api_key.strip():
+        logging.error("API key cannot be empty")
         return None
 
     try:

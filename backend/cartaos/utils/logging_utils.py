@@ -5,23 +5,22 @@ This module provides a standardized way to configure and use logging across the 
 It includes support for different log levels, file and console handlers, and structured logging.
 """
 
-"""
-Centralized logging configuration for CartaOS.
-
-This module provides a standardized way to configure and use logging across the application.
-It includes support for different log levels, file and console handlers, and structured logging.
-"""
-
 import json
 import logging
 import logging.handlers
 import os
 import sys
-from datetime import datetime, timezone, UTC
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from pythonjsonlogger.json import JsonFormatter  # type: ignore
+
+# Define UTC timezone for Python < 3.11 compatibility
+if sys.version_info >= (3, 11):
+    from datetime import UTC
+else:
+    from datetime import timezone as UTC
 
 
 class CustomJsonFormatter(JsonFormatter):

@@ -43,6 +43,7 @@ from .. import config
 from ..ocr import OcrProcessor
 from ..processor import CartaOSProcessor
 from ..triage import TriageProcessor
+from .. import ai_utils
 from .models import (ErrorResponse, HealthResponse, ListFilesResponse,
                      OCRRequest, OCRResponse, ProcessFileRequest,
                      ProcessFileResponse, SummarizeRequest, SummarizeResponse,
@@ -487,30 +488,6 @@ async def summarize_file(request: SummarizeRequest):
                     "error": str(e)
                 }
             )
-
-        # Get configuration for API key
-        cartaos_config = get_config()
-        if not cartaos_config.api_key:
-            raise HTTPException(
-                status_code=500, detail="API key not configured. Cannot generate summary."
-            )
-
-        from ..utils import ai_utils
-
-
-        summary = ai_utils.generate_summary(text, cartaos_config.api_key)
-
-        if not summary:
-            raise HTTPException(status_code=500, detail="Failed to generate summary")
-
-        return SummarizeResponse(
-            summary=summary,
-            word_count=len(summary.split()) if summary else 0,
-            source_pages=None,
-        )
-    except Exception as e:
-        logger.error(f"Error summarizing file {request.file_path}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.exception_handler(HTTPException)

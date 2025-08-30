@@ -42,7 +42,7 @@ def test_get_client_singleton(mock_get_key, mock_gemini_client):
 def test_get_client_no_api_key(mock_get_key):
     """Test that get_client raises ValueError if API key is not found."""
     mock_get_key.return_value = None
-    with pytest.raises(ValueError, match="API key is not configured."):
+    with pytest.raises(ValueError, match="No API key provided and could not find one in environment or config"):
         ai_utils.get_client()
 
 
