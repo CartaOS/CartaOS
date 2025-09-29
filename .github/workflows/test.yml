@@ -4,12 +4,24 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'backend/**'
+      - '.github/workflows/test.yml'
+      - 'docker-compose.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'backend/**'
+      - '.github/workflows/test.yml'
+      - 'docker-compose.yml'
 
 jobs:
-  test:
+  flutter_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -18,3 +30,16 @@ jobs:
           channel: 'stable'
       - run: flutter pub get
       - run: flutter test
+
+  backend_test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.21'
+      - run: go mod tidy
+      - run: go test ./...
