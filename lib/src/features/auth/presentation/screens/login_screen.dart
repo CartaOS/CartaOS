@@ -76,10 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ElevatedButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        // ignore: avoid_print
-                        print('Email: ${_emailController.text}');
-                        // ignore: avoid_print
-                        print('Senha: ${_passwordController.text}');
+                        // TODO: Implementar a chamada ao serviço de autenticação.
                       }
                     },
                     child: const Text('Login'),
