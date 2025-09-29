@@ -5,6 +5,7 @@
 Esta especificação descreve a API RESTful interna que servirá como a ponte de comunicação entre os clientes multiplataforma (Flutter) e o servidor backend do CartaOS. A API é projetada para ser segura, previsível e organizada por recursos.
 
 *   **URL Base:** `https://api.cartaos.com/v1`
+*   **Porta do Servidor:** `8080` (para desenvolvimento local)
 *   **Formato de Dados:** Todas as requisições e respostas utilizarão o formato `application/json`.
 *   **Autenticação:** Todas as rotas, exceto `/auth/*`, exigem um `Bearer Token` de autenticação no cabeçalho `Authorization`. O token é um JWT (JSON Web Token) obtido através do serviço de autenticação.
 

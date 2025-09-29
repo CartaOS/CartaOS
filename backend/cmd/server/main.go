@@ -15,9 +15,14 @@ import (
 )
 
 func main() {
+	// Define the allowed base directory for PDF processing.
+	// In a production environment, this should be configured via environment variables.
+	// For testing, we use the testdata directory.
+	allowedBaseDir := "./internal/pipeline/testdata" // Relative to the backend directory
+
 	// Create the pipeline service and handler
 	pipelineService := services.NewPipelineService()
-	pipelineHandler := customhttp.NewPipelineHandler(pipelineService)
+	pipelineHandler := customhttp.NewPipelineHandler(pipelineService, allowedBaseDir)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +38,7 @@ func main() {
 	mux.Handle("/process", pipelineHandler)
 
 	server := &http.Server{
-		Addr:         ":8081",
+		Addr:         ":8080", // Changed back to 8080
 		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -42,7 +47,7 @@ func main() {
 
 	// Run server in a goroutine so it doesn't block.
 	go func() {
-		log.Println("Server listening on port 8080")
+		log.Println("Server listening on port 8080") // Corrected log message
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("Error starting server: %v", err)
 		}

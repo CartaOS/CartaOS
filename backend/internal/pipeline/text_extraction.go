@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"bytes" // Import bytes package
 	"os"
 
 	"github.com/dslipak/pdf"
@@ -25,7 +26,7 @@ func ExtractTextFromPDF(path string) (string, error) {
 	}
 
 	numPages := r.NumPage()
-	var text string
+	var buf bytes.Buffer // Use bytes.Buffer for efficient string building
 	for i := 1; i <= numPages; i++ {
 		p := r.Page(i)
 		if p.V.IsNull() {
@@ -35,8 +36,8 @@ func ExtractTextFromPDF(path string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		text += t
+		buf.WriteString(t) // Write to buffer
 	}
 
-	return text, nil
+	return buf.String(), nil
 }
