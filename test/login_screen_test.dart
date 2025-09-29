@@ -14,10 +14,11 @@ void main() {
     expect(find.text('Acesse sua conta'), findsOneWidget);
 
     // Verify that our screen has two text fields.
-    expect(find.byType(TextFormField), findsNWidgets(2));
+    expect(find.byKey(const Key('loginEmailField')), findsOneWidget);
+    expect(find.byKey(const Key('loginPasswordField')), findsOneWidget);
 
     // Verify that our screen has a button.
-    expect(find.byType(ElevatedButton), findsOneWidget);
+    expect(find.byKey(const Key('loginButton')), findsOneWidget);
   });
 
   testWidgets('LoginScreen shows error messages for empty fields',
@@ -27,8 +28,7 @@ void main() {
       home: LoginScreen(),
     ));
 
-    // Tap the button without entering any text.
-    await tester.tap(find.byType(ElevatedButton));
+    await tester.tap(find.byKey(const Key('loginButton')));
     await tester.pump();
 
     // Verify that our error messages are shown.
@@ -44,7 +44,8 @@ void main() {
     ));
 
     // Enter an invalid email.
-    await tester.enterText(find.byType(TextFormField).first, 'invalid-email');
+    await tester.enterText(
+        find.byKey(const Key('loginEmailField')), 'invalid-email');
 
     // Tap the button.
     await tester.tap(find.byType(ElevatedButton));
