@@ -22,10 +22,19 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/server
 # Start a new stage from scratch for a smaller image
 FROM alpine:latest
 
-WORKDIR /root/
+# Create a non-root user and group
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+WORKDIR /app
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/main .
+
+# Set ownership to the new user
+RUN chown -R appuser:appgroup /app
+
+# Switch to the non-root user
+USER appuser
 
 # Expose port 8080 to the outside world
 EXPOSE 8080
