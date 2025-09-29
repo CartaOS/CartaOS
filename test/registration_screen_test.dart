@@ -69,6 +69,7 @@ void main() {
     await tester.pump();
 
     // Verify that our error message is shown.
-    expect(find.text('A senha deve ter pelo menos 6 caracteres'), findsOneWidget);
+    expect(
+        find.text('A senha deve ter pelo menos 6 caracteres'), findsOneWidget);
   });
 }
