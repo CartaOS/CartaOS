@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:carta_os/src/features/auth/data/auth_service.dart';
 import 'registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,6 +14,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -73,14 +76,34 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 32.0),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        // TODO: Implementar a chamada ao serviço de autenticação.
-                      }
-                    },
-                    child: const Text('Login'),
-                  ),
+                  _isLoading
+                      ? const CircularProgressIndicator()
+                      : ElevatedButton(
+                          onPressed: () async {
+                            if (_formKey.currentState!.validate()) {
+                              setState(() {
+                                _isLoading = true;
+                              });
+                              final success = await _authService.login(
+                                email: _emailController.text,
+                                password: _passwordController.text,
+                              );
+                              setState(() {
+                                _isLoading = false;
+                              });
+                              if (success) {
+                                // TODO: Navigate to home screen
+                                // ignore: avoid_print
+                                print('Login successful!');
+                              } else {
+                                // TODO: Show error message
+                                // ignore: avoid_print
+                                print('Login failed!');
+                              }
+                            }
+                          },
+                          child: const Text('Login'),
+                        ),
                   const SizedBox(height: 16.0),
                   TextButton(
                     onPressed: () {
