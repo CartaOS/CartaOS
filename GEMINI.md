@@ -1,3 +1,6 @@
+## Gemini Added Memories
+- Completed comprehensive evaluation of PR #17 and local work. Fixed poetry.lock incompatibility, removed types-httpx, added build artifacts to .gitignore, verified existing logging and Ruff config, implemented HTTPS support in RcloneMount, improved error handling with custom exceptions, updated tests, and aligned CI with local development (Python 3.13, explicit venv activation, added pytest-asyncio to root pyproject.toml). Pushed all changes to dev. Investigated and explained PR #17's merge into main. Cleaned up local branches (only dev and main remain).
+
 # Gemini Code Assistant Context
 
 ## Directory Overview
