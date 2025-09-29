@@ -8,6 +8,8 @@ on:
       - 'lib/**'
       - 'test/**'
       - 'backend/**'
+      - '.github/workflows/test.yml'
+      - 'docker-compose.yml'
   pull_request:
     branches:
       - main
@@ -15,6 +17,8 @@ on:
       - 'lib/**'
       - 'test/**'
       - 'backend/**'
+      - '.github/workflows/test.yml'
+      - 'docker-compose.yml'
 
 jobs:
   flutter_test:
