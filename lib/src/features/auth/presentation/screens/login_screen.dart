@@ -54,7 +54,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Por favor, insira seu email';
                       }
-                      if (!value.contains('@')) {
+                      final emailRegex =
+                          RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+                      if (!emailRegex.hasMatch(value)) {
                         return 'Por favor, insira um email válido';
                       }
                       return null;
