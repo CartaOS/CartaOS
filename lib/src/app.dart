@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'features/auth/presentation/screens/registration_screen.dart';
+import 'features/auth/presentation/screens/login_screen.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -9,8 +9,10 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CartaOS',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const RegistrationScreen(),
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const LoginScreen(),
     );
   }
 }
