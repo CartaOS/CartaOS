@@ -55,8 +55,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Por favor, insira seu email';
                       }
-                      final emailRegex =
-                          RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+                      final emailRegex = RegExp(
+                          r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
                       if (!emailRegex.hasMatch(value)) {
                         return 'Por favor, insira um email válido';
                       }
@@ -68,6 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     key: const Key('loginPasswordField'),
                     controller: _passwordController,
                     obscureText: true,
+                    enabled: !_isLoading,
                     decoration: const InputDecoration(
                       labelText: 'Senha',
                       border: OutlineInputBorder(),
@@ -83,12 +84,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 32.0),
-                  _isLoading
-                      ? const CircularProgressIndicator()
-                      : ElevatedButton(
-                          key: const Key('loginButton'),
-                          onPressed: () async {
-                            if (_formKey.currentState!.validate()) {
+                  ElevatedButton(
+                    key: const Key('loginButton'),
+                    onPressed: _isLoading
+                        ? null
+                        : () async {
+                            if (_formKey.currentState?.validate() ?? false) {
                               setState(() {
                                 _isLoading = true;
                               });
@@ -96,13 +97,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 email: _emailController.text,
                                 password: _passwordController.text,
                               );
+                              if (!mounted) return;
                               setState(() {
                                 _isLoading = false;
                               });
                               if (success) {
                                 // TODO: Navigate to home screen
-                                // ignore: avoid_print
-                                print('Login successful!');
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -114,7 +114,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               }
                             }
                           },
-                          child: const Text('Login'),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Login'),
                         ),
                   const SizedBox(height: 16.0),
                   TextButton(

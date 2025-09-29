@@ -48,7 +48,7 @@ void main() {
         find.byKey(const Key('loginEmailField')), 'invalid-email');
 
     // Tap the button.
-    await tester.tap(find.byType(ElevatedButton));
+    await tester.tap(find.byKey(const Key('loginButton')));
     await tester.pump();
 
     // Verify that our error message is shown.
