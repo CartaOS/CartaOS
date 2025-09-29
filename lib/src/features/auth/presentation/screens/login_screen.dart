@@ -96,9 +96,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 // ignore: avoid_print
                                 print('Login successful!');
                               } else {
-                                // TODO: Show error message
-                                // ignore: avoid_print
-                                print('Login failed!');
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Login failed! Invalid credentials.'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
                               }
                             }
                           },
