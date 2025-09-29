@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  test:
+  flutter_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -18,3 +18,15 @@ jobs:
           channel: 'stable'
       - run: flutter pub get
       - run: flutter test
+
+  backend_test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.21'
+      - run: go test ./...
