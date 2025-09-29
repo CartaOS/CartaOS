@@ -9,9 +9,16 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	customhttp "github.com/CartaOS/CartaOS/backend/internal/server/http"
+	"github.com/CartaOS/CartaOS/backend/internal/services"
 )
 
 func main() {
+	// Create the pipeline service and handler
+	pipelineService := services.NewPipelineService()
+	pipelineHandler := customhttp.NewPipelineHandler(pipelineService)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -23,9 +30,10 @@ func main() {
 			log.Printf("Error writing health check response: %v", err)
 		}
 	})
+	mux.Handle("/process", pipelineHandler)
 
 	server := &http.Server{
-		Addr:         ":8080",
+		Addr:         ":8081",
 		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -57,4 +65,3 @@ func main() {
 
 	log.Println("Server gracefully stopped")
 }
-
