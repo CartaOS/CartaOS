@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:carta_os/src/features/document/models/document.dart';
+import 'package:carta_os/src/features/document/models/document_enums.dart';
+import 'package:intl/intl.dart';
 
 class DocumentDetailScreen extends StatelessWidget {
   final Document document;
@@ -8,6 +10,9 @@ class DocumentDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Usar formatação de data com internacionalização
+    final dateFormat = DateFormat('dd/MM/yyyy');
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -56,14 +61,14 @@ class DocumentDetailScreen extends StatelessWidget {
                           Row(
                             children: [
                               Icon(
-                                _getStatusIcon(document.status),
-                                color: _getStatusColor(document.status),
+                                document.status.icon,
+                                color: document.status.color,
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                _getStatusText(document.status),
+                                document.status.displayText,
                                 style: TextStyle(
-                                  color: _getStatusColor(document.status),
+                                  color: document.status.color,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -71,7 +76,7 @@ class DocumentDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Tipo: ${document.fileType ?? 'Desconhecido'}',
+                            'Tipo: ${document.fileType?.displayText ?? 'Desconhecido'}',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 4),
@@ -88,13 +93,13 @@ class DocumentDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Criado: ${_formatDate(document.createdAt)}',
+                            'Criado: ${dateFormat.format(document.createdAt)}',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             document.processedAt != null 
-                                ? 'Processado: ${_formatDate(document.processedAt!)}' 
+                                ? 'Processado: ${dateFormat.format(document.processedAt!)}' 
                                 : 'Aguardando processamento',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
@@ -175,45 +180,5 @@ class DocumentDetailScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'completed':
-        return Icons.check_circle;
-      case 'processing':
-        return Icons.hourglass_top;
-      case 'pending':
-      default:
-        return Icons.access_time;
-    }
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'completed':
-        return Colors.green;
-      case 'processing':
-        return Colors.orange;
-      case 'pending':
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'completed':
-        return 'Processado';
-      case 'processing':
-        return 'Processando';
-      case 'pending':
-      default:
-        return 'Pendente';
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
   }
 }

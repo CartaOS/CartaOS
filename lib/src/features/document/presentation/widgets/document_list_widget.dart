@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:carta_os/src/features/document/models/document.dart';
+import 'package:carta_os/src/features/document/models/document_enums.dart';
 import 'package:carta_os/src/features/document/presentation/screens/document_detail_screen.dart';
+import 'package:intl/intl.dart';
 
 class DocumentListWidget extends StatelessWidget {
   final List<Document> documents;
@@ -15,6 +17,9 @@ class DocumentListWidget extends StatelessWidget {
       );
     }
 
+    // Usar formatação de data com internacionalização
+    final dateFormat = DateFormat('dd/MM/yyyy');
+
     return ListView.builder(
       itemCount: documents.length,
       itemBuilder: (context, index) {
@@ -24,10 +29,10 @@ class DocumentListWidget extends StatelessWidget {
           child: ListTile(
             contentPadding: const EdgeInsets.all(16.0),
             leading: CircleAvatar(
-              backgroundColor: _getStatusColor(document.status).withOpacity(0.2),
+              backgroundColor: document.status.color.withValues(alpha: 0.2),
               child: Icon(
-                _getStatusIcon(document.status),
-                color: _getStatusColor(document.status),
+                document.status.icon,
+                color: document.status.color,
               ),
             ),
             title: Text(
@@ -71,7 +76,7 @@ class DocumentListWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 Text(
-                  _formatDate(document.processedAt ?? document.createdAt),
+                  dateFormat.format(document.processedAt ?? document.createdAt),
                   style: const TextStyle(fontSize: 12),
                 ),
                 const SizedBox(height: 4),
@@ -79,14 +84,14 @@ class DocumentListWidget extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8.0, vertical: 2.0),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(document.status).withOpacity(0.1),
+                    color: document.status.color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10.0),
                   ),
                   child: Text(
-                    _getStatusText(document.status),
+                    document.status.displayText, // Corrigido: usando o mesmo texto que na tela de detalhe
                     style: TextStyle(
                       fontSize: 10,
-                      color: _getStatusColor(document.status),
+                      color: document.status.color,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -104,45 +109,5 @@ class DocumentListWidget extends StatelessWidget {
         );
       },
     );
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'completed':
-        return Icons.check_circle;
-      case 'processing':
-        return Icons.hourglass_top;
-      case 'pending':
-      default:
-        return Icons.access_time;
-    }
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'completed':
-        return Colors.green;
-      case 'processing':
-        return Colors.orange;
-      case 'pending':
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'completed':
-        return 'Pronto';
-      case 'processing':
-        return 'Processando';
-      case 'pending':
-      default:
-        return 'Pendente';
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
   }
 }

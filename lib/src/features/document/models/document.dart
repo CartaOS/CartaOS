@@ -1,3 +1,5 @@
+import 'package:carta_os/src/features/document/models/document_enums.dart';
+
 class Document {
   final String id;
   final String title;
@@ -6,10 +8,10 @@ class Document {
   final List<String>? tags;
   final DateTime createdAt;
   final DateTime? processedAt;
-  final String status; // pending, processing, completed
+  final DocumentStatus status;
   final String filePath;
   final int? pageCount;
-  final String? fileType; // native, scanned, mixed
+  final DocumentFileType? fileType;
 
   Document({
     required this.id,
@@ -33,12 +35,12 @@ class Document {
       content: 'Este é um exemplo de conteúdo de documento. Ele pode conter texto extraído de PDFs, com parágrafos, listas e outras estruturas de texto.',
       summary: 'Este é um resumo gerado automaticamente do documento de exemplo.',
       tags: ['contrato', 'importante', 'financeiro'],
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      processedAt: DateTime.now().subtract(const Duration(days: 1)),
-      status: 'completed',
+      createdAt: DateTime(2025, 9, 28),
+      processedAt: DateTime(2025, 9, 29),
+      status: DocumentStatus.completed,
       filePath: '/path/to/example.pdf',
       pageCount: 12,
-      fileType: 'native',
+      fileType: DocumentFileType.native,
     );
   }
 }
