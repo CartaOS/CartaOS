@@ -5,8 +5,18 @@
 Esta especificação descreve a API RESTful interna que servirá como a ponte de comunicação entre os clientes multiplataforma (Flutter) e o servidor backend do CartaOS. A API é projetada para ser segura, previsível e organizada por recursos.
 
 *   **URL Base:** `https://api.cartaos.com/v1`
+*   **Porta do Servidor:** `8081` (padrão, configurável via variável de ambiente `SERVER_PORT`)
 *   **Formato de Dados:** Todas as requisições e respostas utilizarão o formato `application/json`.
 *   **Autenticação:** Todas as rotas, exceto `/auth/*`, exigem um `Bearer Token` de autenticação no cabeçalho `Authorization`. O token é um JWT (JSON Web Token) obtido através do serviço de autenticação.
+*   **Endpoints:**
+    *   `/process` - Processa documentos e extrai texto
+        *   Método: `POST`
+        *   Conteúdo: `{"path": "relative/path/to/file.pdf"}`
+        *   Resposta bem-sucedida: `{"text": "conteúdo extraído do PDF"}`
+        *   Códigos de resposta: `200` sucesso, `400` requisição inválida, `403` acesso negado, `500` erro interno
+*   **Configurações de Ambiente:**
+    *   `SERVER_PORT` - Porta do servidor (padrão: 8081)
+    *   `PDF_PROCESSING_BASE_DIR` - Diretório base para processamento de PDFs (padrão: ./internal/pipeline/testdata)
 
 ## 2. Autenticação
 
