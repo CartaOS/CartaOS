@@ -1,43 +1,71 @@
 package pipeline
 
 import (
-	"bytes" // Import bytes package
+	"bytes"
 	"os"
+	"strings"
 
-	"github.com/dslipak/pdf"
+	"github.com/ledongthuc/pdf"
 )
 
 // ExtractTextFromPDF extracts text from a native PDF file.
 func ExtractTextFromPDF(path string) (string, error) {
-	f, err := os.Open(path)
+	// Open the PDF file
+	file, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer file.Close()
 
-	fi, err := f.Stat()
-	if err != nil {
-		return "", err
-	}
-
-	r, err := pdf.NewReader(f, fi.Size())
+	// Get file info to determine file size
+	fileInfo, err := file.Stat()
 	if err != nil {
 		return "", err
 	}
 
-	numPages := r.NumPage()
-	var buf bytes.Buffer // Use bytes.Buffer for efficient string building
-	for i := 1; i <= numPages; i++ {
-		p := r.Page(i)
-		if p.V.IsNull() {
-			continue
-		}
-		t, err := p.GetPlainText(nil)
+	// Create a new PDF reader
+	pdfReader, err := pdf.NewReader(file, fileInfo.Size())
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+
+	// Extract text from each page
+	totalPages := pdfReader.NumPage()
+	for i := 1; i <= totalPages; i++ {
+		page := pdfReader.Page(i)
+
+		// Extract plain text from the page
+		// Note: GetPlainText method requires a font map
+		fonts, err := getFontsForPage(pdfReader, i)
 		if err != nil {
-			return "", err
+			// If we can't get fonts, try without fonts
+			pageText, err := page.GetPlainText(nil)
+			if err != nil {
+				continue // Skip pages that can't be read
+			}
+			buf.WriteString(pageText)
+		} else {
+			pageText, err := page.GetPlainText(fonts)
+			if err != nil {
+				continue // Skip pages that can't be read
+			}
+			buf.WriteString(pageText)
 		}
-		buf.WriteString(t) // Write to buffer
 	}
 
-	return buf.String(), nil
+	return strings.TrimSpace(buf.String()), nil
+}
+
+// getFontsForPage gets the fonts for a specific page
+func getFontsForPage(reader *pdf.Reader, pageNum int) (map[string]*pdf.Font, error) {
+	page := reader.Page(pageNum)
+	fonts := page.Fonts()
+	fontMap := make(map[string]*pdf.Font)
+	for _, fontName := range fonts {
+		font := page.Font(fontName)
+		fontMap[fontName] = &font
+	}
+	return fontMap, nil
 }
