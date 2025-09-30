@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -61,17 +62,32 @@ func (h *PipelineHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure the resolved path is within the allowed base directory
 	// This is a critical step to prevent path traversal
-	resolvedPath, err := filepath.Abs(fullPath)
+	// First resolve the path to handle any symbolic links
+	evaluatedPath, err := filepath.EvalSymlinks(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			http.Error(w, "File does not exist", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Error resolving file path", http.StatusInternalServerError)
+		return
+	}
+
+	// Now get the absolute path of the evaluated path
+	resolvedPath, err := filepath.Abs(evaluatedPath)
 	if err != nil {
 		http.Error(w, "Error resolving file path", http.StatusInternalServerError)
 		return
 	}
+
+	// Get the absolute path of the allowed base directory
 	allowedBaseDirAbs, err := filepath.Abs(h.allowedBaseDir)
 	if err != nil {
 		http.Error(w, "Server configuration error", http.StatusInternalServerError)
 		return
 	}
 
+	// Check if the resolved path is within the allowed base directory
 	if !strings.HasPrefix(resolvedPath, allowedBaseDirAbs) {
 		http.Error(w, "Access denied: file outside allowed directory", http.StatusForbidden)
 		return
