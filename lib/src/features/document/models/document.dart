@@ -6,6 +6,7 @@ class Document {
   final String content;
   final String? summary;
   final List<String>? tags;
+  final List<String>? keyConcepts;
   final DateTime createdAt;
   final DateTime? processedAt;
   final DocumentStatus status;
@@ -19,6 +20,7 @@ class Document {
     required this.content,
     this.summary,
     this.tags,
+    this.keyConcepts,
     required this.createdAt,
     this.processedAt,
     required this.status,
@@ -32,9 +34,12 @@ class Document {
     return Document(
       id: '1',
       title: 'Documento de Exemplo',
-      content: 'Este é um exemplo de conteúdo de documento. Ele pode conter texto extraído de PDFs, com parágrafos, listas e outras estruturas de texto.',
-      summary: 'Este é um resumo gerado automaticamente do documento de exemplo.',
-      tags: ['contrato', 'importante', 'financeiro'],
+      content:
+          'Este é um exemplo de conteúdo de documento. Ele pode conter texto extraído de PDFs, com parágrafos, listas e outras estruturas de texto. Este documento é muito importante e tem implicações do âmbito financeiro e legal. O contrato estabelece as obrigações e cláusulas para a validade do acordo.',
+      summary:
+          'Este é um resumo gerado automaticamente do documento de exemplo.',
+      tags: ['importante', 'financeiro', 'legal'],
+      keyConcepts: ['contrato', 'obrigações', 'cláusulas', 'validade'],
       createdAt: DateTime(2025, 9, 28),
       processedAt: DateTime(2025, 9, 29),
       status: DocumentStatus.completed,
