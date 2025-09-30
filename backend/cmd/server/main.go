@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -31,6 +32,13 @@ func main() {
 		serverPort = ":8081" // Default to 8081 for the feature branch
 		log.Println("Using default server port: 8081")
 	} else {
+		// Validate server port format
+		if !strings.HasPrefix(serverPort, ":") {
+			// If the port doesn't start with :, add it
+			if serverPort[0] >= '0' && serverPort[0] <= '9' {
+				serverPort = ":" + serverPort
+			}
+		}
 		log.Printf("Using environment-configured server port: %s", serverPort)
 	}
 
