@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 _isLoading = false;
                               });
                               if (success) {
-                                // TODO: Navigate to home screen
+                                Navigator.of(context).pushReplacementNamed('/home');
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(

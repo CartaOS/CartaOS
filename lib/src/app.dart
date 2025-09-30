@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
-import 'features/auth/presentation/screens/login_screen.dart';
+import 'package:carta_os/src/features/auth/presentation/screens/login_screen.dart';
+import 'package:carta_os/src/features/document/presentation/screens/home_screen.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -12,7 +12,12 @@ class App extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const LoginScreen(),
+      // home: const LoginScreen(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const LoginScreen(),
+        '/home': (context) => const HomeScreen(),
+      },
     );
   }
 }
