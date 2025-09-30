@@ -2,17 +2,17 @@ package http
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
-	"fmt"
 
 	"github.com/CartaOS/CartaOS/backend/internal/services"
 )
 
 // PipelineHandler is a handler for the document processing pipeline.
 type PipelineHandler struct {
-	service *services.PipelineService
+	service        *services.PipelineService
 	allowedBaseDir string
 }
 
@@ -78,11 +78,10 @@ func (h *PipelineHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// --- End Input Validation and Path Restriction ---
 
-
 	text, err := h.service.ProcessDocument(resolvedPath)
 	if err != nil {
 		// Log the actual error for debugging, but return a generic error to the client
-		fmt.Printf("Error processing document %s: %v\n", resolvedPath, err)
+		log.Printf("Error processing document %s: %v", resolvedPath, err)
 		http.Error(w, "Error processing document", http.StatusInternalServerError)
 		return
 	}
@@ -90,7 +89,7 @@ func (h *PipelineHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp := processResponse{Text: text}
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		fmt.Printf("Error encoding response: %v\n", err)
+		log.Printf("Error encoding response: %v", err)
 		http.Error(w, "Error generating response", http.StatusInternalServerError)
 		return
 	}
