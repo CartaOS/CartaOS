@@ -16,9 +16,23 @@ import (
 
 func main() {
 	// Define the allowed base directory for PDF processing.
-	// In a production environment, this should be configured via environment variables.
-	// For testing, we use the testdata directory.
-	allowedBaseDir := "./internal/pipeline/testdata" // Relative to the backend directory
+	// Check for environment variable first, then default to testdata directory.
+	allowedBaseDir := os.Getenv("PDF_PROCESSING_BASE_DIR")
+	if allowedBaseDir == "" {
+		allowedBaseDir = "./internal/pipeline/testdata" // Relative to the backend directory
+		log.Println("Using default PDF processing base directory: ./internal/pipeline/testdata")
+	} else {
+		log.Printf("Using environment-configured PDF processing base directory: %s", allowedBaseDir)
+	}
+
+	// Server port configuration
+	serverPort := os.Getenv("SERVER_PORT")
+	if serverPort == "" {
+		serverPort = ":8081" // Default to 8081 for the feature branch
+		log.Println("Using default server port: 8081")
+	} else {
+		log.Printf("Using environment-configured server port: %s", serverPort)
+	}
 
 	// Create the pipeline service and handler
 	pipelineService := services.NewPipelineService()
@@ -38,7 +52,7 @@ func main() {
 	mux.Handle("/process", pipelineHandler)
 
 	server := &http.Server{
-		Addr:         ":8080", // Changed back to 8080
+		Addr:         serverPort,
 		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -47,7 +61,7 @@ func main() {
 
 	// Run server in a goroutine so it doesn't block.
 	go func() {
-		log.Println("Server listening on port 8080") // Corrected log message
+		log.Printf("Server listening on %s", serverPort)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("Error starting server: %v", err)
 		}
