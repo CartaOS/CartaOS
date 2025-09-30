@@ -37,7 +37,7 @@ class DocumentListWidget extends StatelessWidget {
             ),
             title: Text(
               document.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -49,7 +49,7 @@ class DocumentListWidget extends StatelessWidget {
                   '${document.summary ?? ''}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -60,7 +60,7 @@ class DocumentListWidget extends StatelessWidget {
                       .map((tag) => Chip(
                             label: Text(
                               tag,
-                              style: const TextStyle(fontSize: 10),
+                              style: Theme.of(context).textTheme.labelSmall,
                             ),
                             backgroundColor: Colors.blue.shade50,
                             padding: const EdgeInsets.symmetric(
@@ -77,7 +77,7 @@ class DocumentListWidget extends StatelessWidget {
               children: [
                 Text(
                   dateFormat.format(document.processedAt ?? document.createdAt),
-                  style: const TextStyle(fontSize: 12),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 4),
                 Container(
