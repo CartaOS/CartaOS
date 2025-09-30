@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-
 import 'package:carta_os/src/features/auth/data/auth_service.dart';
-import 'registration_screen.dart';
+import 'package:carta_os/src/features/auth/presentation/screens/registration_screen.dart';
+import 'package:carta_os/src/localization/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,9 +26,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CartaOS - Login'),
+        title: Text(l10n.loginScreenTitle),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -40,25 +41,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Acesse sua conta',
+                    l10n.loginScreenHeadline,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 32.0),
                   TextFormField(
                     key: const Key('loginEmailField'),
                     controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.emailLabel,
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Por favor, insira seu email';
+                        return l10n.emailRequiredError;
                       }
-                      final emailRegex = RegExp(
-                          r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+                      final emailRegex =
+                          RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
                       if (!emailRegex.hasMatch(value)) {
-                        return 'Por favor, insira um email válido';
+                        return l10n.invalidEmailError;
                       }
                       return null;
                     },
@@ -69,16 +70,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _passwordController,
                     obscureText: true,
                     enabled: !_isLoading,
-                    decoration: const InputDecoration(
-                      labelText: 'Senha',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.passwordLabel,
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Por favor, insira sua senha';
+                        return l10n.passwordRequiredError;
                       }
                       if (value.length < 6) {
-                        return 'A senha deve ter pelo menos 6 caracteres';
+                        return l10n.passwordLengthError;
                       }
                       return null;
                     },
@@ -102,12 +103,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 _isLoading = false;
                               });
                               if (success) {
-                                Navigator.of(context).pushReplacementNamed('/home');
+                                Navigator.of(context)
+                                    .pushReplacementNamed('/home');
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Login failed! Invalid credentials.'),
+                                  SnackBar(
+                                    content: Text(l10n.loginFailedError),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
@@ -120,8 +121,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Login'),
-                        ),
+                        : Text(l10n.loginButtonLabel),
+                  ),
                   const SizedBox(height: 16.0),
                   TextButton(
                     onPressed: () {
@@ -131,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       );
                     },
-                    child: const Text('Não tem uma conta? Registre-se'),
+                    child: Text(l10n.noAccountQuestion),
                   ),
                 ],
               ),

@@ -1,6 +1,7 @@
+import 'package:equatable/equatable.dart';
 import 'package:carta_os/src/features/document/models/document_enums.dart';
 
-class Document {
+class Document extends Equatable {
   final String id;
   final String title;
   final String content;
@@ -14,7 +15,7 @@ class Document {
   final int? pageCount;
   final DocumentFileType? fileType;
 
-  Document({
+  const Document({
     required this.id,
     required this.title,
     required this.content,
@@ -28,6 +29,90 @@ class Document {
     this.pageCount,
     this.fileType,
   });
+
+  @override
+  List<Object?> get props => [
+        id,
+        title,
+        content,
+        summary,
+        tags,
+        keyConcepts,
+        createdAt,
+        processedAt,
+        status,
+        filePath,
+        pageCount,
+        fileType,
+      ];
+
+  Document copyWith({
+    String? id,
+    String? title,
+    String? content,
+    String? summary,
+    List<String>? tags,
+    List<String>? keyConcepts,
+    DateTime? createdAt,
+    DateTime? processedAt,
+    DocumentStatus? status,
+    String? filePath,
+    int? pageCount,
+    DocumentFileType? fileType,
+  }) {
+    return Document(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      summary: summary ?? this.summary,
+      tags: tags ?? this.tags,
+      keyConcepts: keyConcepts ?? this.keyConcepts,
+      createdAt: createdAt ?? this.createdAt,
+      processedAt: processedAt ?? this.processedAt,
+      status: status ?? this.status,
+      filePath: filePath ?? this.filePath,
+      pageCount: pageCount ?? this.pageCount,
+      fileType: fileType ?? this.fileType,
+    );
+  }
+
+  factory Document.fromJson(Map<String, dynamic> json) {
+    return Document(
+      id: json['id'],
+      title: json['title'],
+      content: json['content'],
+      summary: json['summary'],
+      tags: json['tags']?.cast<String>(),
+      keyConcepts: json['keyConcepts']?.cast<String>(),
+      createdAt: DateTime.parse(json['createdAt']),
+      processedAt: json['processedAt'] != null
+          ? DateTime.parse(json['processedAt'])
+          : null,
+      status: DocumentStatus.values.byName(json['status']),
+      filePath: json['filePath'],
+      pageCount: json['pageCount'],
+      fileType: json['fileType'] != null
+          ? DocumentFileType.values.byName(json['fileType'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'content': content,
+      'summary': summary,
+      'tags': tags,
+      'keyConcepts': keyConcepts,
+      'createdAt': createdAt.toIso8601String(),
+      'processedAt': processedAt?.toIso8601String(),
+      'status': status.name,
+      'filePath': filePath,
+      'pageCount': pageCount,
+      'fileType': fileType?.name,
+    };
+  }
 
   // Método factory para criar um documento de exemplo
   static Document example() {

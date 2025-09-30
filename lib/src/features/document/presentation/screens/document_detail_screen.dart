@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:carta_os/src/features/document/models/document.dart';
 import 'package:carta_os/src/features/document/models/document_enums.dart';
+import 'package:carta_os/src/localization/app_localizations.dart';
 import 'package:intl/intl.dart';
 
 class DocumentDetailScreen extends StatelessWidget {
@@ -10,6 +11,7 @@ class DocumentDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -19,6 +21,7 @@ class DocumentDetailScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
+            tooltip: l10n.shareLabel,
             onPressed: () {
               // Implementar compartilhamento
             },
@@ -28,13 +31,13 @@ class DocumentDetailScreen extends StatelessWidget {
               // Implementar ações do menu
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'export',
-                child: Text('Exportar'),
+                child: Text(l10n.exportLabel),
               ),
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'delete',
-                child: Text('Excluir'),
+                child: Text(l10n.deleteLabel),
               ),
             ],
           ),
@@ -48,7 +51,7 @@ class DocumentDetailScreen extends StatelessWidget {
             _buildInfoCard(context),
             const SizedBox(height: 16),
             if (document.tags != null && document.tags!.isNotEmpty) ...[
-              _buildSectionTitle('Tags'),
+              _buildSectionTitle(l10n.tagsLabel),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8.0,
@@ -64,7 +67,7 @@ class DocumentDetailScreen extends StatelessWidget {
             ],
             if (document.keyConcepts != null &&
                 document.keyConcepts!.isNotEmpty) ...[
-              _buildSectionTitle('Conceitos-Chave'),
+              _buildSectionTitle(l10n.keyConceptsLabel),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8.0,
@@ -79,7 +82,7 @@ class DocumentDetailScreen extends StatelessWidget {
               const SizedBox(height: 16),
             ],
             if (document.summary != null && document.summary!.isNotEmpty) ...[
-              _buildSectionTitle('Sumário'),
+              _buildSectionTitle(l10n.summaryLabel),
               const SizedBox(height: 8),
               Card(
                 child: Padding(
@@ -92,7 +95,7 @@ class DocumentDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
             ],
-            _buildSectionTitle('Conteúdo'),
+            _buildSectionTitle(l10n.contentLabel),
             const SizedBox(height: 8),
             Card(
               child: Padding(
@@ -107,6 +110,7 @@ class DocumentDetailScreen extends StatelessWidget {
   }
 
   Widget _buildInfoCard(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dateFormat = DateFormat('dd/MM/yyyy');
     return Card(
       child: Padding(
@@ -125,7 +129,7 @@ class DocumentDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        document.status.displayText,
+                        document.status.displayText(l10n),
                         style: TextStyle(
                           color: document.status.color,
                           fontWeight: FontWeight.bold,
@@ -135,12 +139,17 @@ class DocumentDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Tipo: ${document.fileType?.displayText ?? 'Desconhecido'}',
+                    '${l10n.documentTypeLabel}: ${document.fileType?.displayText(l10n) ?? l10n.unknownLabel}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Páginas: ${document.pageCount?.toString() ?? 'N/A'}',
+                    '${l10n.pagesLabel}: ${document.pageCount?.toString() ?? 'N/A'}',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${l10n.fileLabel}: ${document.filePath}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -152,14 +161,14 @@ class DocumentDetailScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Criado: ${dateFormat.format(document.createdAt)}',
+                    '${l10n.createdLabel}: ${dateFormat.format(document.createdAt)}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     document.processedAt != null
-                        ? 'Processado: ${dateFormat.format(document.processedAt!)}'
-                        : 'Aguardando processamento',
+                        ? '${l10n.processedLabel}: ${dateFormat.format(document.processedAt!)}'
+                        : l10n.waitingProcessingLabel,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -195,15 +204,17 @@ class DocumentDetailScreen extends StatelessWidget {
     }
 
     final spans = <TextSpan>[];
-    final pattern = allKeywords.map((e) => RegExp.escape(e)).join('|');
+    final pattern = allKeywords.map((e) => '\b${RegExp.escape(e)}\b').join('|');
     final regex = RegExp(pattern, caseSensitive: false);
+
+    final lowercasedKeyConcepts = keyConcepts.map((c) => c.toLowerCase()).toSet();
 
     text.splitMapJoin(
       regex,
       onMatch: (match) {
         final matchedText = match.group(0)!;
-        final isKeyConcept = keyConcepts.any((concept) =>
-            concept.toLowerCase() == matchedText.toLowerCase());
+        final isKeyConcept =
+            lowercasedKeyConcepts.contains(matchedText.toLowerCase());
         spans.add(
           TextSpan(
             text: matchedText,

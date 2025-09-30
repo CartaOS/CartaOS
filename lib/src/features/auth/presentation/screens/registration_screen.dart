@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:carta_os/src/localization/app_localizations.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -21,8 +22,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('CartaOS - Registro')),
+      appBar: AppBar(title: Text(l10n.registrationScreenTitle)),
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -33,22 +35,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Crie sua conta',
+                    l10n.registrationScreenHeadline,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 32.0),
                   TextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.emailLabel,
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Por favor, insira seu email';
+                        return l10n.emailRequiredError;
                       }
                       if (!value.contains('@')) {
-                        return 'Por favor, insira um email válido';
+                        return l10n.invalidEmailError;
                       }
                       return null;
                     },
@@ -57,16 +59,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Senha',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.passwordLabel,
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Por favor, insira sua senha';
+                        return l10n.passwordRequiredError;
                       }
                       if (value.length < 6) {
-                        return 'A senha deve ter pelo menos 6 caracteres';
+                        return l10n.passwordLengthError;
                       }
                       return null;
                     },
@@ -81,7 +83,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         print('Senha: ${_passwordController.text}');
                       }
                     },
-                    child: const Text('Registrar'),
+                    child: Text(l10n.registerButtonLabel),
                   ),
                 ],
               ),

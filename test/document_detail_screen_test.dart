@@ -2,16 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:carta_os/src/features/document/models/document.dart';
 import 'package:carta_os/src/features/document/presentation/screens/document_detail_screen.dart';
+import 'package:carta_os/src/localization/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() {
   group('DocumentDetailScreen', () {
     final testDocument = Document.example();
 
+    Widget createWidgetForTesting({required Widget child}) {
+      return MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('pt', ''),
+        ],
+        home: child,
+      );
+    }
+
     testWidgets('should display document details correctly',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: DocumentDetailScreen(document: testDocument),
+        createWidgetForTesting(
+          child: DocumentDetailScreen(document: testDocument),
         ),
       );
 
@@ -41,21 +58,22 @@ void main() {
     testWidgets('should display status information',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: DocumentDetailScreen(document: testDocument),
+        createWidgetForTesting(
+          child: DocumentDetailScreen(document: testDocument),
         ),
       );
+      final l10n = AppLocalizations(const Locale('pt'));
 
       // Check if the status information is displayed
-      expect(find.textContaining('Tipo:'), findsOneWidget);
-      expect(find.textContaining('Páginas:'), findsOneWidget);
+      expect(find.textContaining(l10n.documentTypeLabel), findsOneWidget);
+      expect(find.textContaining(l10n.pagesLabel), findsOneWidget);
     });
 
     testWidgets('should have share and menu options in app bar',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: DocumentDetailScreen(document: testDocument),
+        createWidgetForTesting(
+          child: DocumentDetailScreen(document: testDocument),
         ),
       );
 
@@ -67,8 +85,8 @@ void main() {
     testWidgets('should highlight key concepts and tags in content',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: DocumentDetailScreen(document: testDocument),
+        createWidgetForTesting(
+          child: DocumentDetailScreen(document: testDocument),
         ),
       );
 

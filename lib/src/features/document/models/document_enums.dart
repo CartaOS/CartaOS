@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:carta_os/src/localization/app_localizations.dart';
 
 /// Enums para representar os diferentes estados e tipos de documentos
 enum DocumentStatus { pending, processing, completed }
@@ -29,14 +30,14 @@ extension DocumentStatusInfo on DocumentStatus {
   }
 
   /// Retorna o texto a ser exibido para o status do documento
-  String get displayText {
+  String displayText(AppLocalizations l10n) {
     switch (this) {
       case DocumentStatus.completed:
-        return 'Processado';
+        return l10n.documentStatusCompleted;
       case DocumentStatus.processing:
-        return 'Processando';
+        return l10n.documentStatusProcessing;
       case DocumentStatus.pending:
-        return 'Pendente';
+        return l10n.documentStatusPending;
     }
   }
 }
@@ -46,14 +47,14 @@ enum DocumentFileType { native, scanned, mixed }
 
 extension DocumentFileTypeDisplay on DocumentFileType {
   /// Retorna o texto a ser exibido para o tipo de arquivo do documento
-  String get displayText {
+  String displayText(AppLocalizations l10n) {
     switch (this) {
       case DocumentFileType.native:
-        return 'Nativo';
+        return l10n.documentFileTypeNative;
       case DocumentFileType.scanned:
-        return 'Digitalizado';
+        return l10n.documentFileTypeScanned;
       case DocumentFileType.mixed:
-        return 'Misto';
+        return l10n.documentFileTypeMixed;
     }
   }
 }

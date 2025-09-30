@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:carta_os/src/features/document/presentation/widgets/document_list_widget.dart';
 import 'package:carta_os/src/features/document/models/document.dart';
-import 'package:carta_os/src/features/document/models/document_enums.dart';
+import 'package:carta_os/src/features/document/data/document_service.dart';
+import 'package:carta_os/src/localization/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -11,61 +12,57 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Document> documents = [
-    Document.example(),
-    Document(
-      id: '2',
-      title: 'Contrato de Prestação de Serviços',
-      content: 'Este é o conteúdo do contrato de prestação de serviços. Ele contém cláusulas importantes sobre obrigações, prazos e condições de pagamento.',
-      summary: 'Contrato detalhando os termos de prestação de serviços entre as partes.',
-      tags: ['contrato', 'financeiro', 'legal'],
-      createdAt: DateTime(2025, 9, 25),
-      processedAt: DateTime(2025, 9, 26),
-      status: DocumentStatus.completed,
-      filePath: '/path/to/contract.pdf',
-      pageCount: 8,
-      fileType: DocumentFileType.native,
-    ),
-    Document(
-      id: '3',
-      title: 'Relatório Trimestral',
-      content: 'Relatório com os resultados financeiros do trimestre. Inclui gráficos e análise de performance.',
-      summary: 'Relatório detalhado sobre os resultados do trimestre.',
-      tags: ['relatório', 'financeiro', 'trimestral'],
-      createdAt: DateTime(2025, 9, 20),
-      processedAt: DateTime(2025, 9, 21),
-      status: DocumentStatus.processing,
-      filePath: '/path/to/quarterly_report.pdf',
-      pageCount: 15,
-      fileType: DocumentFileType.native,
-    ),
-  ];
+  late Future<List<Document>> _documentsFuture;
+  final DocumentService _documentService = DocumentService();
+
+  @override
+  void initState() {
+    super.initState();
+    _documentsFuture = _documentService.getDocuments();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CartaOS - Documentos'),
+        title: Text(l10n.homeScreenTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
+            tooltip: l10n.searchLabel,
             onPressed: () {
               // Implementar busca
             },
           ),
           IconButton(
             icon: const Icon(Icons.settings),
+            tooltip: l10n.settingsLabel,
             onPressed: () {
               // Implementar configurações
             },
           ),
         ],
       ),
-      body: DocumentListWidget(documents: documents),
+      body: FutureBuilder<List<Document>>(
+        future: _documentsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(child: Text(l10n.noDocumentsFound));
+          } else {
+            return DocumentListWidget(documents: snapshot.data!);
+          }
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Implementar adição de novo documento
         },
+        tooltip: l10n.addDocumentTooltip,
         child: const Icon(Icons.add),
       ),
     );

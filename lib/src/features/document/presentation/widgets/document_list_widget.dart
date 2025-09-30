@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:carta_os/src/features/document/models/document.dart';
 import 'package:carta_os/src/features/document/models/document_enums.dart';
 import 'package:carta_os/src/features/document/presentation/screens/document_detail_screen.dart';
+import 'package:carta_os/src/localization/app_localizations.dart';
 import 'package:intl/intl.dart';
 
 class DocumentListWidget extends StatelessWidget {
@@ -11,9 +12,10 @@ class DocumentListWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (documents.isEmpty) {
-      return const Center(
-        child: Text('Nenhum documento encontrado'),
+      return Center(
+        child: Text(l10n.noDocumentsFound),
       );
     }
 
@@ -29,7 +31,7 @@ class DocumentListWidget extends StatelessWidget {
           child: ListTile(
             contentPadding: const EdgeInsets.all(16.0),
             leading: CircleAvatar(
-              backgroundColor: document.status.color.withValues(alpha: 0.2),
+              backgroundColor: document.status.color.withOpacity(0.2),
               child: Icon(
                 document.status.icon,
                 color: document.status.color,
@@ -37,7 +39,10 @@ class DocumentListWidget extends StatelessWidget {
             ),
             title: Text(
               document.title,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -84,11 +89,11 @@ class DocumentListWidget extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8.0, vertical: 2.0),
                   decoration: BoxDecoration(
-                    color: document.status.color.withValues(alpha: 0.1),
+                    color: document.status.color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10.0),
                   ),
                   child: Text(
-                    document.status.displayText, // Corrigido: usando o mesmo texto que na tela de detalhe
+                    document.status.displayText(l10n),
                     style: TextStyle(
                       fontSize: 10,
                       color: document.status.color,
