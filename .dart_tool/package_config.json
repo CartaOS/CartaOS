@@ -56,6 +56,12 @@
       "languageVersion": "3.8"
     },
     {
+      "name": "intl",
+      "rootUri": "file:///home/luis/.pub-cache/hosted/pub.dev/intl-0.19.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "leak_tracker",
       "rootUri": "file:///home/luis/.pub-cache/hosted/pub.dev/leak_tracker-11.0.2",
       "packageUri": "lib/",
