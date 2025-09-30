@@ -37,22 +37,20 @@ func ExtractTextFromPDF(path string) (string, error) {
 		page := pdfReader.Page(i)
 
 		// Extract plain text from the page
-		// Note: GetPlainText method requires a font map
+		// Try to get the fonts for the page first
 		fonts, err := getFontsForPage(pdfReader, i)
+		var pageText string
 		if err != nil {
 			// If we can't get fonts, try without fonts
-			pageText, err := page.GetPlainText(nil)
-			if err != nil {
-				continue // Skip pages that can't be read
-			}
-			buf.WriteString(pageText)
+			pageText, err = page.GetPlainText(nil)
 		} else {
-			pageText, err := page.GetPlainText(fonts)
-			if err != nil {
-				continue // Skip pages that can't be read
-			}
-			buf.WriteString(pageText)
+			pageText, err = page.GetPlainText(fonts)
 		}
+
+		if err != nil {
+			continue // Skip pages that can't be read
+		}
+		buf.WriteString(pageText)
 	}
 
 	return strings.TrimSpace(buf.String()), nil
