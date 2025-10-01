@@ -2,15 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:carta_os/src/features/document/models/document.dart';
 import 'package:carta_os/src/features/document/presentation/screens/document_detail_screen.dart';
+import 'package:carta_os/src/features/document/domain/export_service.dart';
+import 'package:mockito/mockito.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:carta_os/src/localization/app_localizations.dart';
+
+class MockExportService extends Mock implements ExportService {}
 
 void main() {
   group('DocumentDetailScreen', () {
     final testDocument = Document.example();
+    late MockExportService mockExportService;
+
+    setUp(() {
+      mockExportService = MockExportService();
+    });
 
     testWidgets('should display document details correctly', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: DocumentDetailScreen(document: testDocument),
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: [
+            const Locale('en', ''),
+          ],
+          home: DocumentDetailScreen(document: testDocument, exportService: mockExportService),
         ),
       );
 
@@ -36,19 +55,35 @@ void main() {
     testWidgets('should display status information', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: DocumentDetailScreen(document: testDocument),
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: [
+            const Locale('en', ''),
+          ],
+          home: DocumentDetailScreen(document: testDocument, exportService: mockExportService),
         ),
       );
 
       // Verificar se as informações de status são exibidas
-      expect(find.textContaining('Tipo:'), findsOneWidget);
-      expect(find.textContaining('Páginas:'), findsOneWidget);
+      expect(find.textContaining('Type'), findsOneWidget);
+      expect(find.textContaining('Pages'), findsOneWidget);
     });
 
     testWidgets('should have share and menu options in app bar', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: DocumentDetailScreen(document: testDocument),
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: [
+            const Locale('en', ''),
+          ],
+          home: DocumentDetailScreen(document: testDocument, exportService: mockExportService),
         ),
       );
 
