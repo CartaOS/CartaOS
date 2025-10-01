@@ -84,14 +84,14 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                               Row(
                                 children: [
                                   Icon(
-                                    document.status.icon,
-                                    color: document.status.color,
+                                    widget.document.status.icon,
+                                    color: widget.document.status.color,
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    document.status.displayText,
+                                    widget.document.status.displayText,
                                     style: TextStyle(
-                                      color: document.status.color,
+                                      color: widget.document.status.color,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -99,12 +99,12 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${appLocalizations.documentType}: ${document.fileType?.displayText ?? appLocalizations.unknown}',
+                                '${appLocalizations.documentType}: ${widget.document.fileType?.displayText ?? appLocalizations.unknown}',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${appLocalizations.pageCount}: ${document.pageCount?.toString() ?? appLocalizations.notApplicable}',
+                                '${appLocalizations.pageCount}: ${widget.document.pageCount?.toString() ?? appLocalizations.notApplicable}',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ],
@@ -116,13 +116,13 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${appLocalizations.createdAt}: ${dateFormat.format(document.createdAt)}',
+                                '${appLocalizations.createdAt}: ${dateFormat.format(widget.document.createdAt)}',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                document.processedAt != null
-                                    ? '${appLocalizations.processedAt}: ${dateFormat.format(document.processedAt!)}'
+                                widget.document.processedAt != null
+                                    ? '${appLocalizations.processedAt}: ${dateFormat.format(widget.document.processedAt!)}'
                                     : appLocalizations.pendingProcessing,
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
@@ -137,7 +137,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                 const SizedBox(height: 16),
 
                 // Tags
-                if (document.tags != null && document.tags!.isNotEmpty) ...[
+                if (widget.document.tags != null && widget.document.tags!.isNotEmpty) ...[
                   Text(
                     appLocalizations.tagsTitle,
                     style: const TextStyle(
@@ -149,7 +149,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                   Wrap(
                     spacing: 8.0,
                     runSpacing: 4.0,
-                    children: document.tags!.map((tag) {
+                    children: widget.document.tags!.map((tag) {
                       return Chip(
                         label: Text(tag),
                         backgroundColor: Colors.blue.shade100,
@@ -160,7 +160,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                 ],
 
                 // Sumário (se disponível)
-                if (document.summary != null && document.summary!.isNotEmpty) ...[
+                if (widget.document.summary != null && widget.document.summary!.isNotEmpty) ...[
                   Text(
                     appLocalizations.summaryTitle,
                     style: const TextStyle(
@@ -173,7 +173,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Text(
-                        document.summary!,
+                        widget.document.summary!,
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),
@@ -194,7 +194,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: SelectableText(
-                      document.content,
+                      widget.document.content,
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                   ),
@@ -205,7 +205,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
         ),
         if (_isExporting)
           Container(
-            color: Colors.black.withOpacity(0.5),
+            color: Colors.black.withAlpha(128),
             child: const Center(
               child: CircularProgressIndicator(),
             ),
