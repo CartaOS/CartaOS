@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:carta_os/src/features/document/models/document.dart';
+import 'package:carta_os/src/features/document/models/document_enums.dart';
 
 class ExportService {
   Future<void> exportDocument({
