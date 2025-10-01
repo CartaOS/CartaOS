@@ -24,5 +24,7 @@
     "tagsTitle": "Tags",
     "summaryTitle": "Summary",
     "contentTitle": "Content",
-    "noDocumentsFound": "No documents found"
+    "noDocumentsFound": "No documents found",
+    "idLabel": "ID",
+    "statusLabel": "Status"
 }

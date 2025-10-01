@@ -14,6 +14,17 @@ class ExportService {
   Future<void> exportDocument({
     required Document document,
     required String targetDirectory,
+    required String idLabel,
+    required String createdAtLabel,
+    required String processedAtLabel,
+    required String statusLabel,
+    required String fileTypeLabel,
+    required String pagesLabel,
+    required String summaryLabel,
+    required String tagsLabel,
+    required String pendingProcessingLabel,
+    required String unknownLabel,
+    required String notApplicableLabel,
   }) async {
     try {
       String safeTitle = document.title
@@ -37,18 +48,18 @@ class ExportService {
       final String markdownContent = '''
 # ${document.title}
 
-**ID:** ${document.id}
-**Criado em:** ${DateFormat('dd/MM/yyyy').format(document.createdAt)}
-**Processado em:** ${document.processedAt != null ? DateFormat('dd/MM/yyyy').format(document.processedAt!) : 'Aguardando processamento'}
-**Status:** ${document.status.displayText}
-**Tipo de Arquivo:** ${document.fileType?.displayText ?? 'Desconhecido'}
-**Páginas:** ${document.pageCount?.toString() ?? 'N/A'}
+**$idLabel:** ${document.id}
+**$createdAtLabel:** ${DateFormat('dd/MM/yyyy').format(document.createdAt)}
+**$processedAtLabel:** ${document.processedAt != null ? DateFormat('dd/MM/yyyy').format(document.processedAt!) : pendingProcessingLabel}
+**$statusLabel:** ${document.status.displayText}
+**$fileTypeLabel:** ${document.fileType?.displayText ?? unknownLabel}
+**$pagesLabel:** ${document.pageCount?.toString() ?? notApplicableLabel}
 
-## Sumário
-${document.summary ?? 'N/A'}
+## $summaryLabel
+${document.summary ?? notApplicableLabel}
 
-## Tags
-${(document.tags != null && document.tags!.isNotEmpty) ? document.tags!.map((tag) => '- $tag').join('\n') : 'N/A'}
+## $tagsLabel
+${(document.tags != null && document.tags!.isNotEmpty) ? document.tags!.map((tag) => '- $tag').join('\n') : notApplicableLabel}
 
 ''';
 
