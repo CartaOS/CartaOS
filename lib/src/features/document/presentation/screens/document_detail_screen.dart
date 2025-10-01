@@ -5,11 +5,12 @@ import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
+import 'package:carta_os/src/features/document/domain/export_service.dart';
 
 class DocumentDetailScreen extends StatelessWidget {
   final Document document;
 
-  const DocumentDetailScreen({Key? key, required this.document}) : super(key: key);
+  const DocumentDetailScreen({Key? key, required this: document}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -202,67 +203,22 @@ class DocumentDetailScreen extends StatelessWidget {
     }
 
     try {
-      // Sanitize filename to be safe for filesystems
-      String safeTitle = document.title
-          .replaceAll(RegExp(r'[\s/\\?%*:|"<>]+'), '_')
-          .replaceAll(RegExp(r'[^\w.-]+'), '');
-
-      if (safeTitle.isEmpty) {
-        safeTitle = 'document_${document.id}'; // Fallback filename
-      }
-
-      final originalPdfFile = File(document.filePath);
-      if (!await originalPdfFile.exists()) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Arquivo PDF original não encontrado.')),
-        );
-        return;
-      }
-
-      // Define file paths using the 'path' package for cross-platform compatibility
-      final pdfFileName = '${safeTitle}.pdf';
-      final markdownFileName = '${safeTitle}.md';
-      final newPdfFile = File(p.join(selectedDirectory, pdfFileName));
-      final markdownFile = File(p.join(selectedDirectory, markdownFileName));
-
-      // Create Markdown content
-      final String markdownContent = '''
-# ${document.title}
-
-**ID:** ${document.id}
-**Criado em:** ${DateFormat('dd/MM/yyyy').format(document.createdAt)}
-**Processado em:** ${document.processedAt != null ? DateFormat('dd/MM/yyyy').format(document.processedAt!) : 'Aguardando processamento'}
-**Status:** ${document.status.displayText}
-**Tipo de Arquivo:** ${document.fileType?.displayText ?? 'Desconhecido'}
-**Páginas:** ${document.pageCount?.toString() ?? 'N/A'}
-
-## Sumário
-${document.summary ?? 'N/A'}
-
-## Tags
-${(document.tags != null && document.tags!.isNotEmpty) ? document.tags!.map((tag) => '- $tag').join('\n') : 'N/A'}
-
-## Conteúdo
-${document.content}
-''';
-
-      // Copy original PDF and write Markdown file
-      await originalPdfFile.copy(newPdfFile.path);
-      await markdownFile.writeAsString(markdownContent);
+      final exportService = ExportService();
+      await exportService.exportDocument(
+        document: document,
+        targetDirectory: selectedDirectory,
+      );
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Documento exportado para $selectedDirectory')),
       );
-    } on FileSystemException catch (e, s) {
-      print('File system error during export: $e\n$s');
+    } on FileSystemException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro de arquivo ao exportar: ${e.message}')),
       );
-    } catch (e, s) {
-      print('Unexpected error during export: $e\n$s');
+    } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ocorreu um erro inesperado ao exportar.')),
