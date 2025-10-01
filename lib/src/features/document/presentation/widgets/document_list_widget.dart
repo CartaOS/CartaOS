@@ -3,6 +3,8 @@ import 'package:carta_os/src/features/document/models/document.dart';
 import 'package:carta_os/src/features/document/models/document_enums.dart';
 import 'package:carta_os/src/features/document/presentation/screens/document_detail_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:carta_os/src/features/document/domain/export_service.dart';
+import 'package:carta_os/src/localization/app_localizations.dart';
 
 class DocumentListWidget extends StatelessWidget {
   final List<Document> documents;
@@ -12,8 +14,8 @@ class DocumentListWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (documents.isEmpty) {
-      return const Center(
-        child: Text('Nenhum documento encontrado'),
+      return Center(
+        child: Text(AppLocalizations.of(context)!.noDocumentsFound),
       );
     }
 
@@ -101,7 +103,10 @@ class DocumentListWidget extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => DocumentDetailScreen(document: document),
+                  builder: (context) => DocumentDetailScreen(
+                    document: document,
+                    exportService: ExportService(),
+                  ),
                 ),
               );
             },

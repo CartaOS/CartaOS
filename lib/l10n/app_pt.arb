@@ -7,5 +7,22 @@
     "passwordLabel": "Senha",
     "passwordRequiredError": "Por favor, insira sua senha",
     "passwordLengthError": "A senha deve ter pelo menos 6 caracteres",
-    "registerButtonLabel": "Registrar"
+    "registerButtonLabel": "Registrar",
+    "exportOption": "Exportar",
+    "deleteOption": "Excluir",
+    "exportCanceled": "Exportação cancelada.",
+    "documentExportedTo": "Documento exportado para {directory}",
+    "fileExportError": "Erro de arquivo ao exportar: {errorMessage}",
+    "unexpectedExportError": "Ocorreu um erro inesperado ao exportar.",
+    "documentType": "Tipo",
+    "unknown": "Desconhecido",
+    "pageCount": "Páginas",
+    "notApplicable": "N/A",
+    "createdAt": "Criado",
+    "processedAt": "Processado",
+    "pendingProcessing": "Aguardando processamento",
+    "tagsTitle": "Tags",
+    "summaryTitle": "Sumário",
+    "contentTitle": "Conteúdo",
+    "noDocumentsFound": "Nenhum documento encontrado"
 }

@@ -1,36 +1,39 @@
-import 'dart:io';
+import 'dart:developer';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:carta_os/src/features/document/models/document.dart';
 import 'package:carta_os/src/features/document/models/document_enums.dart';
+import 'package:carta_os/src/features/document/domain/exceptions/export_exception.dart';
+import 'file_system.dart';
 
 class ExportService {
+  final FileSystem fileSystem;
+
+  ExportService({this.fileSystem = const DefaultFileSystem()});
+
   Future<void> exportDocument({
     required Document document,
     required String targetDirectory,
   }) async {
     try {
-      // Sanitize filename to be safe for filesystems
       String safeTitle = document.title
           .replaceAll(RegExp(r'[\s/\\?%*:|"<>]+'), '_')
           .replaceAll(RegExp(r'[^\w.-]+'), '');
 
       if (safeTitle.isEmpty) {
-        safeTitle = 'document_${document.id}'; // Fallback filename
+        safeTitle = 'document_${document.id}';
       }
 
-      final originalPdfFile = File(document.filePath);
-      if (!await originalPdfFile.exists()) {
-        throw FileSystemException('Original PDF file not found', document.filePath);
+      if (!await fileSystem.fileExists(document.filePath)) {
+        log('Original PDF file not found: ${document.filePath}', name: 'ExportService');
+        throw ExportException('Original PDF file not found', details: document.filePath);
       }
 
-      // Define file paths using the 'path' package for cross-platform compatibility
       final pdfFileName = '${safeTitle}.pdf';
       final markdownFileName = '${safeTitle}.md';
-      final newPdfFile = File(p.join(targetDirectory, pdfFileName));
-      final markdownFile = File(p.join(targetDirectory, markdownFileName));
+      final newPdfFilePath = p.join(targetDirectory, pdfFileName);
+      final markdownFilePath = p.join(targetDirectory, markdownFileName);
 
-      // Create Markdown content
       final String markdownContent = '''
 # ${document.title}
 
@@ -47,18 +50,16 @@ ${document.summary ?? 'N/A'}
 ## Tags
 ${(document.tags != null && document.tags!.isNotEmpty) ? document.tags!.map((tag) => '- $tag').join('\n') : 'N/A'}
 
-## Conteúdo
-${document.content}
 ''';
 
-      // Copy original PDF and write Markdown file
-      await originalPdfFile.copy(newPdfFile.path);
-      await markdownFile.writeAsString(markdownContent);
-    } on FileSystemException {
-      rethrow; // Rethrow FileSystemExceptions as they are specific
+      await fileSystem.copyFile(document.filePath, newPdfFilePath);
+      await fileSystem.writeFile(markdownFilePath, markdownContent);
     } catch (e, s) {
-      print('Unexpected error during export: $e\n$s');
-      throw Exception('Ocorreu um erro inesperado ao exportar o documento.');
+      log('Error during export: $e', error: e, stackTrace: s, name: 'ExportService');
+      if (e is ExportException) {
+        rethrow;
+      }
+      throw ExportException('An unexpected error occurred during export', details: e.toString());
     }
   }
 }
