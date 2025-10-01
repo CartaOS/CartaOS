@@ -57,6 +57,7 @@ void main() {
         pendingProcessingLabel: 'Pending',
         unknownLabel: 'Unknown',
         notApplicableLabel: 'N/A',
+        includeContent: true,
       );
 
       verify(mockFileSystem.fileExists(mockDocument.filePath)).called(1);
@@ -86,6 +87,7 @@ void main() {
           pendingProcessingLabel: 'Pending',
           unknownLabel: 'Unknown',
           notApplicableLabel: 'N/A',
+          includeContent: true,
         ),
         throwsA(isA<ExportException>()),
       );
@@ -122,6 +124,7 @@ void main() {
         pendingProcessingLabel: 'Pending',
         unknownLabel: 'Unknown',
         notApplicableLabel: 'N/A',
+        includeContent: true,
       );
 
       final expectedPdfPath = p.join(targetDirectory, 'document_test-id.pdf');
@@ -145,12 +148,38 @@ void main() {
         pendingProcessingLabel: 'Pending',
         unknownLabel: 'Unknown',
         notApplicableLabel: 'N/A',
+        includeContent: true,
       );
 
       final capturedMarkdownContent = verify(mockFileSystem.writeFile(any, captureAny)).captured.single as String;
       expect(capturedMarkdownContent, contains('## Tags'));
       expect(capturedMarkdownContent, contains('- tag1'));
       expect(capturedMarkdownContent, contains('- tag2'));
+    });
+
+    test('should not include content in Markdown if includeContent is false', () async {
+      final String targetDirectory = '/path/to/export';
+
+      await exportService.exportDocument(
+        document: mockDocument,
+        targetDirectory: targetDirectory,
+        idLabel: 'ID',
+        createdAtLabel: 'Created',
+        processedAtLabel: 'Processed',
+        statusLabel: 'Status',
+        fileTypeLabel: 'Type',
+        pagesLabel: 'Pages',
+        summaryLabel: 'Summary',
+        tagsLabel: 'Tags',
+        pendingProcessingLabel: 'Pending',
+        unknownLabel: 'Unknown',
+        notApplicableLabel: 'N/A',
+        includeContent: false,
+      );
+
+      final capturedMarkdownContent = verify(mockFileSystem.writeFile(any, captureAny)).captured.single as String;
+      expect(capturedMarkdownContent, isNot(contains('## Content')));
+      expect(capturedMarkdownContent, isNot(contains(mockDocument.content)));
     });
   });
 }

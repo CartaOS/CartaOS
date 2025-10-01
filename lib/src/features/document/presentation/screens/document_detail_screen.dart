@@ -24,6 +24,7 @@ class DocumentDetailScreen extends StatefulWidget {
 
 class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   bool _isExporting = false; // For loading indicator
+  bool _includeContent = true; // New state variable for content inclusion
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +49,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
               PopupMenuButton<String>(
                 onSelected: (String result) {
                   if (result == 'export') {
-                    _exportDocument(context);
+                    _showExportOptionsDialog(context);
                   } else if (result == 'delete') {
                     // Implementar exclusão
                   }
@@ -214,7 +215,59 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     );
   }
 
-  void _exportDocument(BuildContext context) async {
+  void _showExportOptionsDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: Text(l10n.exportOption),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SwitchListTile(
+                    title: Text(l10n.includeContent),
+                    value: _includeContent,
+                    onChanged: (bool value) {
+                      setState(() {
+                        _includeContent = value;
+                      });
+                    },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      l10n.exportContentWarning,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: Text(l10n.cancelButtonLabel),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    _exportDocument(context, _includeContent);
+                  },
+                  child: Text(l10n.exportButtonLabel),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _exportDocument(BuildContext context, bool includeContent) async {
     setState(() {
       _isExporting = true;
     });
@@ -248,6 +301,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
         pendingProcessingLabel: l10n.pendingProcessing,
         unknownLabel: l10n.unknown,
         notApplicableLabel: l10n.notApplicable,
+        includeContent: includeContent,
       );
 
       if (!context.mounted) return;
