@@ -46,6 +46,17 @@ void main() {
       await exportService.exportDocument(
         document: mockDocument,
         targetDirectory: targetDirectory,
+        idLabel: 'ID',
+        createdAtLabel: 'Created',
+        processedAtLabel: 'Processed',
+        statusLabel: 'Status',
+        fileTypeLabel: 'Type',
+        pagesLabel: 'Pages',
+        summaryLabel: 'Summary',
+        tagsLabel: 'Tags',
+        pendingProcessingLabel: 'Pending',
+        unknownLabel: 'Unknown',
+        notApplicableLabel: 'N/A',
       );
 
       verify(mockFileSystem.fileExists(mockDocument.filePath)).called(1);
@@ -64,6 +75,17 @@ void main() {
         () => exportService.exportDocument(
           document: mockDocument,
           targetDirectory: targetDirectory,
+          idLabel: 'ID',
+          createdAtLabel: 'Created',
+          processedAtLabel: 'Processed',
+          statusLabel: 'Status',
+          fileTypeLabel: 'Type',
+          pagesLabel: 'Pages',
+          summaryLabel: 'Summary',
+          tagsLabel: 'Tags',
+          pendingProcessingLabel: 'Pending',
+          unknownLabel: 'Unknown',
+          notApplicableLabel: 'N/A',
         ),
         throwsA(isA<ExportException>()),
       );
@@ -89,6 +111,17 @@ void main() {
       await exportService.exportDocument(
         document: mockDocument,
         targetDirectory: targetDirectory,
+        idLabel: 'ID',
+        createdAtLabel: 'Created',
+        processedAtLabel: 'Processed',
+        statusLabel: 'Status',
+        fileTypeLabel: 'Type',
+        pagesLabel: 'Pages',
+        summaryLabel: 'Summary',
+        tagsLabel: 'Tags',
+        pendingProcessingLabel: 'Pending',
+        unknownLabel: 'Unknown',
+        notApplicableLabel: 'N/A',
       );
 
       final expectedPdfPath = p.join(targetDirectory, 'document_test-id.pdf');
@@ -101,6 +134,17 @@ void main() {
       await exportService.exportDocument(
         document: mockDocument,
         targetDirectory: targetDirectory,
+        idLabel: 'ID',
+        createdAtLabel: 'Created',
+        processedAtLabel: 'Processed',
+        statusLabel: 'Status',
+        fileTypeLabel: 'Type',
+        pagesLabel: 'Pages',
+        summaryLabel: 'Summary',
+        tagsLabel: 'Tags',
+        pendingProcessingLabel: 'Pending',
+        unknownLabel: 'Unknown',
+        notApplicableLabel: 'N/A',
       );
 
       final capturedMarkdownContent = verify(mockFileSystem.writeFile(any, captureAny)).captured.single as String;

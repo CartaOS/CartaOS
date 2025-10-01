@@ -233,9 +233,21 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     }
 
     try {
+      final l10n = AppLocalizations.of(context)!;
       await widget.exportService.exportDocument(
         document: widget.document,
         targetDirectory: selectedDirectory,
+        idLabel: l10n.idLabel,
+        createdAtLabel: l10n.createdAt,
+        processedAtLabel: l10n.processedAt,
+        statusLabel: l10n.statusLabel,
+        fileTypeLabel: l10n.documentType,
+        pagesLabel: l10n.pageCount,
+        summaryLabel: l10n.summaryTitle,
+        tagsLabel: l10n.tagsTitle,
+        pendingProcessingLabel: l10n.pendingProcessing,
+        unknownLabel: l10n.unknown,
+        notApplicableLabel: l10n.notApplicable,
       );
 
       if (!context.mounted) return;
