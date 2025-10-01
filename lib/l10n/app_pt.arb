@@ -26,5 +26,9 @@
     "contentTitle": "Conteúdo",
     "noDocumentsFound": "Nenhum documento encontrado",
     "idLabel": "ID",
-    "statusLabel": "Status"
+    "statusLabel": "Status",
+    "includeContent": "Incluir Conteúdo do Documento",
+    "exportContentWarning": "Aviso: O conteúdo do documento pode conter informações sensíveis. Exporte com cautela.",
+    "cancelButtonLabel": "Cancelar",
+    "exportButtonLabel": "Exportar"
 }

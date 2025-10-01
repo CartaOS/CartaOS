@@ -25,6 +25,7 @@ class ExportService {
     required String pendingProcessingLabel,
     required String unknownLabel,
     required String notApplicableLabel,
+    bool includeContent = true,
   }) async {
     try {
       String safeTitle = document.title
@@ -45,7 +46,7 @@ class ExportService {
       final newPdfFilePath = p.join(targetDirectory, pdfFileName);
       final markdownFilePath = p.join(targetDirectory, markdownFileName);
 
-      final String markdownContent = '''
+      String markdownContent = '''
 # ${document.title}
 
 **$idLabel:** ${document.id}
@@ -62,6 +63,10 @@ ${document.summary ?? notApplicableLabel}
 ${(document.tags != null && document.tags!.isNotEmpty) ? document.tags!.map((tag) => '- $tag').join('\n') : notApplicableLabel}
 
 ''';
+
+      if (includeContent) {
+        markdownContent += '\n## Content\n${document.content}';
+      }
 
       await fileSystem.copyFile(document.filePath, newPdfFilePath);
       await fileSystem.writeFile(markdownFilePath, markdownContent);
