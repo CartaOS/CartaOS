@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:carta_os/src/features/document/presentation/widgets/document_list_widget.dart';
 import 'package:carta_os/src/features/document/models/document.dart';
 import 'package:carta_os/src/features/document/models/document_enums.dart';
+import 'package:provider/provider.dart';
+import 'package:carta_os/src/features/document/domain/export_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -43,6 +45,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final exportService = Provider.of<ExportService>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('CartaOS - Documentos'),
@@ -61,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: DocumentListWidget(documents: documents),
+      body: DocumentListWidget(documents: documents, exportService: exportService),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Implementar adição de novo documento

@@ -8,8 +8,9 @@ import 'package:carta_os/src/localization/app_localizations.dart';
 
 class DocumentListWidget extends StatelessWidget {
   final List<Document> documents;
+  final ExportService exportService;
 
-  const DocumentListWidget({Key? key, required this.documents}) : super(key: key);
+  const DocumentListWidget({Key? key, required this.documents, required this.exportService}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +106,7 @@ class DocumentListWidget extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (context) => DocumentDetailScreen(
                     document: document,
-                    exportService: ExportService(),
+                    exportService: exportService,
                   ),
                 ),
               );
