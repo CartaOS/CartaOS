@@ -8,7 +8,8 @@ void main() {
   testWidgets('RegistrationScreen has a title, two text fields and a button',
       (WidgetTester tester) async {
     await tester.pumpWidget(createWidgetForTesting(child: const RegistrationScreen()));
-    final l10n = await getLocalizations(tester);
+    final BuildContext context = tester.element(find.byType(RegistrationScreen));
+    final l10n = AppLocalizations.of(context)!;
 
     // Verify that our screen has a title.
     expect(find.text(l10n.registrationScreenHeadline), findsOneWidget);
@@ -25,7 +26,8 @@ void main() {
       (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(createWidgetForTesting(child: const RegistrationScreen()));
-    final l10n = await getLocalizations(tester);
+    final BuildContext context = tester.element(find.byType(RegistrationScreen));
+    final l10n = AppLocalizations.of(context)!;
 
     await tester.tap(find.byKey(const Key('registerButton')));
     await tester.pump();
@@ -39,7 +41,8 @@ void main() {
       (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(createWidgetForTesting(child: const RegistrationScreen()));
-    final l10n = await getLocalizations(tester);
+    final BuildContext context = tester.element(find.byType(RegistrationScreen));
+    final l10n = AppLocalizations.of(context)!;
 
     // Enter an invalid email.
     await tester.enterText(
@@ -57,7 +60,8 @@ void main() {
       (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(createWidgetForTesting(child: const RegistrationScreen()));
-    final l10n = await getLocalizations(tester);
+    final BuildContext context = tester.element(find.byType(RegistrationScreen));
+    final l10n = AppLocalizations.of(context)!;
 
     // Enter a short password.
     await tester.enterText(find.byKey(const Key('registrationPasswordField')), '123');
@@ -84,15 +88,4 @@ Widget createWidgetForTesting({required Widget child}) {
     ],
     home: child,
   );
-}
-
-Future<AppLocalizations> getLocalizations(WidgetTester tester) async {
-  late AppLocalizations l10n;
-  await tester.pumpWidget(Builder(
-    builder: (BuildContext context) {
-      l10n = AppLocalizations.of(context)!;
-      return Container();
-    },
-  ));
-  return l10n;
 }
