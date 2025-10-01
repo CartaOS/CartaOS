@@ -81,7 +81,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ElevatedButton(
                     key: const Key('registerButton'), // Added Key
                     onPressed: () {
-                      if (_formKey.currentState!.validate()) {
+                      if (_formKey.currentState?.validate() ?? false) {
                         // TODO: Implement actual registration logic
                         // ignore: avoid_print
                         print('Email: ${_emailController.text}');
