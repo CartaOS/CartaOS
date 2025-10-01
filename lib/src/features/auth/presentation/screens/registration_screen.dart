@@ -1,5 +1,8 @@
+import 'package:carta_os/src/features/auth/data/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:carta_os/src/localization/app_localizations.dart'; // Added import
+
+final _emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -12,6 +15,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -51,8 +56,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         return l10n.emailRequiredError; // Used l10n
                       }
                       // Using a more robust email regex
-                      final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                      if (!emailRegex.hasMatch(value)) {
+                      if (!_emailRegex.hasMatch(value)) {
                         return l10n.invalidEmailError; // Used l10n
                       }
                       return null;
@@ -78,19 +82,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     },
                   ),
                   const SizedBox(height: 32.0),
-                  ElevatedButton(
-                    key: const Key('registerButton'), // Added Key
-                    onPressed: () {
-                      if (_formKey.currentState?.validate() ?? false) {
-                        // TODO: Implement actual registration logic
-                        // ignore: avoid_print
-                        print('Email: ${_emailController.text}');
-                        // ignore: avoid_print
-                        print('Senha: ${_passwordController.text}');
-                      }
-                    },
-                    child: Text(l10n.registerButtonLabel), // Used l10n
-                  ),
+                  if (_isLoading)
+                    const CircularProgressIndicator()
+                  else
+                    ElevatedButton(
+                      key: const Key('registerButton'), // Added Key
+                      onPressed: _register,
+                      child: Text(l10n.registerButtonLabel), // Used l10n
+                    ),
                 ],
               ),
             ),
@@ -98,5 +97,35 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
       ),
     );
+  }
+
+  void _register() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final success = await _authService.register(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Registro realizado com sucesso!')),
+          );
+          Navigator.of(context).pushReplacementNamed('/home');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Falha no registro. Tente novamente.')),
+          );
+        }
+      }
+    }
   }
 }

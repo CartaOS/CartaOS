@@ -5,73 +5,72 @@ import 'package:carta_os/src/localization/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() {
-  testWidgets('RegistrationScreen has a title, two text fields and a button',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(createWidgetForTesting(child: const RegistrationScreen()));
-    final BuildContext context = tester.element(find.byType(RegistrationScreen));
-    final l10n = AppLocalizations.of(context)!;
+  group('RegistrationScreen', () {
+    late AppLocalizations l10n;
 
-    // Verify that our screen has a title.
-    expect(find.text(l10n.registrationScreenHeadline), findsOneWidget);
+    Future<void> pumpWidget(WidgetTester tester) async {
+      await tester.pumpWidget(createWidgetForTesting(child: const RegistrationScreen()));
+      final BuildContext context = tester.element(find.byType(RegistrationScreen));
+      l10n = AppLocalizations.of(context)!;
+    }
 
-    // Verify that our screen has two text fields.
-    expect(find.byKey(const Key('registrationEmailField')), findsOneWidget);
-    expect(find.byKey(const Key('registrationPasswordField')), findsOneWidget);
+    testWidgets('has a title, two text fields and a button',
+        (WidgetTester tester) async {
+      await pumpWidget(tester);
 
-    // Verify that our screen has a button.
-    expect(find.byKey(const Key('registerButton')), findsOneWidget);
-  });
+      // Verify that our screen has a title.
+      expect(find.text(l10n.registrationScreenHeadline), findsOneWidget);
 
-  testWidgets('RegistrationScreen shows error messages for empty fields',
-      (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(createWidgetForTesting(child: const RegistrationScreen()));
-    final BuildContext context = tester.element(find.byType(RegistrationScreen));
-    final l10n = AppLocalizations.of(context)!;
+      // Verify that our screen has two text fields.
+      expect(find.byKey(const Key('registrationEmailField')), findsOneWidget);
+      expect(find.byKey(const Key('registrationPasswordField')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('registerButton')));
-    await tester.pump();
+      // Verify that our screen has a button.
+      expect(find.byKey(const Key('registerButton')), findsOneWidget);
+    });
 
-    // Verify that our error messages are shown.
-    expect(find.text(l10n.emailRequiredError), findsOneWidget);
-    expect(find.text(l10n.passwordRequiredError), findsOneWidget);
-  });
+    testWidgets('shows error messages for empty fields',
+        (WidgetTester tester) async {
+      await pumpWidget(tester);
 
-  testWidgets('RegistrationScreen shows error message for invalid email',
-      (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(createWidgetForTesting(child: const RegistrationScreen()));
-    final BuildContext context = tester.element(find.byType(RegistrationScreen));
-    final l10n = AppLocalizations.of(context)!;
+      await tester.tap(find.byKey(const Key('registerButton')));
+      await tester.pump();
 
-    // Enter an invalid email.
-    await tester.enterText(
-        find.byKey(const Key('registrationEmailField')), 'invalid-email');
+      // Verify that our error messages are shown.
+      expect(find.text(l10n.emailRequiredError), findsOneWidget);
+      expect(find.text(l10n.passwordRequiredError), findsOneWidget);
+    });
 
-    // Tap the button.
-    await tester.tap(find.byKey(const Key('registerButton')));
-    await tester.pump();
+    testWidgets('shows error message for invalid email',
+        (WidgetTester tester) async {
+      await pumpWidget(tester);
 
-    // Verify that our error message is shown.
-    expect(find.text(l10n.invalidEmailError), findsOneWidget);
-  });
+      // Enter an invalid email.
+      await tester.enterText(
+          find.byKey(const Key('registrationEmailField')), 'invalid-email');
 
-  testWidgets('RegistrationScreen shows error message for short password',
-      (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(createWidgetForTesting(child: const RegistrationScreen()));
-    final BuildContext context = tester.element(find.byType(RegistrationScreen));
-    final l10n = AppLocalizations.of(context)!;
+      // Tap the button.
+      await tester.tap(find.byKey(const Key('registerButton')));
+      await tester.pump();
 
-    // Enter a short password.
-    await tester.enterText(find.byKey(const Key('registrationPasswordField')), '123');
+      // Verify that our error message is shown.
+      expect(find.text(l10n.invalidEmailError), findsOneWidget);
+    });
 
-    // Tap the button.
-    await tester.tap(find.byKey(const Key('registerButton')));
-    await tester.pump();
+    testWidgets('shows error message for short password',
+        (WidgetTester tester) async {
+      await pumpWidget(tester);
 
-    // Verify that our error message is shown.
-    expect(find.text(l10n.passwordLengthError), findsOneWidget);
+      // Enter a short password.
+      await tester.enterText(find.byKey(const Key('registrationPasswordField')), '123');
+
+      // Tap the button.
+      await tester.tap(find.byKey(const Key('registerButton')));
+      await tester.pump();
+
+      // Verify that our error message is shown.
+      expect(find.text(l10n.passwordLengthError), findsOneWidget);
+    });
   });
 }
 
