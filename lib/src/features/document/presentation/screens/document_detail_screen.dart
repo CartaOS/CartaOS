@@ -4,13 +4,13 @@ import 'package:carta_os/src/features/document/models/document_enums.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
-import 'package:path/path.dart' as p;
+
 import 'package:carta_os/src/features/document/domain/export_service.dart';
 
 class DocumentDetailScreen extends StatelessWidget {
   final Document document;
 
-  const DocumentDetailScreen({Key? key, required this: document}) : super(key: key);
+  const DocumentDetailScreen({Key? key, required this.document}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

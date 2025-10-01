@@ -3,7 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:carta_os/src/features/auth/presentation/screens/login_screen.dart';
 import 'package:carta_os/src/features/auth/presentation/screens/registration_screen.dart';
 import 'package:carta_os/src/features/document/presentation/screens/home_screen.dart';
-import 'packagepackage:carta_os/src/localization/app_localizations.dart';
+import 'package:carta_os/src/localization/app_localizations.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
