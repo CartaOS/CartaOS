@@ -4,6 +4,8 @@ This directory contains the Python/FastAPI backend for CartaOS.
 
 ## Setup
 
+Assuming `uv` is installed on your system.
+
 1.  **Navigate to the backend directory:**
     ```sh
     cd backend
@@ -11,14 +13,13 @@ This directory contains the Python/FastAPI backend for CartaOS.
 
 2.  **Create and activate the virtual environment:**
     ```sh
-    python3 -m venv .venv
+    uv venv
     source .venv/bin/activate
     ```
 
-3.  **Install dependencies using uv:**
+3.  **Sync dependencies:**
     ```sh
-    pip install uv
-    uv pip install -r requirements.txt
+    uv pip sync requirements.txt
     ```
 
 ## Running the Development Server
