@@ -6,13 +6,15 @@ The CartaOS architecture is guided by the following principles:
 
 *   **Desktop-First, Multi-Platform Ready:** The architecture prioritizes a best-in-class desktop experience while using technologies (web standards) that allow for future expansion to web and mobile platforms.
 *   **Scalability:** The backend is designed to scale horizontally, supporting everything from a single user to thousands of concurrent users under team and institutional plans.
-*   **Security:** Security is a primary concern. The architecture incorporates principles of security by design, especially regarding user data and API access.
-*   **Separation of Concerns:** A clear division of responsibilities exists between the client (frontend), which handles the user interface and experience, and the server (backend), which manages business logic, data, and heavy processing.
+*   **Security:** Security is a primary concern. The architecture incorporates principles of security by design, especially regarding user data and API access:
+    *   All network traffic uses HTTPS/TLS 1.2+; HSTS enabled at the edge.
+    *   Data at rest is encrypted (PostgreSQL disk encryption, S3/GCS server-side encryption with per-bucket KMS keys).
+    *   API keys/tokens are never stored in plaintext: server-side secrets in a managed secrets store (e.g., GCP Secret Manager); client-side tokens in Tauri secure storage.
+    *   Processing workers run in isolated containers with least-privilege IAM roles and no direct Internet egress unless required.
+*   **Separation of Concerns:** A clear division of responsibilities exists between the client (frontend), and the server (backend).
 *   **Local-First & Cloud-Enhanced:** The application must be fully functional offline for core tasks. Cloud features enhance this experience with synchronization, heavy-duty processing, and collaboration.
 
 ## 2. High-Level Architecture Diagram (C4 Model - Level 1)
-
-The diagram below describes the main containers of the system and their interactions.
 
 ```mermaid
 graph TD
@@ -44,41 +46,27 @@ graph TD
 
 *   **Technology:** Tauri (Rust), Svelte, TypeScript, TailwindCSS.
 *   **Responsibilities:**
-    *   **User Interface (UI):** Render the entire user interface using Svelte components running inside a Tauri-managed webview.
-    *   **State Management:** Manage the application's client-side state (loaded documents, UI status, user profile) using Svelte stores.
-    *   **Backend Communication:** Make secure HTTPS calls to the backend API to fetch data, trigger processing, and synchronize information.
-    *   **High-Performance Local Tasks:** Use Tauri's Rust core to execute performant, safe, and concurrent local operations (e.g., intensive file system interactions, local database access).
-    *   **Security:** Securely store authentication tokens and other secrets using Tauri's built-in secure storage APIs.
-    *   **Local Persistence:** Use a local database (like SQLite via Rust or an in-browser DB like IndexedDB) for caching metadata and enabling offline functionality.
+    *   **UI:** Render the entire user interface using Svelte components running inside a Tauri-managed webview.
+    *   **State Management:** Manage client-side state using Svelte stores.
+    *   **Backend Communication:** Make secure HTTPS calls to the backend API.
+    *   **Security:** Store tokens and secrets only via Tauri secure storage; never persist tokens in plaintext. Enforce TLS certificate validation on all API requests. Apply rate limiting on auth flows.
 
 ### 3.2. Backend (Server)
 
 *   **Technology:** Python with FastAPI.
-*   **Internal Architecture:** Modular monolith or microservices, with each business domain (auth, documents, plugins) in its own module.
 *   **Responsibilities:**
-    *   **API Gateway:** Expose a secure RESTful API for consumption by the client.
-    *   **User & Auth Service:** Manage user profiles, subscription plans, and integrate with Firebase Auth for registration and login.
-    *   **Document Service:** Manage document metadata, processing status, and file storage paths.
-    *   **Processing Service (Worker):** An asynchronous service (using message queues like RabbitMQ or Google Pub/Sub) that executes the heavy processing pipeline (OCR, structural analysis, AI enrichment). This ensures the main API remains responsive.
-    *   **Semantic Search Service (RAG):** Handle "Chat with Documents" queries by converting user questions into vectors, searching for relevant chunks in the vector database, and using an LLM to synthesize the answer.
-    *   **Direct AI Integration:** Natively integrates with the Python AI/NLP ecosystem (`LlamaIndex`, `spaCy`, `Hugging Face`, etc.) to perform its core functions.
+    *   **API Gateway:** Expose a secure RESTful API.
+    *   **User & Auth Service:** Manage user profiles and integrate with Firebase Auth. The backend must validate Firebase ID tokens server-side on every authenticated request.
+    *   **Processing Service (Worker):** An asynchronous, idempotent service that executes the processing pipeline. All user-uploaded files are treated as untrusted and validated.
+    *   **Semantic Search Service (RAG):** Handle "Chat with Documents" queries, enforcing multi-tenant isolation in all vector searches to prevent data leakage.
 
 ### 3.3. Data Architecture
 
 *   **Relational Database (PostgreSQL):**
-    *   **Usage:** Store structured and relational data: user information, subscriptions, document metadata, plugin info.
-    *   **`pgvector` Extension:** Adds vector similarity search capabilities directly to PostgreSQL, allowing it to function as our vector database for RAG features. This simplifies the initial stack by avoiding a separate, dedicated vector DB.
+    *   **Usage:** Store structured data like user info, document metadata, etc.
+    *   **`pgvector` Extension:** Provides vector similarity search capabilities.
 
 *   **Object Storage (Cloud Storage - GCS/S3):**
-    *   **Usage:** Store binary files (the original PDFs for premium users). Files are not stored in the database itself.
-    *   **Access:** Access is managed via signed URLs generated by the backend, ensuring only the document owner can access a file for a limited time.
+    *   **Usage:** Store binary files (PDFs).
+    *   **Access:** The backend issues short-lived, method-scoped signed URLs (e.g., PUT for upload, GET for download) only after validating the authenticated user.
 
-## 4. Data Processing Flow (Premium Plan)
-
-1.  The **Tauri Client** requests a secure upload URL from the **Backend API**.
-2.  The client uploads the PDF file directly to **Cloud Storage** using the signed URL.
-3.  After the upload, the client notifies the API. The API creates a document entry in **PostgreSQL** with a "pending" status and dispatches a message to a processing queue.
-4.  A **Python Worker** picks up the message, downloads the document from Cloud Storage, and executes the full analysis pipeline (OCR, layout analysis, etc.).
-5.  The Worker calls **External AI Services** (Gemini) for semantic enrichment (summaries, tags).
-6.  The Worker updates the document's entry in PostgreSQL with the generated metadata and a "completed" status.
-7.  The client, which may be polling the API or connected via WebSocket, is notified and updates the UI to display the results to the user.
