@@ -79,5 +79,5 @@ jobs:
         run: |
           # Create a dummy test to prevent exit code 1 if no tests are found
           mkdir -p src
-          echo "import { expect, test } from 'vitest';\ntest('placeholder', () => { expect(1).toBe(1); });" > src/placeholder.test.ts
+          printf 'import { expect, test } from "vitest";\ntest("placeholder", () => { expect(1).toBe(1); });' > src/placeholder.test.ts
           npm run test
