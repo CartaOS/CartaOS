@@ -1,6 +1,6 @@
 # ADR-002: Strategic Pivot to Python Backend and Tauri/Svelte Frontend
 
-*   **Status:** Proposed
+*   **Status:** Accepted
 *   **Date:** 2025-10-02
 
 ## Context

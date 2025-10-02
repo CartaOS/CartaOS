@@ -14,8 +14,10 @@ frontend/.svelte-kit/
 
 # Tauri
 frontend/src-tauri/target/
-frontend/src-tauri/Cargo.lock
 
 # General
 build/
 progresso.md
+
+# Obsolete Flutter files
+.flutter-plugins-dependencies

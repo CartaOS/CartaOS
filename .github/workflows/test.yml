@@ -38,6 +38,9 @@ jobs:
 
   frontend_test:
     runs-on: ubuntu-latest
+    env:
+      TAURI_PLATFORM: linux
+      TAURI_DEBUG: 'false'
     defaults:
       run:
         working-directory: frontend
@@ -50,6 +53,6 @@ jobs:
       - name: Install Dependencies
         run: npm install
       - name: Check Types
-        run: npm run check # Assumes a 'check' script for svelte-check
+        run: npm run check
       - name: Run Tests
-        run: npm run test # Assumes a 'test' script for vitest
+        run: npm run test
