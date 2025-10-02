@@ -4,7 +4,10 @@
 )]
 
 fn main() {
-  tauri::Builder::default()
+  if let Err(e) = tauri::Builder::default()
     .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+  {
+    eprintln!("Error while running tauri application: {:?}", e);
+    std::process::exit(1);
+  }
 }

@@ -41,9 +41,8 @@ jobs:
       - name: Run Tests
         run: |
           uv pip install pytest
-          # Create a dummy test to prevent exit code 1 if no tests are found
           mkdir -p tests
-          echo "def test_placeholder():\n    pass" > tests/test_placeholder.py
+          printf 'def test_placeholder():\n    pass' > tests/test_placeholder.py
           uv run pytest
 
   frontend_test:

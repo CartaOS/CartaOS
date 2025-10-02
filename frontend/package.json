@@ -1,18 +1,22 @@
 {
-  "name": "frontend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "carta-os-frontend",
+  "version": "0.1.0",
+  "description": "The Svelte-based frontend for the CartaOS desktop application.",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "check": "svelte-check",
     "test": "vitest"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
+  "keywords": [
+    "tauri",
+    "svelte",
+    "academic",
+    "research"
+  ],
+  "author": "CartaOS Team",
+  "license": "MIT",
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@tauri-apps/cli": "^2.8.4",
