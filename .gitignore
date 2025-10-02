@@ -1,22 +1,25 @@
 # Environments
 .env
 .venv
+*.env.*
 
 # Python
 __pycache__/
 *.pyc
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Node / Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.svelte-kit/
+.DS_Store
 
 # Tauri
 frontend/src-tauri/target/
+frontend/src-tauri/Cargo.lock
 
 # General
 build/
 progresso.md
-
-# Obsolete Flutter files
-.flutter-plugins-dependencies
