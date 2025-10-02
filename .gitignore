@@ -1,8 +1,21 @@
+# Environments
 .env
+.venv
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.svelte-kit/
+
+# Tauri
+frontend/src-tauri/target/
+frontend/src-tauri/Cargo.lock
+
+# General
 build/
 progresso.md
-.dart_tool/
-pubspec.lock
-.flutter-plugins-dependencies
-lib/src/localization/
-*.mocks.dart

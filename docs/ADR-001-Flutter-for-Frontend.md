@@ -1,45 +1,57 @@
-# ADR-001: Adoção do Flutter para o Frontend Multiplataforma
+# ADR-001: Flutter for Cross-Platform Frontend
 
-*   **Status:** Aceito
-*   **Data:** 2025-09-28
+*   **Status:** Superseded
+*   **Date:** 2025-09-28
 
-## Contexto
+---
 
-A visão de produto para o CartaOS v2 exige uma presença em múltiplas plataformas: Desktop (Windows, macOS, Linux), Web e Mobile (iOS, Android). A manutenção de bases de código nativas separadas para cada uma dessas plataformas (ex: Swift/SwiftUI para iOS/macOS, Kotlin/Compose para Android, C#/.NET para Windows, e um framework web como React/Svelte) é logisticamente complexa e financeiramente inviável para uma equipe enxuta.
+## Superseded by ADR-002
 
-Isso criaria uma sobrecarga massiva de desenvolvimento, dificultaria a manutenção da paridade de funcionalidades entre as plataformas e aumentaria drasticamente o tempo de lançamento de novos recursos. Precisamos de uma solução que nos permita alcançar todas as plataformas alvo com uma única base de código, sem comprometer significativamente a performance ou a experiência do usuário.
+This decision was superseded by [ADR-002: Strategic Pivot to Python Backend and Tauri/Svelte Frontend](./ADR-002-Pivo-Tecnologico-Python-Tauri.md) on 2025-10-02.
 
-## Decisão
+**Reasoning for Invalidation:** While Flutter remains a strong choice for cross-platform development including mobile, a re-evaluation concluded that the Tauri/Svelte/TailwindCSS stack is better aligned with the immediate MVP goal of creating a lightweight, high-performance desktop application. The key advantages of the new stack, such as significantly smaller binary sizes and direct access to the web ecosystem for document and text-heavy UI components, were deemed critical for the initial product's success. Please refer to ADR-002 for a detailed justification.
 
-Nós decidimos adotar o framework **Flutter**, utilizando a linguagem **Dart**, como a tecnologia principal para o desenvolvimento de toda a interface do cliente (frontend) do CartaOS v2.
+---
 
-## Justificativa
+*The original text of the ADR is preserved below for historical context.*
 
-A escolha pelo Flutter é baseada em quatro pilares principais:
+## Original Context
 
-1.  **Base de Código Única e Verdadeira Multiplataforma:** Flutter permite o desenvolvimento e a compilação para todas as nossas seis plataformas alvo (Windows, macOS, Linux, Web, iOS, Android) a partir de um único repositório e código. Esta é a sua vantagem estratégica mais significativa, pois maximiza a eficiência do desenvolvimento.
+The product vision for CartaOS v2 requires a presence on multiple platforms: Desktop (Windows, macOS, Linux), Web, and Mobile (iOS, Android). Maintaining separate native codebases for each of these platforms (e.g., Swift/SwiftUI for iOS/macOS, Kotlin/Compose for Android, C#/.NET for Windows, and a web framework like React/Svelte) is logistically complex and financially unfeasible for a lean team.
 
-2.  **Performance Nativa:** Diferente de soluções baseadas em web wrappers (como Electron), o Flutter não empacota um navegador. Ele compila o código Dart para código de máquina nativo (ARM, x86) e utiliza seu próprio motor de renderização de alta performance (Skia) para desenhar a UI diretamente na tela. Isso resulta em aplicações com inicialização rápida, animações fluidas a 60/120fps e uma sensação de responsividade nativa.
+This would create a massive development overhead, make it difficult to maintain feature parity across platforms, and drastically increase the time-to-market for new features. We need a solution that allows us to reach all target platforms with a single codebase, without significantly compromising performance or user experience.
 
-3.  **UI Consistente e Controlada:** Como o Flutter controla cada pixel na tela, ele garante que a interface do usuário, o design system e a experiência de uso sejam virtualmente idênticos em todas as plataformas. Isso fortalece a identidade da marca CartaOS e reduz o tempo gasto com ajustes de CSS ou layout específicos para cada plataforma.
+## Original Decision
 
-4.  **Ecossistema Forte e Apoio do Google:** Flutter é um projeto de código aberto apoiado pelo Google, com uma comunidade grande, ativa e crescente. O repositório de pacotes `pub.dev` é vasto e maduro, oferecendo soluções prontas para a maioria dos desafios comuns (gerenciamento de estado, armazenamento seguro, comunicação de rede, etc.), o que acelera o desenvolvimento.
+We decided to adopt the **Flutter** framework, using the **Dart** language, as the primary technology for the development of the entire client interface (frontend) of CartaOS v2.
 
-### Alternativas Consideradas
+## Original Justification
 
-*   **Tauri/Svelte (Arquitetura Atual):** Embora excelente para aplicações desktop leves, a expansão para mobile exigiria uma reescrita completa em outro framework (como React Native ou nativo). A manutenção da paridade entre a versão web/desktop e a mobile seria um desafio.
-*   **React Native:** Forte no mobile, mas o suporte para desktop ainda é menos maduro e mais fragmentado que o do Flutter. A performance, especialmente em aplicações complexas, pode não ser tão consistente quanto a do Flutter.
-*   **Desenvolvimento Nativo Separado:** Rejeitado por ser inviável em termos de custo, tempo e tamanho da equipe.
+The choice of Flutter was based on four main pillars:
 
-## Consequências
+1.  **Single Codebase and True Cross-Platform Capability:** Flutter allows development and compilation for all our six target platforms (Windows, macOS, Linux, Web, iOS, Android) from a single repository and codebase. This is its most significant strategic advantage, as it maximizes development efficiency.
 
-*   **Positivas:**
-    *   Redução drástica no tempo e custo de desenvolvimento e manutenção.
-    *   Equipe de frontend unificada, focada em uma única stack (Dart/Flutter).
-    *   Lançamento mais rápido de funcionalidades em todas as plataformas simultaneamente.
-    *   Experiência de usuário consistente que fortalece a marca do produto.
+2.  **Native Performance:** Unlike solutions based on web wrappers (like Electron), Flutter does not bundle a browser. It compiles Dart code to native machine code (ARM, x86) and uses its own high-performance rendering engine (Skia) to draw the UI directly on the screen. This results in applications with fast startup, smooth animations at 60/120fps, and a native feel of responsiveness.
 
-*   **Negativas ou Riscos a Mitigar:**
-    *   **Curva de Aprendizagem:** A equipe de desenvolvimento precisará ter ou adquirir proficiência em Dart e na arquitetura do Flutter (ex: gerenciamento de estado com BLoC/Riverpod).
-    *   **Tamanho do Aplicativo:** O tamanho final de um aplicativo Flutter ("Hello World") é maior do que o de um aplicativo totalmente nativo, devido à inclusão do motor de renderização. No entanto, para uma aplicação complexa como o CartaOS, essa diferença se torna proporcionalmente menos significativa.
-    *   **Integrações Nativas Específicas:** Para funcionalidades que dependem de APIs de baixo nível de um sistema operacional específico, será necessário desenvolver "Platform Channels", o que adiciona uma camada de complexidade. Isso deve ser mapeado e planejado para funcionalidades como a invocação de scripts locais no modo gratuito.
+3.  **Consistent and Controlled UI:** As Flutter controls every pixel on the screen, it ensures that the user interface, design system, and user experience are virtually identical across all platforms. This strengthens the CartaOS brand identity and reduces the time spent on platform-specific CSS or layout adjustments.
+
+4.  **Strong Ecosystem and Google Support:** Flutter is an open-source project backed by Google, with a large, active, and growing community. The `pub.dev` package repository is vast and mature, offering ready-made solutions for most common challenges (state management, secure storage, network communication, etc.), which accelerates development.
+
+### Alternatives Considered (at the time)
+
+*   **Tauri/Svelte:** While excellent for lightweight desktop applications, expanding to mobile would require a complete rewrite in another framework (like React Native or native). Maintaining parity between the web/desktop version and the mobile version would be a challenge.
+*   **React Native:** Strong on mobile, but its desktop support is still less mature and more fragmented than Flutter's. Performance, especially in complex applications, may not be as consistent as Flutter's.
+*   **Separate Native Development:** Rejected as unfeasible in terms of cost, time, and team size.
+
+## Original Consequences
+
+*   **Positive:**
+    *   Drastic reduction in development and maintenance time and cost.
+    *   Unified frontend team, focused on a single stack (Dart/Flutter).
+    *   Faster rollout of features across all platforms simultaneously.
+    *   Consistent user experience that strengthens the product brand.
+
+*   **Negative or Risks to Mitigate:**
+    *   **Learning Curve:** The development team would need to have or acquire proficiency in Dart and Flutter architecture (e.g., state management with BLoC/Riverpod).
+    *   **Application Size:** The final size of a Flutter application ("Hello World") is larger than that of a fully native application, due to the inclusion of the rendering engine. However, for a complex application like CartaOS, this difference becomes proportionally less significant.
+    *   **Specific Native Integrations:** For features that depend on low-level OS APIs, it would be necessary to develop "Platform Channels," which adds a layer of complexity. This was to be mapped and planned for features like invoking local scripts in the free mode.

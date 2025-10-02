@@ -1,79 +1,79 @@
-# MVP e Requisitos do Produto - CartaOS
+# MVP and Product Requirements - CartaOS
 
-## 1. Objetivo do MVP
+## 1. MVP Goal
 
-O Minimum Viable Product (MVP) tem como objetivo principal validar a hipótese central do CartaOS: **é possível agregar valor significativo ao fluxo de trabalho de um pesquisador automatizando o processamento e o enriquecimento semântico de documentos em uma única aplicação desktop.**
+The primary goal of the Minimum Viable Product (MVP) is to validate the core hypothesis of CartaOS: **it is possible to add significant value to a researcher's workflow by automating the processing and semantic enrichment of documents within a single desktop application.**
 
-O foco é testar o pipeline de ponta a ponta com usuários reais, coletar feedback sobre a usabilidade e a utilidade das funcionalidades de IA, e estabelecer a base técnica para futuras expansões (web, mobile, colaboração).
+The focus is to test the end-to-end pipeline with real users, gather feedback on the usability and utility of the AI features, and establish the technical foundation for future expansions (web, mobile, collaboration).
 
-## 2. Requisitos Funcionais do MVP
+## 2. MVP Functional Requirements
 
-### RF-01: Autenticação de Usuário
-*   **Descrição:** O sistema deve permitir que os usuários criem uma conta com e-mail e senha e façam login na aplicação desktop.
-*   **Critérios de Aceite:**
-    *   Um novo usuário pode se registrar com sucesso.
-    *   Um usuário registrado pode fazer login.
-    *   O estado de login é persistido entre as sessões do aplicativo.
-    *   Este sistema servirá de base para a futura gestão de licenças e assinaturas.
+### FR-01: User Authentication
+*   **Description:** The system must allow users to create an account with an email and password and to log into the desktop application.
+*   **Acceptance Criteria:**
+    *   A new user can register successfully.
+    *   A registered user can log in.
+    *   The login state is persisted between application sessions.
+    *   This system will serve as the basis for future license and subscription management.
 
-### RF-02: Caixa de Entrada Unificada (Local)
-*   **Descrição:** A interface principal deve apresentar uma área designada onde o usuário pode adicionar arquivos PDF do seu sistema de arquivos local.
-*   **Critérios de Aceite:**
-    *   O usuário pode arrastar e soltar um ou mais arquivos PDF na área designada.
-    *   O usuário pode clicar em um botão para abrir um seletor de arquivos e escolher os PDFs.
-    *   Os arquivos adicionados aparecem em uma lista de "pendentes" na UI.
+### FR-02: Unified Local Inbox
+*   **Description:** The main interface must feature a designated area where the user can add PDF files from their local file system.
+*   **Acceptance Criteria:**
+    *   The user can drag and drop one or more PDF files onto the designated area.
+    *   The user can click a button to open a file picker and select PDFs.
+    *   Added files appear in a "pending" list in the UI.
 
-### RF-03: Pipeline de Processamento Automatizado (Simplificado)
-*   **Descrição:** Uma vez que um documento é adicionado, o sistema deve iniciar um pipeline de processamento em segundo plano.
-*   **Critérios de Aceite:**
-    *   **Triagem:** O sistema analisa o PDF e o classifica como "nascido digital" (contém texto) ou "digitalizado" (imagem).
-    *   **Extração/OCR:** Se "nascido digital", o texto é extraído. Se "digitalizado", o sistema executa um processo de OCR para extrair o texto.
-    *   **Enriquecimento Semântico:** O texto extraído é enviado para uma API de LLM (Gemini) para gerar um resumo conciso (aprox. 250 palavras), uma lista de 3-5 conceitos-chave e uma lista de 5-10 tags relevantes.
-    *   O usuário pode ver o status de cada documento no pipeline (ex: "Processando...", "Concluído", "Erro").
+### FR-03: Simplified Automated Processing Pipeline
+*   **Description:** Once a document is added, the system must initiate a background processing pipeline.
+*   **Acceptance Criteria:**
+    *   **Triage:** The system analyzes the PDF and classifies it as "born-digital" (contains text) or "scanned" (image-based).
+    *   **Extraction/OCR:** If "born-digital", the text is extracted. If "scanned", the system runs an OCR process to extract the text.
+    *   **Semantic Enrichment:** The extracted text is sent to an LLM API (Gemini) to generate a concise summary (approx. 250 words), a list of 3-5 key concepts, and a list of 5-10 relevant tags.
+    *   The user can see the status of each document in the pipeline (e.g., "Processing...", "Completed", "Error").
 
-### RF-04: Base de Conhecimento (Visualização Local)
-*   **Descrição:** Após o processamento, os documentos e seus metadados gerados devem ser apresentados em uma interface de visualização.
-*   **Critérios de Aceite:**
-    *   Há uma seção na UI que lista todos os documentos concluídos.
-    *   Ao selecionar um documento, a UI exibe:
-        *   O nome do arquivo original.
-        *   O resumo gerado pela IA.
-        *   Os conceitos-chave e as tags em formato de lista ou badges.
-    *   O sistema armazena localmente o PDF original e um arquivo Markdown (`.md`) associado contendo os metadados gerados em formato YAML Frontmatter.
+### FR-04: Knowledge Base (Local View)
+*   **Description:** After processing, the documents and their generated metadata must be presented in a viewing interface.
+*   **Acceptance Criteria:**
+    *   There is a section in the UI that lists all completed documents.
+    *   When a document is selected, the UI displays:
+        *   The original filename.
+        *   The AI-generated summary.
+        *   The key concepts and tags in a list or badge format.
+    *   The system stores the original PDF and an associated Markdown (`.md`) file containing the generated metadata in YAML Frontmatter format locally.
 
-### RF-05: Integração de Saída (Exportação)
-*   **Descrição:** O usuário deve ser capaz de exportar os artefatos processados para uso em outras ferramentas.
-*   **Critérios de Aceite:**
-    *   Existe uma opção "Exportar" para cada documento concluído.
-    *   A exportação cria uma pasta no local escolhido pelo usuário contendo o PDF original e o arquivo `.md` com os metadados.
-    *   O formato do arquivo `.md` é compatível com ferramentas como Obsidian e Logseq.
+### FR-05: Output Integration (Export)
+*   **Description:** The user must be able to export the processed artifacts for use in other tools.
+*   **Acceptance Criteria:**
+    *   An "Export" option exists for each completed document.
+    *   The export creates a folder in the user's chosen location containing the original PDF and the `.md` file with the metadata.
+    *   The format of the `.md` file is compatible with tools like Obsidian and Logseq.
 
-## 3. Requisitos Não-Funcionais do MVP
+## 3. MVP Non-Functional Requirements
 
-### RNF-01: Plataforma
-*   O MVP será uma aplicação desktop compatível com **Windows 10/11, macOS (Apple Silicon e Intel) e Linux (Debian/Ubuntu)**, construída com Flutter.
+### NFR-01: Platform
+*   The MVP will be a desktop application compatible with **Windows 10/11, macOS (Apple Silicon and Intel), and Linux (Debian/Ubuntu)**, built with **Tauri and Svelte**.
 
-### RNF-02: Performance
-*   A aplicação deve iniciar em menos de 5 segundos em hardware moderno.
-*   A interface do usuário deve permanecer responsiva (sem travamentos) enquanto um documento está sendo processado em segundo plano.
-*   O processamento de um documento de 20 páginas deve ser concluído em um tempo razoável (a ser definido, ex: < 2 minutos).
+### NFR-02: Performance
+*   The application should start in under 5 seconds on modern hardware.
+*   The user interface must remain responsive (no freezing) while a document is being processed in the background.
+*   The processing of a 20-page document should be completed in a reasonable time (e.g., < 2 minutes).
 
-### RNF-03: Segurança
-*   As senhas dos usuários devem ser armazenadas no banco de dados usando hashing forte (ex: bcrypt).
-*   As chaves de API do LLM do usuário (se aplicável no modelo inicial) devem ser armazenadas de forma segura no cliente usando os mecanismos do sistema operacional (ex: Keychain no macOS, Credential Manager no Windows) através do pacote `flutter_secure_storage`.
+### NFR-03: Security
+*   User passwords must be stored on the backend database using strong hashing (e.g., bcrypt).
+*   User-specific API keys (if applicable in the initial model) must be stored securely on the client using the operating system's native mechanisms, accessed via **Tauri's secure storage APIs (e.g., `@tauri-apps/plugin-store`)**.
 
-### RNF-04: Usabilidade
-*   A interface deve ser intuitiva, exigindo o mínimo de documentação para que um novo usuário entenda o fluxo de trabalho principal.
-*   O sistema deve fornecer feedback claro sobre o status do processamento e quaisquer erros que ocorram.
+### NFR-04: Usability
+*   The interface must be intuitive, requiring minimal documentation for a new user to understand the main workflow.
+*   The system must provide clear feedback on the processing status and any errors that occur.
 
-## 4. Fora do Escopo para o MVP
+## 4. Out of Scope for MVP
 
-As seguintes funcionalidades são intencionalmente deixadas de fora do MVP para garantir o foco e a velocidade de entrega:
+The following features are intentionally left out of the MVP to ensure focus and speed of delivery:
 
-*   **NÃO HAVERÁ** sincronização na nuvem ou armazenamento de documentos no backend.
-*   **NÃO HAVERÁ** funcionalidades colaborativas.
-*   **NÃO HAVERÁ** Chat com Documentos (RAG).
-*   **NÃO HAVERÁ** integração direta com Zotero ou outras ferramentas (apenas exportação manual).
-*   **NÃO HAVERÁ** aplicativos Web ou Mobile.
-*   **NÃO HAVERÁ** marketplace de plugins.
-*   **NÃO HAVERÁ** funcionalidades avançadas de edição de OCR ou limpeza de imagem (Laboratório de Restauração).
+*   **NO** cloud synchronization or document storage on the backend.
+*   **NO** collaborative features.
+*   **NO** Chat with Documents (RAG).
+*   **NO** direct integration with Zotero or other tools (manual export only).
+*   **NO** Web or Mobile applications.
+*   **NO** plugin marketplace.
+*   **NO** advanced OCR editing or image cleaning features.
