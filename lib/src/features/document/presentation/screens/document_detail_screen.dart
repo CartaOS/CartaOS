@@ -247,12 +247,14 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
               ),
               actions: [
                 TextButton(
+                  key: const Key('cancelButton'),
                   onPressed: () {
                     Navigator.of(dialogContext).pop();
                   },
                   child: Text(l10n.cancelButtonLabel),
                 ),
                 ElevatedButton(
+                  key: const Key('exportButton'),
                   onPressed: () {
                     Navigator.of(dialogContext).pop();
                     _exportDocument(context, _includeContent);
