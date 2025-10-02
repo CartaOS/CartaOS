@@ -5,3 +5,4 @@ progresso.md
 pubspec.lock
 .flutter-plugins-dependencies
 lib/src/localization/
+*.mocks.dart
