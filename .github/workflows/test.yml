@@ -5,18 +5,33 @@ on:
     branches:
       - main
     paths:
+      - 'lib/**'
+      - 'test/**'
       - 'backend/**'
-      - 'frontend/**'
       - '.github/workflows/test.yml'
+      - 'docker-compose.yml'
   pull_request:
     branches:
       - main
     paths:
+      - 'lib/**'
+      - 'test/**'
       - 'backend/**'
-      - 'frontend/**'
       - '.github/workflows/test.yml'
+      - 'docker-compose.yml'
 
 jobs:
+  flutter_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - run: flutter test
+
   backend_test:
     runs-on: ubuntu-latest
     defaults:
@@ -24,58 +39,8 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-go@v3
         with:
-          python-version: '3.11'
-
-      - name: Install uv
-        run: pip install uv
-
-      - name: Create Virtual Environment
-        run: uv venv
-
-      - name: Install Dependencies
-        run: uv pip sync requirements.txt
-
-      - name: Run Tests
-        run: |
-          uv pip install pytest
-          mkdir -p tests
-          printf 'def test_placeholder():\n    pass' > tests/test_placeholder.py
-          uv run pytest
-
-  frontend_test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Tauri system dependencies (Linux)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Check Types
-        run: npm run check
-
-      - name: Run Tests
-        run: |
-          # Create a dummy test to prevent exit code 1 if no tests are found
-          mkdir -p src
-          echo "import { expect, test } from 'vitest';\ntest('placeholder', () => { expect(1).toBe(1); });" > src/placeholder.test.ts
-          npm run test
+          go-version: '1.21'
+      - run: go mod tidy
+      - run: go test ./...
