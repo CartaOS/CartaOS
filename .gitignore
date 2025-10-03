@@ -25,6 +25,7 @@ progresso.md
 
 # OS-specific
 .DS_Store
+Thumbs.db
 
 # IDE
 .vscode/
